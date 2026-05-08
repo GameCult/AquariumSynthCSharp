@@ -88,6 +88,9 @@ public static class PatchScript
                 case "mod":
                     AddModBus(fields, line);
                     break;
+                case "control":
+                    AddControlLane(fields, line);
+                    break;
                 default:
                     throw new PatchScriptException(line, $"unknown command `{parts[0]}`");
             }
@@ -126,7 +129,7 @@ public static class PatchScript
                 ? ParseFormants(formantSpec, line)
                 : [];
 
-            var modulators = TryGetAny(fields, ["mods"], out var mods)
+            var modulators = TryGetAny(fields, ["mods", "m"], out var mods)
                 ? ParseVoiceModulators(mods, line)
                 : [];
 
@@ -146,7 +149,7 @@ public static class PatchScript
                     waveform,
                     GetFloat(fields, line, 440, "freq", "frequency", "f"),
                     GetFloat(fields, line, 0.5f, "duty", "du"),
-                    GetFloat(fields, line, 0, "phase")),
+                    GetFloat(fields, line, 0, "phase", "pa")),
                 Envelope = new Envelope(
                     GetFloat(fields, line, 0, "attack", "a"),
                     GetFloat(fields, line, 0.1f, "sustain", "s"),
@@ -155,7 +158,7 @@ public static class PatchScript
                 Pitch = new PitchMotion(
                     GetFloat(fields, line, 20, "min_freq", "min"),
                     GetFloat(fields, line, 0, "pitch_ramp", "pr"),
-                    GetFloat(fields, line, 0, "pitch_delta", "pd"),
+                    GetFloat(fields, line, 0, "pitch_delta", "pd", "pitch_dramp", "pdr"),
                     GetFloat(fields, line, 0, "vibrato", "vi"),
                     GetFloat(fields, line, 0, "vibrato_hz", "vh"),
                     GetFloat(fields, line, 0, "vibrato_delay", "vd")),
@@ -171,7 +174,7 @@ public static class PatchScript
                     GetFloat(fields, line, 0, "phaser_ramp", "phr")),
                 Arpeggio = arpeggio,
                 Fm = new FrequencyModulation(
-                    GetFloat(fields, line, 1, "fm", "fmr"),
+                    GetFloat(fields, line, 1, "fm", "fmr", "fm_ratio"),
                     GetFloat(fields, line, 0, "fm_index", "fmi"),
                     GetFloat(fields, line, 0, "fm_decay", "fmd")),
                 Color = new VoiceColor(
@@ -196,12 +199,45 @@ public static class PatchScript
             var hz = GetFloat(fields, line, 1, "hz", "rate");
             var phase = GetFloat(fields, line, 0, "phase");
 
+            if (TryGetAny(fields, ["to", "targets"], out var routeSpec))
+            {
+                foreach (var route in ParseRoutes(routeSpec, line))
+                {
+                    _controls.Add(new ControlLane(
+                        $"{name}_{TargetSuffix(route.Target)}",
+                        new Modulator(route.Target, wave, hz, route.Depth, phase)));
+                }
+            }
+
             foreach (var (key, target) in ModTargets)
             {
                 if (!TryGetAny(fields, key, out var depthText)) continue;
                 var depth = ParseFloat(depthText, line);
                 _controls.Add(new ControlLane($"{name}_{key[0]}", new Modulator(target, wave, hz, depth, phase)));
             }
+        }
+
+        private void AddControlLane(IReadOnlyDictionary<string, string> fields, int line)
+        {
+            var name = GetAny(fields, ["name", "n"], "control");
+            if (!TryGetAny(fields, ["target", "t"], out var targetText))
+            {
+                throw new PatchScriptException(line, "control lane needs target");
+            }
+
+            var wave = TryGetAny(fields, ["wave", "w"], out var waveform)
+                ? ParseModWaveform(waveform, line)
+                : ModWaveform.Sine;
+
+            _controls.Add(new ControlLane(
+                name,
+                new Modulator(
+                    ParseModTarget(targetText, line),
+                    wave,
+                    GetFloat(fields, line, 1, "hz", "rate"),
+                    GetFloat(fields, line, 0, "depth", "d", "decay"),
+                    GetFloat(fields, line, 0, "phase", "ph"),
+                    GetFloat(fields, line, 0, "bias", "b"))));
         }
     }
 
@@ -215,7 +251,7 @@ public static class PatchScript
         (["noise", "nz"], ModTarget.Noise),
         (["drive", "drv"], ModTarget.Drive),
         (["fold", "fl"], ModTarget.Fold),
-        (["formant_mix", "fmix"], ModTarget.FormantMix),
+        (["formant_mix", "fmix", "formant"], ModTarget.FormantMix),
         (["fm_index", "fmi"], ModTarget.FmIndex)
     ];
 
@@ -258,13 +294,23 @@ public static class PatchScript
             })
             .ToList();
 
+    private static IEnumerable<(ModTarget Target, float Depth)> ParseRoutes(string value, int line) =>
+        value.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(part =>
+            {
+                var pieces = part.Split(':');
+                if (pieces.Length != 2) throw new PatchScriptException(line, $"bad route `{part}`");
+                return (ParseModTarget(pieces[0], line), ParseFloat(pieces[1], line));
+            });
+
     private static string CanonicalCommand(string command) => command.ToLowerInvariant() switch
     {
         "p" or "patch" => "patch",
-        "d" or "defaults" => "defaults",
+        "d" or "default" or "defaults" => "defaults",
         "def" or "t" or "template" => "template",
         "v" or "voice" => "voice",
         "mod" or "wob" or "wobble" or "bus" => "mod",
+        "lfo" or "control" => "control",
         _ => command
     };
 
@@ -304,11 +350,30 @@ public static class PatchScript
     {
         foreach (var (keys, target) in ModTargets)
         {
-            if (keys.Contains(value, StringComparer.OrdinalIgnoreCase)) return target;
+            if (keys.Contains(value, StringComparer.OrdinalIgnoreCase) ||
+                keys.Select(CanonicalField).Contains(CanonicalField(value), StringComparer.OrdinalIgnoreCase))
+            {
+                return target;
+            }
         }
         if (value.Equals("formant", StringComparison.OrdinalIgnoreCase)) return ModTarget.FormantMix;
         throw new PatchScriptException(line, $"unknown mod target `{value}`");
     }
+
+    private static string TargetSuffix(ModTarget target) => target switch
+    {
+        ModTarget.Gain => "gain",
+        ModTarget.Pitch => "pitch",
+        ModTarget.Duty => "duty",
+        ModTarget.LowPass => "lpf",
+        ModTarget.HighPass => "hpf",
+        ModTarget.Noise => "noise",
+        ModTarget.Drive => "drive",
+        ModTarget.Fold => "fold",
+        ModTarget.FormantMix => "formant_mix",
+        ModTarget.FmIndex => "fm_index",
+        _ => target.ToString().ToLowerInvariant()
+    };
 
     private static string Required(IReadOnlyDictionary<string, string> fields, string key, int line) =>
         fields.TryGetValue(key, out var value) ? value : throw new PatchScriptException(line, $"missing `{key}`");

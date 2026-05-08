@@ -22,6 +22,69 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
+    public void ParserSupportsRouteListModBus()
+    {
+        var patch = PatchScript.Parse("bus n=sway w=tri hz=2 to=g:.12,l:-.2,fmix:.35,fmi:1.4;v w=saw f=80");
+
+        Assert.Equal(4, patch.Controls.Count);
+        Assert.Contains(patch.Controls, lane => lane.Name == "sway_gain" && lane.Modulator.Target == ModTarget.Gain);
+        Assert.Contains(patch.Controls, lane => lane.Name == "sway_lpf" && lane.Modulator.Target == ModTarget.LowPass);
+        Assert.Contains(patch.Controls, lane => lane.Name == "sway_formant_mix" && lane.Modulator.Target == ModTarget.FormantMix);
+        Assert.Contains(patch.Controls, lane => lane.Name == "sway_fm_index" && lane.Modulator.Target == ModTarget.FmIndex);
+    }
+
+    [Fact]
+    public void ParserSupportsExplicitControlLane()
+    {
+        var patch = PatchScript.Parse("lfo n=wob t=p w=sin hz=6 d=.04 ph=.25 b=.01;v w=saw f=80");
+
+        var lane = Assert.Single(patch.Controls);
+        Assert.Equal("wob", lane.Name);
+        Assert.Equal(ModTarget.Pitch, lane.Modulator.Target);
+        Assert.Equal(6, lane.Modulator.FrequencyHz);
+        Assert.Equal(.04f, lane.Modulator.Depth, 5);
+        Assert.Equal(.25f, lane.Modulator.Phase, 5);
+        Assert.Equal(.01f, lane.Modulator.Bias, 5);
+    }
+
+    [Fact]
+    public void BuiltInExampleParsesAndExportsFaust()
+    {
+        var patch = PatchScript.Parse(BuiltInScripts.PatchScriptExample);
+        var export = FaustEmitter.Emit(patch);
+
+        Assert.Equal(2, patch.Voices.Count);
+        Assert.Equal(5, patch.Controls.Count);
+        Assert.Contains("patch_mod_formant_mix", export.Source);
+    }
+
+    [Fact]
+    public void ClassicAbstractGolfScriptParsesAndExportsFaust()
+    {
+        var patch = PatchScript.Parse(BuiltInScripts.ClassicSfxrAbstractGolfScript);
+        var export = FaustEmitter.Emit(patch);
+
+        Assert.Equal(7, patch.Voices.Count);
+        Assert.Contains("process =", export.Source);
+    }
+
+    [Fact]
+    public void BuiltInPrimitiveGolfScriptsParseAndExportFaust()
+    {
+        foreach (var (family, name, script) in BuiltInScripts.PrimitiveGolfScripts())
+        {
+            var exception = Record.Exception(() =>
+            {
+                var patch = PatchScript.Parse(script);
+                var export = FaustEmitter.Emit(patch, new FaustExportOptions($"{family}_{name}".Replace('-', '_')));
+                Assert.Contains("process =", export.Source);
+            });
+
+            Assert.Null(exception);
+        }
+    }
+
+    [Fact]
     public void FaustEmitterProducesWobbleSource()
     {
         var export = FaustEmitter.EmitScript(WobbleTalker, new FaustExportOptions("wobble_talker", Stereo: true));

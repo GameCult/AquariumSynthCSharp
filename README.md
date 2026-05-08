@@ -20,6 +20,8 @@ dotnet test
 - `FaustEmitter.Emit(patch)` emits Faust source.
 - `FaustCompiler.ValidateAsync(source)` compile-checks with Faust when present.
 - `FaustCompiler.CompileAsync(source, options)` writes generated backend code.
+- `BuiltInScripts` carries the current Rust-side classic SFXR, 808, FM bell,
+  and wobble bass golf scripts so the migration has executable baggage checks.
 
 Faust `2.85.5` supports `-lang csharp`, so the intended hot path is:
 
@@ -33,7 +35,9 @@ await FaustCompiler.CompileAsync(
 
 ## Status
 
-This is the first scaffolded slice, not the whole cathedral. It covers the graph
-surface needed by the current wobble/FM/formant scripts and validates generated
-Faust when the compiler is installed. Next job is tightening parity against the
-Rust crate and porting the remaining preset/macro conveniences.
+The current slice covers the modular graph surface needed by the Rust golfed
+scripts, emits Faust, and validates generated Faust when the compiler is
+installed. Migration coverage is tracked in
+[`docs/migration-checklist.md`](docs/migration-checklist.md), because leaving
+important things behind in the old repo would be a very efficient way to become
+our own haunted house.
