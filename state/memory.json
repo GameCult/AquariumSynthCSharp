@@ -1,0 +1,36 @@
+{
+  "project": "AquariumSynthCSharp",
+  "mission": "Own Aquarium Synth patch authoring, analysis, preset mapping, and Faust generation in C# for the Aquarium/Vortice engine path.",
+  "current_boundary": {
+    "leave_in_rust": [
+      "Rust sample renderer",
+      "PatchPlayer runtime",
+      "realtime AudioUnit bridge",
+      "experimental Rust DSL compiler branch"
+    ],
+    "own_here": [
+      "patch graph model",
+      "patch script parser",
+      "SFXR atoms and parameter mapping",
+      "analysis/comparison metrics",
+      "script scoring",
+      "preset catalogs",
+      "Faust emission and compiler wrapper"
+    ]
+  },
+  "taste": [
+    "Patch scripts should be terse but lower into explicit, inspectable graph data.",
+    "Compiler abstractions should remove repeated musical structure, not hide DSP behavior.",
+    "Generated Faust should be boring enough to diff and debug.",
+    "Realtime-facing work must assume allocation, locks, file I/O, console I/O, and OS calls are hostile."
+  ],
+  "doctrine_refs": [
+    "docs/audio-doctrine.md",
+    "docs/migration-checklist.md"
+  ],
+  "last_verified": {
+    "command": "dotnet test",
+    "result": "13 passed",
+    "commit": "3246672"
+  }
+}

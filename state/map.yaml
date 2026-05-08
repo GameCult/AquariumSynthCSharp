@@ -1,0 +1,39 @@
+project: AquariumSynthCSharp
+mission: >
+  C# authoring, analysis, and Faust generation layer for Aquarium synth patches,
+  targeting the Aquarium/Vortice engine path without dragging the Rust renderer
+  into runtime dependencies.
+surfaces:
+  instructions: AGENTS.md
+  doctrine: docs/audio-doctrine.md
+  memory: state/memory.json
+  scratch: state/scratch.md
+  evidence: state/evidence.jsonl
+  solution: AquariumSynthCSharp.slnx
+  library: src/AquariumSynth.Dsl
+  tests: tests/AquariumSynth.Dsl.Tests
+modules:
+  model: src/AquariumSynth.Dsl/Model.cs
+  parser: src/AquariumSynth.Dsl/PatchScript.cs
+  faust: src/AquariumSynth.Dsl/FaustExport.cs
+  sfxr: src/AquariumSynth.Dsl/SfxrParams.cs
+  analysis: src/AquariumSynth.Dsl/AudioAnalysis.cs
+  scoring: src/AquariumSynth.Dsl/ScriptMetrics.cs
+  presets: src/AquariumSynth.Dsl/Presets.cs
+  built_in_scripts: src/AquariumSynth.Dsl/BuiltInScripts.cs
+boundaries:
+  leave_in_rust:
+    - sample renderer
+    - PatchPlayer runtime
+    - realtime AudioUnit bridge
+    - experimental Rust DSL compiler branch
+  own_in_csharp:
+    - patch graph contracts
+    - patch script surface
+    - SFXR parameter mapping and atoms
+    - analysis and comparison tools
+    - script scoring
+    - Faust source and target-code generation
+checks:
+  default: dotnet test
+  faust_validation: automatic in tests when Faust is installed
