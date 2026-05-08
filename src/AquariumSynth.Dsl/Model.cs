@@ -1,0 +1,117 @@
+namespace AquariumSynth.Dsl;
+
+public enum Waveform
+{
+    Sine,
+    Square,
+    Sawtooth,
+    Triangle,
+    Noise
+}
+
+public enum ModWaveform
+{
+    Sine,
+    Triangle,
+    Square,
+    SampleHold
+}
+
+public enum ModTarget
+{
+    Gain,
+    Pitch,
+    Duty,
+    LowPass,
+    HighPass,
+    Noise,
+    Drive,
+    Fold,
+    FormantMix,
+    FmIndex
+}
+
+public sealed record Envelope(
+    float AttackSeconds = 0,
+    float SustainSeconds = 0.1f,
+    float DecaySeconds = 0.1f,
+    float Punch = 0)
+{
+    public float DurationSeconds => AttackSeconds + SustainSeconds + DecaySeconds;
+}
+
+public sealed record Oscillator(
+    Waveform Waveform = Waveform.Sine,
+    float FrequencyHz = 440,
+    float Duty = 0.5f,
+    float Phase = 0);
+
+public sealed record PitchMotion(
+    float MinFrequencyHz = 20,
+    float RampPerSecond = 0,
+    float DeltaRampPerSecond = 0,
+    float VibratoDepth = 0,
+    float VibratoHz = 0,
+    float VibratoDelaySeconds = 0);
+
+public sealed record DutyMotion(float RampPerSecond = 0);
+
+public sealed record Filter(
+    float LowPass = 1,
+    float LowPassRamp = 0,
+    float LowPassResonance = 0,
+    float HighPass = 0,
+    float HighPassRamp = 0);
+
+public sealed record Phaser(float OffsetSeconds = 0, float RampSecondsPerSecond = 0);
+
+public sealed record Arpeggio(float DelaySeconds, float Multiplier);
+
+public sealed record FrequencyModulation(float Ratio = 1, float Index = 0, float IndexDecaySeconds = 0);
+
+public sealed record VoiceColor(
+    float NoiseMix = 0,
+    float Drive = 0,
+    float Fold = 0,
+    float TremoloDepth = 0,
+    float TremoloHz = 0,
+    float FormantMix = 0);
+
+public sealed record Formant(float FrequencyHz, float BandwidthHz, float Gain);
+
+public sealed record Modulator(
+    ModTarget Target,
+    ModWaveform Waveform = ModWaveform.Sine,
+    float FrequencyHz = 1,
+    float Depth = 0,
+    float Phase = 0,
+    float Bias = 0);
+
+public sealed record ControlLane(string Name, Modulator Modulator);
+
+public sealed record Repeat(float IntervalSeconds);
+
+public sealed record Voice
+{
+    public Oscillator Oscillator { get; init; } = new();
+    public Envelope Envelope { get; init; } = new();
+    public PitchMotion Pitch { get; init; } = new();
+    public DutyMotion Duty { get; init; } = new();
+    public Filter Filter { get; init; } = new();
+    public Phaser Phaser { get; init; } = new();
+    public Arpeggio? Arpeggio { get; init; }
+    public FrequencyModulation Fm { get; init; } = new();
+    public VoiceColor Color { get; init; } = new();
+    public IReadOnlyList<Formant> Formants { get; init; } = Array.Empty<Formant>();
+    public IReadOnlyList<Modulator> Modulators { get; init; } = Array.Empty<Modulator>();
+    public float Gain { get; init; } = 0.2f;
+}
+
+public sealed record SynthPatch
+{
+    public IReadOnlyList<Voice> Voices { get; init; } = Array.Empty<Voice>();
+    public IReadOnlyList<ControlLane> Controls { get; init; } = Array.Empty<ControlLane>();
+    public Repeat? Repeat { get; init; }
+    public float Gain { get; init; } = 1;
+    public bool SoftClip { get; init; } = true;
+}

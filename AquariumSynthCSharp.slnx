@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AquariumSynth.Dsl/AquariumSynth.Dsl.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AquariumSynth.Dsl.Tests/AquariumSynth.Dsl.Tests.csproj" />
+  </Folder>
+</Solution>
