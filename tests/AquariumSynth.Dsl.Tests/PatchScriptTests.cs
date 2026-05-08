@@ -53,9 +53,58 @@ public sealed class PatchScriptTests
         var patch = PatchScript.Parse(BuiltInScripts.PatchScriptExample);
         var export = FaustEmitter.Emit(patch);
 
-        Assert.Equal(2, patch.Voices.Count);
+        Assert.Equal(3, patch.Voices.Count);
         Assert.Equal(5, patch.Controls.Count);
         Assert.Contains("patch_mod_formant_mix", export.Source);
+    }
+
+    [Fact]
+    public void SfxrAtomsAndMutationsParse()
+    {
+        var named = PatchScript.Parse("laser");
+        var verbose = PatchScript.Parse("sfxr preset=laser mutate_seed=9 mutate=0.01");
+        var golfed = PatchScript.Parse("s p=laser ms=9 m=0.01");
+
+        Assert.Single(named.Voices);
+        Assert.Single(verbose.Voices);
+        Assert.Single(golfed.Voices);
+        Assert.Equal(verbose.Voices[0].Oscillator.FrequencyHz, golfed.Voices[0].Oscillator.FrequencyHz);
+    }
+
+    [Fact]
+    public void ScriptMetricsScoreTerseAndReadableInputs()
+    {
+        var terse = PatchScriptScoring.Measure("v w=sq f=80 g=.2 s=.1 d=.2");
+        var readable = PatchScriptScoring.Measure("""
+            voice wave=square freq=80 gain=0.2 sustain=0.1 decay=0.2
+            """);
+
+        Assert.True(terse.TerseScore > readable.TerseScore);
+        Assert.True(readable.ReadabilityScore > terse.ReadabilityScore);
+        Assert.InRange(terse.BalancedScore, 0, 1);
+    }
+
+    [Fact]
+    public void AudioAnalyzerComparesSimpleBuffers()
+    {
+        var samples = Enumerable.Range(0, 2048)
+            .Select(i => MathF.Sin(i * MathF.Tau * 440 / 44100) * 0.2f)
+            .ToArray();
+
+        var comparison = new AudioAnalyzer().Compare(samples, samples);
+
+        Assert.True(comparison.Reference.Features.Peak > 0.19f);
+        Assert.True(comparison.Score > 0.99f);
+    }
+
+    [Fact]
+    public void AquariumPresetsExportFaust()
+    {
+        foreach (var patch in new[] { Presets.AquariumPluck(), Presets.AquariumHeartbeat(), Presets.AquariumVoice(), Presets.Sfxr("pickup") })
+        {
+            var export = FaustEmitter.Emit(patch);
+            Assert.Contains("process =", export.Source);
+        }
     }
 
     [Fact]

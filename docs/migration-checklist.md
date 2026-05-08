@@ -19,6 +19,11 @@ there.
 - Built-in script catalog for classic SFXR, classic 808, FM bell, and wobble
   bass primitive golf scripts.
 - Abstract SFXR golf script using defaults and templates.
+- SFXR parameter presets, mutation, shorthand atoms, and SFXR-to-patch mapping.
+- Aquarium preset patches: pluck, heartbeat, voice, and SFXR named bridge.
+- Patch script scoring: terse, readability, and balanced metrics.
+- Audio analysis and comparison: envelope, log-mel spectrogram, spectral
+  features, distance metrics, and score.
 - Faust source emitter and installed-compiler wrapper for C, C++, C#, and Rust
   target code generation.
 - Tests that parse/export all built-in primitive scripts and validate Faust
@@ -26,15 +31,13 @@ there.
 
 ## Still Deliberate
 
-- The C# repo does not yet include an audio renderer, analysis metric suite, or
-  exhaustive Rust-vs-Faust audio parity harness. Faust is the renderer target,
-  so C# should own authoring and validation first.
-- SFXR preset atoms such as `sfxr preset=laser mutate_seed=...` are not carried
-  over yet. The current migration preserves the primitive patch construction
-  path, which is the part we want in the engine.
-- Random mutation, parameter-space search, and readability/code-golf scoring are
-  still Rust-reference features until we decide which ones belong in C# tools
-  versus offline authoring utilities.
+- The Rust sample renderer, patch player, and realtime audio-unit bridge stay in
+  Rust unless we decide to write a real C#/Faust runtime wrapper.
+- The experimental Rust-side DSL compiler branch can stay behind as reference
+  machinery. The C# repo owns the script surface needed to drive Faust.
+- Exhaustive Rust-renderer-vs-Faust audio parity stays with the Rust renderer.
+  C# can compare buffers it is handed, but it should not recreate the old
+  renderer just to prove the old renderer existed. That road has a sign on it.
 
 ## Next Pull
 

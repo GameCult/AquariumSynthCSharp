@@ -22,6 +22,8 @@ dotnet test
 - `FaustCompiler.CompileAsync(source, options)` writes generated backend code.
 - `BuiltInScripts` carries the current Rust-side classic SFXR, 808, FM bell,
   and wobble bass golf scripts so the migration has executable baggage checks.
+- `SfxrParams`, `PatchScriptScoring`, `AudioAnalyzer`, and `Presets` carry the
+  reusable Rust-side analysis, scoring, SFXR, and preset tools.
 
 Faust `2.85.5` supports `-lang csharp`, so the intended hot path is:
 
@@ -36,8 +38,8 @@ await FaustCompiler.CompileAsync(
 ## Status
 
 The current slice covers the modular graph surface needed by the Rust golfed
-scripts, emits Faust, and validates generated Faust when the compiler is
-installed. Migration coverage is tracked in
+scripts, SFXR atoms, script scoring, audio comparison, presets, Faust emission,
+and installed Faust validation. Migration coverage is tracked in
 [`docs/migration-checklist.md`](docs/migration-checklist.md), because leaving
 important things behind in the old repo would be a very efficient way to become
 our own haunted house.

@@ -9,6 +9,7 @@ public static class BuiltInScripts
         bus n=shimmer w=triangle hz=2 to=gain:0.08,lpf:-0.04,fmix:0.12
         voice wave=sine freq=220 gain=0.12 attack=0.002 sustain=0.03 decay=0.2 vibrato=0.02 vibrato_hz=5 formants=620:90:1,1040:150:0.8 formant_mix=0.45 mods=formant:sine:2:0.12,pitch:triangle:3:0.015
         voice wave=triangle freq=440 gain=0.04 attack=0 sustain=0.02 decay=0.18 lpf=0.7 hpf=0.02 mods=gain:sine:8:0.18,lpf:hold:12:0.08
+        sfxr preset=laser mutate_seed=9 mutate=0.01
         """;
 
     public static readonly IReadOnlyList<string> ClassicSfxrNames =

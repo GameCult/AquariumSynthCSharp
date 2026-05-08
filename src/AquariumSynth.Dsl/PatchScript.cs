@@ -68,8 +68,15 @@ public static class PatchScript
         public void Apply(string statement, int line)
         {
             var parts = statement.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+            var rawCommand = parts[0];
             var command = CanonicalCommand(parts[0]);
             var fields = ParseFields(parts.Skip(1), line);
+            if (SfxrParams.Named(rawCommand) is { } namedParams)
+            {
+                AddSfxrPatch(ApplySfxrFields(namedParams, fields, line));
+                return;
+            }
+
             switch (command)
             {
                 case "patch":
@@ -91,6 +98,9 @@ public static class PatchScript
                 case "control":
                     AddControlLane(fields, line);
                     break;
+                case "sfxr":
+                    AddSfxrPatch(ParseSfxrCommand(fields, line));
+                    break;
                 default:
                     throw new PatchScriptException(line, $"unknown command `{parts[0]}`");
             }
@@ -101,11 +111,14 @@ public static class PatchScript
             var expanded = new Dictionary<string, string>(_defaults, StringComparer.OrdinalIgnoreCase);
             if (TryGetAny(fields, ["use", "u"], out var templateName))
             {
-                if (!_templates.TryGetValue(templateName, out var template))
+                foreach (var name in templateName.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 {
-                    throw new PatchScriptException(line, $"unknown template `{templateName}`");
+                    if (!_templates.TryGetValue(name, out var template))
+                    {
+                        throw new PatchScriptException(line, $"unknown template `{name}`");
+                    }
+                    Merge(expanded, template);
                 }
-                Merge(expanded, template);
             }
             Merge(expanded, Without(fields, "use", "u"));
             return expanded;
@@ -239,6 +252,62 @@ public static class PatchScript
                     GetFloat(fields, line, 0, "phase", "ph"),
                     GetFloat(fields, line, 0, "bias", "b"))));
         }
+
+        private void AddSfxrPatch(SfxrParams parameters)
+        {
+            var mapped = parameters.ToPatch();
+            Voices.AddRange(mapped.Voices);
+            Repeat = mapped.Repeat;
+            Gain *= mapped.Gain;
+        }
+
+        private static SfxrParams ParseSfxrCommand(IReadOnlyDictionary<string, string> fields, int line)
+        {
+            var parameters = TryGetAny(fields, ["preset", "p"], out var preset)
+                ? SfxrParams.Named(preset) ?? throw new PatchScriptException(line, $"unknown sfxr preset `{preset}`")
+                : new SfxrParams();
+            return ApplySfxrFields(parameters, fields, line);
+        }
+
+        private static SfxrParams ApplySfxrFields(SfxrParams parameters, IReadOnlyDictionary<string, string> fields, int line)
+        {
+            if (TryGetAny(fields, ["mutate_seed", "ms"], out var seedText))
+            {
+                if (!ulong.TryParse(seedText, out var seed))
+                {
+                    throw new PatchScriptException(line, "mutate_seed must be an integer");
+                }
+
+                var amount = GetFloat(fields, line, 0.05f, "mutate", "m");
+                parameters = parameters.Mutate(seed, amount);
+            }
+
+            if (TryGetAny(fields, ["wave", "w"], out var wave)) parameters = parameters with { WaveType = ParseWaveform(wave, line) };
+            if (TryGetAny(fields, ["base", "b"], out var baseFreq)) parameters = parameters with { BaseFreq = Math.Clamp(ParseFloat(baseFreq, line), 0, 1) };
+            if (TryGetAny(fields, ["limit", "lim"], out var limit)) parameters = parameters with { FreqLimit = Math.Clamp(ParseFloat(limit, line), 0, 1) };
+            if (TryGetAny(fields, ["ramp", "r"], out var ramp)) parameters = parameters with { FreqRamp = Math.Clamp(ParseFloat(ramp, line), -1, 1) };
+            if (TryGetAny(fields, ["dramp", "dr"], out var dramp)) parameters = parameters with { FreqDramp = Math.Clamp(ParseFloat(dramp, line), -1, 1) };
+            if (TryGetAny(fields, ["duty", "du"], out var duty)) parameters = parameters with { Duty = Math.Clamp(ParseFloat(duty, line), 0, 1) };
+            if (TryGetAny(fields, ["duty_ramp", "dur"], out var dutyRamp)) parameters = parameters with { DutyRamp = Math.Clamp(ParseFloat(dutyRamp, line), -1, 1) };
+            if (TryGetAny(fields, ["vib", "vi"], out var vib)) parameters = parameters with { VibStrength = Math.Clamp(ParseFloat(vib, line), 0, 1) };
+            if (TryGetAny(fields, ["vib_speed", "vs"], out var vibSpeed)) parameters = parameters with { VibSpeed = Math.Clamp(ParseFloat(vibSpeed, line), 0, 1) };
+            if (TryGetAny(fields, ["vib_delay", "vd"], out var vibDelay)) parameters = parameters with { VibDelay = Math.Clamp(ParseFloat(vibDelay, line), 0, 1) };
+            if (TryGetAny(fields, ["attack", "a"], out var attack)) parameters = parameters with { EnvAttack = Math.Clamp(ParseFloat(attack, line), 0, 1) };
+            if (TryGetAny(fields, ["sustain", "s"], out var sustain)) parameters = parameters with { EnvSustain = Math.Clamp(ParseFloat(sustain, line), 0, 1) };
+            if (TryGetAny(fields, ["decay", "d"], out var decay)) parameters = parameters with { EnvDecay = Math.Clamp(ParseFloat(decay, line), 0, 1) };
+            if (TryGetAny(fields, ["punch", "pu"], out var punch)) parameters = parameters with { EnvPunch = Math.Clamp(ParseFloat(punch, line), -1, 1) };
+            if (TryGetAny(fields, ["resonance", "res"], out var resonance)) parameters = parameters with { LpfResonance = Math.Clamp(ParseFloat(resonance, line), 0, 1) };
+            if (TryGetAny(fields, ["lpf"], out var lpf)) parameters = parameters with { LpfFreq = Math.Clamp(ParseFloat(lpf, line), 0, 1) };
+            if (TryGetAny(fields, ["lpf_ramp", "lpfr"], out var lpfRamp)) parameters = parameters with { LpfRamp = Math.Clamp(ParseFloat(lpfRamp, line), -1, 1) };
+            if (TryGetAny(fields, ["hpf"], out var hpf)) parameters = parameters with { HpfFreq = Math.Clamp(ParseFloat(hpf, line), 0, 1) };
+            if (TryGetAny(fields, ["hpf_ramp", "hpfr"], out var hpfRamp)) parameters = parameters with { HpfRamp = Math.Clamp(ParseFloat(hpfRamp, line), -1, 1) };
+            if (TryGetAny(fields, ["phaser", "ph"], out var phaser)) parameters = parameters with { PhaOffset = Math.Clamp(ParseFloat(phaser, line), -1, 1) };
+            if (TryGetAny(fields, ["phaser_ramp", "phr"], out var phaserRamp)) parameters = parameters with { PhaRamp = Math.Clamp(ParseFloat(phaserRamp, line), -1, 1) };
+            if (TryGetAny(fields, ["repeat", "rep"], out var repeat)) parameters = parameters with { RepeatSpeed = Math.Clamp(ParseFloat(repeat, line), 0, 1) };
+            if (TryGetAny(fields, ["arp"], out var arp)) parameters = parameters with { ArpSpeed = Math.Clamp(ParseFloat(arp, line), 0, 1) };
+            if (TryGetAny(fields, ["arp_mod", "am"], out var arpMod)) parameters = parameters with { ArpMod = Math.Clamp(ParseFloat(arpMod, line), -1, 1) };
+            return parameters;
+        }
     }
 
     private static readonly (string[] Keys, ModTarget Target)[] ModTargets =
@@ -311,6 +380,7 @@ public static class PatchScript
         "v" or "voice" => "voice",
         "mod" or "wob" or "wobble" or "bus" => "mod",
         "lfo" or "control" => "control",
+        "s" or "sfxr" => "sfxr",
         _ => command
     };
 
