@@ -14,6 +14,17 @@ the Rust crate into the room by the ankle.
 dotnet test
 ```
 
+## Package Boundary
+
+Aquarium consumes this library as a pinned `AquariumSynth.Dsl` NuGet package,
+not as a live project reference. Breaking synth-library work should happen here
+freely, then Aquarium should intentionally update only after a new package
+version is packed and tested.
+
+```powershell
+dotnet pack src\AquariumSynth.Dsl\AquariumSynth.Dsl.csproj -c Release
+```
+
 ## Shape
 
 - `PatchScript.Parse(script)` lowers terse script into `SynthPatch`.
