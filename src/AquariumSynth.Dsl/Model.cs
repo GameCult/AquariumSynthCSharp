@@ -100,6 +100,8 @@ public sealed record PatchParameter(
     string AutomationRate = "control",
     string Notes = "");
 
+public sealed record ParameterBinding(string FieldPath, string ParameterPath);
+
 public sealed record ReferenceSource(
     string Kind,
     string Uri,
@@ -141,6 +143,7 @@ public sealed record SynthPatch
     public IReadOnlyList<Voice> Voices { get; init; } = Array.Empty<Voice>();
     public IReadOnlyList<ControlLane> Controls { get; init; } = Array.Empty<ControlLane>();
     public IReadOnlyList<PatchParameter> Parameters { get; init; } = Array.Empty<PatchParameter>();
+    public IReadOnlyList<ParameterBinding> ParameterBindings { get; init; } = Array.Empty<ParameterBinding>();
     public Repeat? Repeat { get; init; }
     public float Gain { get; init; } = 1;
     public bool SoftClip { get; init; } = true;

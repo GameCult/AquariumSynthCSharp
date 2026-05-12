@@ -13,15 +13,17 @@ Completed this slice:
   contracts with provenance/license/hash-ready fields.
 - Added `param` script declarations and duplicate parameter path validation.
 - Updated Faust emission so declared parameters produce smoothed `hslider`
-  controls. Target binding is not implemented yet and emits a warning; do not
-  pretend the parameter value shapes sound until binding exists.
-- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 20 passed.
+  controls.
+- Implemented Option B parameter binding: numeric fields may reference declared
+  parameters with `@/path`, for example `lpf=@/macro/brightness`. The parser
+  records an exact field binding such as `/voices/0/filter/lpf` and keeps the
+  parameter default as the graph value.
+- Faust emission substitutes the parameter expression only at the bound field
+  site. Unbound parameters still emit a warning.
+- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 23 passed.
 
 Next likely slice:
 
-- Decide whether `param` should bind to explicit semantic targets such as
-  `target=lpf` or whether fields should accept parameter references such as
-  `lpf=@/macro/brightness`. Do not add both without a clear ownership model.
 - Implement a DX7 SysEx parser skeleton for single voices and cartridge payloads.
 - Extract operator topology, envelopes, ratios, feedback, levels, LFO, and pitch
   envelope into feature records before trying to translate.

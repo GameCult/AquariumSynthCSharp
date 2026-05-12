@@ -31,6 +31,7 @@ public static class FaustEmitter
         if (patch.Voices.Count == 0) throw new ArgumentException("cannot export an empty patch", nameof(patch));
 
         var warnings = new List<string>();
+        var parameters = new ParameterMap(patch, warnings);
         var source = new StringBuilder();
         source.AppendLine("import(\"stdfaust.lib\");");
         source.AppendLine($"declare name \"{Escape(options.Name)}\";");
@@ -39,7 +40,8 @@ public static class FaustEmitter
         source.AppendLine("time = ba.time / ma.SR;");
         if (patch.Repeat is { } repeat)
         {
-            source.AppendLine($"age = time - floor(time / {F(repeat.IntervalSeconds)}) * {F(repeat.IntervalSeconds)};");
+            var interval = parameters.Expression("/patch/repeat", repeat.IntervalSeconds);
+            source.AppendLine($"age = time - floor(time / {interval}) * {interval};");
         }
         else
         {
@@ -56,7 +58,7 @@ public static class FaustEmitter
         source.AppendLine("lfo_hold(hz, phase) = no.noise : ba.latch(os.oscrs(hz));");
         source.AppendLine();
 
-        EmitParameterControls(source, patch, warnings);
+        EmitParameterControls(source, patch, parameters);
         if (patch.Parameters.Count > 0)
         {
             source.AppendLine();
@@ -72,33 +74,40 @@ public static class FaustEmitter
         for (var i = 0; i < patch.Voices.Count; i++)
         {
             var name = $"voice_{i}";
-            EmitVoice(source, patch, patch.Voices[i], name, warnings);
+            EmitVoice(source, patch, patch.Voices[i], i, name, parameters, warnings);
             voices.Add(name);
         }
 
-        var final = $"({string.Join(" + ", voices)}) * {F(patch.Gain)}";
+        var final = $"({string.Join(" + ", voices)}) * {parameters.Expression("/patch/gain", patch.Gain)}";
         if (patch.SoftClip) final = $"softclip({final})";
-        if (patch.Parameters.Count > 0)
+        var unbound = parameters.UnboundParameterIds().ToList();
+        if (unbound.Count > 0)
         {
-            final = $"({final}) + 0.0 * ({string.Join(" + ", patch.Parameters.Select((_, i) => ParameterIdentifier(i)))})";
+            final = $"({final}) + 0.0 * ({string.Join(" + ", unbound)})";
         }
         source.AppendLine(options.Stereo ? $"process = {final} <: _,_;" : $"process = {final};");
         return new FaustExport(source.ToString(), warnings);
     }
 
-    private static void EmitParameterControls(StringBuilder source, SynthPatch patch, List<string> warnings)
+    private static void EmitParameterControls(StringBuilder source, SynthPatch patch, ParameterMap parameters)
     {
         for (var i = 0; i < patch.Parameters.Count; i++)
         {
             var parameter = patch.Parameters[i];
-            warnings.Add($"parameter {parameter.Path}: declared as a runtime control; target binding is not implemented yet");
             source.AppendLine($"{ParameterIdentifier(i)} = hslider(\"{Escape(parameter.Path)}\", {F(parameter.Default)}, {F(parameter.Min)}, {F(parameter.Max)}, {F(parameter.Step)}) : si.smoo;");
         }
     }
 
-    private static void EmitVoice(StringBuilder source, SynthPatch patch, Voice voice, string name, List<string> warnings)
+    private static void EmitVoice(
+        StringBuilder source,
+        SynthPatch patch,
+        Voice voice,
+        int voiceIndex,
+        string name,
+        ParameterMap parameters,
+        List<string> warnings)
     {
-        if (voice.Filter.LowPassResonance != 0)
+        if (voice.Filter.LowPassResonance != 0 || parameters.IsBound(VoiceField(voiceIndex, "filter/resonance")))
         {
             warnings.Add($"{name}: low-pass resonance is approximated with Faust resonlp");
         }
@@ -114,29 +123,46 @@ public static class FaustEmitter
         var lpfMod = ModExpressionForTarget(voice.Modulators, ModTarget.LowPass);
         var hpfMod = ModExpressionForTarget(voice.Modulators, ModTarget.HighPass);
 
-        var baseFreq = $"max({F(voice.Pitch.MinFrequencyHz)}, {F(voice.Oscillator.FrequencyHz)} * pow(2.0, {F(voice.Pitch.RampPerSecond)} * age + 0.5 * {F(voice.Pitch.DeltaRampPerSecond)} * age * age))";
-        var vibrato = voice.Pitch.VibratoDepth != 0 && voice.Pitch.VibratoHz > 0
-            ? $" * (1.0 + select2(age < {F(voice.Pitch.VibratoDelaySeconds)}, 0.0, sin(2.0 * ma.PI * (age - {F(voice.Pitch.VibratoDelaySeconds)}) * {F(voice.Pitch.VibratoHz)}) * {F(voice.Pitch.VibratoDepth)}))"
+        var minFreq = parameters.Expression(VoiceField(voiceIndex, "pitch/min_freq"), voice.Pitch.MinFrequencyHz);
+        var oscFreq = parameters.Expression(VoiceField(voiceIndex, "osc/freq"), voice.Oscillator.FrequencyHz);
+        var pitchRamp = parameters.Expression(VoiceField(voiceIndex, "pitch/ramp"), voice.Pitch.RampPerSecond);
+        var pitchDelta = parameters.Expression(VoiceField(voiceIndex, "pitch/delta"), voice.Pitch.DeltaRampPerSecond);
+        var vibratoDepth = parameters.Expression(VoiceField(voiceIndex, "pitch/vibrato"), voice.Pitch.VibratoDepth);
+        var vibratoHz = parameters.Expression(VoiceField(voiceIndex, "pitch/vibrato_hz"), voice.Pitch.VibratoHz);
+        var vibratoDelay = parameters.Expression(VoiceField(voiceIndex, "pitch/vibrato_delay"), voice.Pitch.VibratoDelaySeconds);
+        var baseFreq = $"max({minFreq}, {oscFreq} * pow(2.0, {pitchRamp} * age + 0.5 * {pitchDelta} * age * age))";
+        var hasVibrato = voice.Pitch.VibratoDepth != 0 && voice.Pitch.VibratoHz > 0 ||
+                         parameters.IsBound(VoiceField(voiceIndex, "pitch/vibrato")) ||
+                         parameters.IsBound(VoiceField(voiceIndex, "pitch/vibrato_hz"));
+        var vibrato = hasVibrato
+            ? $" * (1.0 + select2(age < {vibratoDelay}, 0.0, sin(2.0 * ma.PI * (age - {vibratoDelay}) * {vibratoHz}) * {vibratoDepth}))"
             : "";
         var arpeggio = voice.Arpeggio is null
             ? "1.0"
-            : $"select2(age < {F(voice.Arpeggio.DelaySeconds)}, {F(voice.Arpeggio.Multiplier)}, 1.0)";
+            : $"select2(age < {parameters.Expression(VoiceField(voiceIndex, "arpeggio/delay"), voice.Arpeggio.DelaySeconds)}, {parameters.Expression(VoiceField(voiceIndex, "arpeggio/multiplier"), voice.Arpeggio.Multiplier)}, 1.0)";
         var frequency = $"(({baseFreq}){vibrato}) * {arpeggio} * pow(2.0, patch_mod_pitch + {pitch})";
-        var dutyExpression = $"clip01({F(voice.Oscillator.Duty)} + {F(voice.Duty.RampPerSecond)} * age + patch_mod_duty + {duty})";
-        var fmIndex = $"max(0.0, {F(voice.Fm.Index)} + patch_mod_fm_index + {fmIndexMod}) * {FmDecay(voice.Fm.IndexDecaySeconds)}";
-        var oscillator = OscillatorExpression(patch, voice, frequency, dutyExpression, fmIndex);
-        var envelope = $"env({F(voice.Envelope.AttackSeconds)}, {F(voice.Envelope.SustainSeconds)}, {F(voice.Envelope.DecaySeconds)}, {F(voice.Envelope.Punch)})";
-        var tremolo = voice.Color.TremoloDepth > 0 && voice.Color.TremoloHz > 0
-            ? $" * (1.0 - {F(Math.Clamp(voice.Color.TremoloDepth, 0, 1))} * (0.5 + 0.5 * lfo_sin({F(voice.Color.TremoloHz)}, 0.0)))"
+        var dutyExpression = $"clip01({parameters.Expression(VoiceField(voiceIndex, "osc/duty"), voice.Oscillator.Duty)} + {parameters.Expression(VoiceField(voiceIndex, "duty/ramp"), voice.Duty.RampPerSecond)} * age + patch_mod_duty + {duty})";
+        var fmIndex = $"max(0.0, {parameters.Expression(VoiceField(voiceIndex, "fm/index"), voice.Fm.Index)} + patch_mod_fm_index + {fmIndexMod}) * {FmDecay(parameters.Expression(VoiceField(voiceIndex, "fm/decay"), voice.Fm.IndexDecaySeconds), voice.Fm.IndexDecaySeconds, parameters.IsBound(VoiceField(voiceIndex, "fm/decay")))}";
+        var oscillator = OscillatorExpression(patch, voice, voiceIndex, frequency, dutyExpression, fmIndex, parameters);
+        var envelope = $"env({parameters.Expression(VoiceField(voiceIndex, "env/attack"), voice.Envelope.AttackSeconds)}, {parameters.Expression(VoiceField(voiceIndex, "env/sustain"), voice.Envelope.SustainSeconds)}, {parameters.Expression(VoiceField(voiceIndex, "env/decay"), voice.Envelope.DecaySeconds)}, {parameters.Expression(VoiceField(voiceIndex, "env/punch"), voice.Envelope.Punch)})";
+        var tremoloDepth = parameters.Expression(VoiceField(voiceIndex, "color/tremolo"), Math.Clamp(voice.Color.TremoloDepth, 0, 1));
+        var tremoloHz = parameters.Expression(VoiceField(voiceIndex, "color/tremolo_hz"), voice.Color.TremoloHz);
+        var hasTremolo = voice.Color.TremoloDepth > 0 && voice.Color.TremoloHz > 0 ||
+                         parameters.IsBound(VoiceField(voiceIndex, "color/tremolo")) ||
+                         parameters.IsBound(VoiceField(voiceIndex, "color/tremolo_hz"));
+        var tremolo = hasTremolo
+            ? $" * (1.0 - {tremoloDepth} * (0.5 + 0.5 * lfo_sin({tremoloHz}, 0.0)))"
             : "";
-        var noiseMix = $"clip01({F(voice.Color.NoiseMix)} + patch_mod_noise + {noise})";
-        var driveExpression = $"clip01({F(voice.Color.Drive)} + patch_mod_drive + {drive})";
-        var foldExpression = $"clip01({F(voice.Color.Fold)} + patch_mod_fold + {fold})";
-        var formantMix = $"clip01({F(voice.Color.FormantMix)} + patch_mod_formant_mix + {formant})";
-        var lpf = $"clip01({F(voice.Filter.LowPass)} * (1.0 + {F(voice.Filter.LowPassRamp)} * age * 1.8) + patch_mod_lpf + {lpfMod})";
-        var hpf = $"clip01({F(voice.Filter.HighPass)} * (1.0 + {F(voice.Filter.HighPassRamp)} * age * 2.0) + patch_mod_hpf + {hpfMod})";
-        var lowpass = voice.Filter.LowPassResonance > 0
-            ? $"fi.resonlp(max(20.0, {lpf} * 18000.0), {F(0.7f + Math.Clamp(voice.Filter.LowPassResonance, 0, 1) * 18)}, 1.0)"
+        var noiseMix = $"clip01({parameters.Expression(VoiceField(voiceIndex, "color/noise"), voice.Color.NoiseMix)} + patch_mod_noise + {noise})";
+        var driveExpression = $"clip01({parameters.Expression(VoiceField(voiceIndex, "color/drive"), voice.Color.Drive)} + patch_mod_drive + {drive})";
+        var foldExpression = $"clip01({parameters.Expression(VoiceField(voiceIndex, "color/fold"), voice.Color.Fold)} + patch_mod_fold + {fold})";
+        var formantMix = $"clip01({parameters.Expression(VoiceField(voiceIndex, "color/formant_mix"), voice.Color.FormantMix)} + patch_mod_formant_mix + {formant})";
+        var lpf = $"clip01({parameters.Expression(VoiceField(voiceIndex, "filter/lpf"), voice.Filter.LowPass)} * (1.0 + {parameters.Expression(VoiceField(voiceIndex, "filter/lpf_ramp"), voice.Filter.LowPassRamp)} * age * 1.8) + patch_mod_lpf + {lpfMod})";
+        var hpf = $"clip01({parameters.Expression(VoiceField(voiceIndex, "filter/hpf"), voice.Filter.HighPass)} * (1.0 + {parameters.Expression(VoiceField(voiceIndex, "filter/hpf_ramp"), voice.Filter.HighPassRamp)} * age * 2.0) + patch_mod_hpf + {hpfMod})";
+        var hasResonance = voice.Filter.LowPassResonance > 0 || parameters.IsBound(VoiceField(voiceIndex, "filter/resonance"));
+        var resonance = parameters.Expression(VoiceField(voiceIndex, "filter/resonance"), voice.Filter.LowPassResonance);
+        var lowpass = hasResonance
+            ? $"fi.resonlp(max(20.0, {lpf} * 18000.0), 0.7 + clip01({resonance}) * 18.0, 1.0)"
             : $"fi.lowpass(1, max(20.0, {lpf} * 18000.0))";
 
         source.AppendLine($"{name}_freq = {frequency};");
@@ -145,9 +171,11 @@ public static class FaustEmitter
         source.AppendLine($"{name}_driven = ma.tanh({name}_colored * (1.0 + {driveExpression} * 12.0)) / ma.tanh(1.0 + {driveExpression} * 12.0);");
         source.AppendLine($"{name}_folded = {name}_driven * (1.0 - {foldExpression}) + fold({name}_driven * (1.0 + {foldExpression} * 3.5)) * {foldExpression};");
         source.AppendLine($"{name}_filtered = {name}_folded : {lowpass} : fi.highpass(1, max(5.0, ({hpf}) * ({hpf}) * 7000.0));");
-        if (voice.Phaser.OffsetSeconds != 0 || voice.Phaser.RampSecondsPerSecond != 0)
+        if (voice.Phaser.OffsetSeconds != 0 || voice.Phaser.RampSecondsPerSecond != 0 ||
+            parameters.IsBound(VoiceField(voiceIndex, "phaser/offset")) ||
+            parameters.IsBound(VoiceField(voiceIndex, "phaser/ramp")))
         {
-            var delay = $"min(2047.0, max(0.0, abs({F(voice.Phaser.OffsetSeconds)} + {F(voice.Phaser.RampSecondsPerSecond)} * age) * ma.SR))";
+            var delay = $"min(2047.0, max(0.0, abs({parameters.Expression(VoiceField(voiceIndex, "phaser/offset"), voice.Phaser.OffsetSeconds)} + {parameters.Expression(VoiceField(voiceIndex, "phaser/ramp"), voice.Phaser.RampSecondsPerSecond)} * age) * ma.SR))";
             source.AppendLine($"{name}_phased = {name}_filtered + ({name}_filtered : de.fdelay(2048, {delay}));");
         }
         else
@@ -155,18 +183,20 @@ public static class FaustEmitter
             source.AppendLine($"{name}_phased = {name}_filtered;");
         }
         source.AppendLine($"{name}_formants = {FormantExpression(name, voice)};");
-        source.AppendLine($"{name} = (({name}_phased * (1.0 - {formantMix}) + {name}_formants * {formantMix}) * {envelope}{tremolo} * max(0.0, 1.0 + patch_mod_gain + {gain}) * {F(voice.Gain)});");
+        source.AppendLine($"{name} = (({name}_phased * (1.0 - {formantMix}) + {name}_formants * {formantMix}) * {envelope}{tremolo} * max(0.0, 1.0 + patch_mod_gain + {gain}) * {parameters.Expression(VoiceField(voiceIndex, "gain"), voice.Gain)});");
         source.AppendLine();
     }
 
-    private static string OscillatorExpression(SynthPatch patch, Voice voice, string frequency, string duty, string fmIndex)
+    private static string OscillatorExpression(SynthPatch patch, Voice voice, int voiceIndex, string frequency, string duty, string fmIndex, ParameterMap parameters)
     {
         var hasFmMod = patch.Controls.Any(control => control.Modulator.Target == ModTarget.FmIndex) ||
-                       voice.Modulators.Any(modulator => modulator.Target == ModTarget.FmIndex);
+                       voice.Modulators.Any(modulator => modulator.Target == ModTarget.FmIndex) ||
+                       parameters.IsBound(VoiceField(voiceIndex, "fm/index")) ||
+                       parameters.IsBound(VoiceField(voiceIndex, "fm/decay"));
         var phaseMod = voice.Fm.Index > 0 || voice.Fm.IndexDecaySeconds > 0 || hasFmMod
-            ? $" + sin(2.0 * ma.PI * os.phasor(1.0, {frequency} * {F(Math.Max(voice.Fm.Ratio, 0))})) * ({fmIndex}) / ma.PI"
+            ? $" + sin(2.0 * ma.PI * os.phasor(1.0, {frequency} * max(0.0, {parameters.Expression(VoiceField(voiceIndex, "fm/ratio"), Math.Max(voice.Fm.Ratio, 0))}))) * ({fmIndex}) / ma.PI"
             : "";
-        var phase = $"wrap01(os.phasor(1.0, {frequency}) + {F(voice.Oscillator.Phase)}{phaseMod})";
+        var phase = $"wrap01(os.phasor(1.0, {frequency}) + {parameters.Expression(VoiceField(voiceIndex, "osc/phase"), voice.Oscillator.Phase)}{phaseMod})";
         return voice.Oscillator.Waveform switch
         {
             Waveform.Sine => $"sin(2.0 * ma.PI * {phase})",
@@ -241,9 +271,72 @@ public static class FaustEmitter
 
     private static string FmDecay(float seconds) => seconds > 0 ? $"exp(-age / {F(Math.Max(seconds, 0.0001f))})" : "1.0";
 
+    private static string FmDecay(string seconds, float defaultSeconds, bool isBound) =>
+        defaultSeconds > 0 || isBound ? $"exp(-age / max({seconds}, 0.0001))" : "1.0";
+
     private static string ParameterIdentifier(int index) => $"patch_param_{index}";
 
+    private static string VoiceField(int voiceIndex, string field) => $"/voices/{voiceIndex}/{field}";
+
     private static string Escape(string value) => value.Replace("\\", "\\\\").Replace("\"", "\\\"");
+
+    private sealed class ParameterMap
+    {
+        private readonly Dictionary<string, int> _parameterIndexes = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, string> _bindings = new(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _boundParameterPaths = new(StringComparer.OrdinalIgnoreCase);
+
+        public ParameterMap(SynthPatch patch, List<string> warnings)
+        {
+            for (var i = 0; i < patch.Parameters.Count; i++)
+            {
+                _parameterIndexes[patch.Parameters[i].Path] = i;
+            }
+
+            foreach (var binding in patch.ParameterBindings)
+            {
+                if (!_parameterIndexes.ContainsKey(binding.ParameterPath))
+                {
+                    warnings.Add($"parameter binding {binding.FieldPath}: unknown parameter `{binding.ParameterPath}`");
+                    continue;
+                }
+
+                _bindings[binding.FieldPath] = binding.ParameterPath;
+                _boundParameterPaths.Add(binding.ParameterPath);
+            }
+
+            foreach (var parameter in patch.Parameters)
+            {
+                if (!_boundParameterPaths.Contains(parameter.Path))
+                {
+                    warnings.Add($"parameter {parameter.Path}: declared but not bound to a patch field");
+                }
+            }
+        }
+
+        public bool IsBound(string fieldPath) => _bindings.ContainsKey(fieldPath);
+
+        public string Expression(string fieldPath, float fallback)
+        {
+            if (!_bindings.TryGetValue(fieldPath, out var parameterPath))
+            {
+                return F(fallback);
+            }
+
+            return ParameterIdentifier(_parameterIndexes[parameterPath]);
+        }
+
+        public IEnumerable<string> UnboundParameterIds()
+        {
+            foreach (var (path, index) in _parameterIndexes)
+            {
+                if (!_boundParameterPaths.Contains(path))
+                {
+                    yield return ParameterIdentifier(index);
+                }
+            }
+        }
+    }
 }
 
 public static class FaustCompiler

@@ -32,6 +32,7 @@ public static class PatchScript
         private readonly Dictionary<string, Dictionary<string, string>> _templates = new(StringComparer.OrdinalIgnoreCase);
         private readonly List<ControlLane> _controls = [];
         private readonly List<PatchParameter> _parameters = [];
+        private readonly List<ParameterBinding> _parameterBindings = [];
         private readonly Dictionary<string, string> _defaults = new(StringComparer.OrdinalIgnoreCase);
 
         public List<Voice> Voices { get; } = [];
@@ -44,6 +45,7 @@ public static class PatchScript
             Voices = Voices,
             Controls = _controls,
             Parameters = _parameters,
+            ParameterBindings = _parameterBindings,
             Repeat = Repeat,
             Gain = Gain,
             SoftClip = SoftClip
@@ -74,7 +76,7 @@ public static class PatchScript
                     _templates[name] = Without(fields, "name");
                     break;
                 case "voice":
-                    Voices.Add(ParseVoice(ExpandVoiceFields(fields, line), line));
+                    Voices.Add(ParseVoice(ExpandVoiceFields(fields, line), Voices.Count, line));
                     break;
                 case "mod":
                     AddModBus(fields, line);
@@ -113,16 +115,16 @@ public static class PatchScript
 
         private void ApplyPatch(IReadOnlyDictionary<string, string> fields, int line)
         {
-            if (TryGetAny(fields, ["gain", "g"], out var gain)) Gain = ParseFloat(gain, line);
+            if (TryGetAny(fields, ["gain", "g"], out var gain)) Gain = ParseBoundFloat(gain, line, Gain, "/patch/gain");
             if (TryGetAny(fields, ["soft_clip", "clip"], out var softClip)) SoftClip = ParseBool(softClip, line);
             if (TryGetAny(fields, ["repeat", "r", "rp"], out var repeat))
             {
-                var interval = ParseFloat(repeat, line);
+                var interval = ParseBoundFloat(repeat, line, 0.1f, "/patch/repeat");
                 Repeat = interval > 0 ? new Repeat(interval) : null;
             }
         }
 
-        private Voice ParseVoice(IReadOnlyDictionary<string, string> fields, int line)
+        private Voice ParseVoice(IReadOnlyDictionary<string, string> fields, int voiceIndex, int line)
         {
             var waveform = TryGetAny(fields, ["wave", "w"], out var wave) ? ParseWaveform(wave, line) : Waveform.Sine;
             var formants = TryGetAny(fields, ["formants", "fs"], out var formantSpec)
@@ -139,54 +141,54 @@ public static class PatchScript
             if (hasArpDelay || hasArpMult)
             {
                 arpeggio = new Arpeggio(
-                    ParseFloat(arpDelay ?? throw new PatchScriptException(line, "arpeggio needs arp_delay"), line),
-                    ParseFloat(arpMult ?? throw new PatchScriptException(line, "arpeggio needs arp_mult"), line));
+                    ParseBoundFloat(arpDelay ?? throw new PatchScriptException(line, "arpeggio needs arp_delay"), line, 0, VoiceField(voiceIndex, "arpeggio/delay")),
+                    ParseBoundFloat(arpMult ?? throw new PatchScriptException(line, "arpeggio needs arp_mult"), line, 1, VoiceField(voiceIndex, "arpeggio/multiplier")));
             }
 
             return new Voice
             {
                 Oscillator = new Oscillator(
                     waveform,
-                    GetFloat(fields, line, 440, "freq", "frequency", "f"),
-                    GetFloat(fields, line, 0.5f, "duty", "du"),
-                    GetFloat(fields, line, 0, "phase", "pa")),
+                    GetBoundFloat(fields, line, 440, VoiceField(voiceIndex, "osc/freq"), "freq", "frequency", "f"),
+                    GetBoundFloat(fields, line, 0.5f, VoiceField(voiceIndex, "osc/duty"), "duty", "du"),
+                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "osc/phase"), "phase", "pa")),
                 Envelope = new Envelope(
-                    GetFloat(fields, line, 0, "attack", "a"),
-                    GetFloat(fields, line, 0.1f, "sustain", "s"),
-                    GetFloat(fields, line, 0.1f, "decay", "d"),
-                    GetFloat(fields, line, 0, "punch", "pu")),
+                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "env/attack"), "attack", "a"),
+                    GetBoundFloat(fields, line, 0.1f, VoiceField(voiceIndex, "env/sustain"), "sustain", "s"),
+                    GetBoundFloat(fields, line, 0.1f, VoiceField(voiceIndex, "env/decay"), "decay", "d"),
+                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "env/punch"), "punch", "pu")),
                 Pitch = new PitchMotion(
-                    GetFloat(fields, line, 20, "min_freq", "min"),
-                    GetFloat(fields, line, 0, "pitch_ramp", "pr"),
-                    GetFloat(fields, line, 0, "pitch_delta", "pd", "pitch_dramp", "pdr"),
-                    GetFloat(fields, line, 0, "vibrato", "vi"),
-                    GetFloat(fields, line, 0, "vibrato_hz", "vh"),
-                    GetFloat(fields, line, 0, "vibrato_delay", "vd")),
-                Duty = new DutyMotion(GetFloat(fields, line, 0, "duty_ramp", "dur")),
+                    GetBoundFloat(fields, line, 20, VoiceField(voiceIndex, "pitch/min_freq"), "min_freq", "min"),
+                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "pitch/ramp"), "pitch_ramp", "pr"),
+                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "pitch/delta"), "pitch_delta", "pd", "pitch_dramp", "pdr"),
+                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "pitch/vibrato"), "vibrato", "vi"),
+                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "pitch/vibrato_hz"), "vibrato_hz", "vh"),
+                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "pitch/vibrato_delay"), "vibrato_delay", "vd")),
+                Duty = new DutyMotion(GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "duty/ramp"), "duty_ramp", "dur")),
                 Filter = new Filter(
-                    GetFloat(fields, line, 1, "lpf", "l"),
-                    GetFloat(fields, line, 0, "lpf_ramp", "lr"),
-                    GetFloat(fields, line, 0, "resonance", "res"),
-                    GetFloat(fields, line, 0, "hpf", "h"),
-                    GetFloat(fields, line, 0, "hpf_ramp", "hr")),
+                    GetBoundFloat(fields, line, 1, VoiceField(voiceIndex, "filter/lpf"), "lpf", "l"),
+                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "filter/lpf_ramp"), "lpf_ramp", "lr"),
+                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "filter/resonance"), "resonance", "res"),
+                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "filter/hpf"), "hpf", "h"),
+                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "filter/hpf_ramp"), "hpf_ramp", "hr")),
                 Phaser = new Phaser(
-                    GetFloat(fields, line, 0, "phaser", "ph"),
-                    GetFloat(fields, line, 0, "phaser_ramp", "phr")),
+                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "phaser/offset"), "phaser", "ph"),
+                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "phaser/ramp"), "phaser_ramp", "phr")),
                 Arpeggio = arpeggio,
                 Fm = new FrequencyModulation(
-                    GetFloat(fields, line, 1, "fm", "fmr", "fm_ratio"),
-                    GetFloat(fields, line, 0, "fm_index", "fmi"),
-                    GetFloat(fields, line, 0, "fm_decay", "fmd")),
+                    GetBoundFloat(fields, line, 1, VoiceField(voiceIndex, "fm/ratio"), "fm", "fmr", "fm_ratio"),
+                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "fm/index"), "fm_index", "fmi"),
+                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "fm/decay"), "fm_decay", "fmd")),
                 Color = new VoiceColor(
-                    GetFloat(fields, line, 0, "noise", "nz"),
-                    GetFloat(fields, line, 0, "drive", "drv"),
-                    GetFloat(fields, line, 0, "fold", "fl"),
-                    GetFloat(fields, line, 0, "tremolo", "tr"),
-                    GetFloat(fields, line, 0, "tremolo_hz", "th"),
-                    GetFloat(fields, line, 0, "formant_mix", "fmix")),
+                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "color/noise"), "noise", "nz"),
+                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "color/drive"), "drive", "drv"),
+                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "color/fold"), "fold", "fl"),
+                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "color/tremolo"), "tremolo", "tr"),
+                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "color/tremolo_hz"), "tremolo_hz", "th"),
+                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "color/formant_mix"), "formant_mix", "fmix")),
                 Formants = formants,
                 Modulators = modulators,
-                Gain = GetFloat(fields, line, 0.2f, "gain", "g")
+                Gain = GetBoundFloat(fields, line, 0.2f, VoiceField(voiceIndex, "gain"), "gain", "g")
             };
         }
 
@@ -284,6 +286,42 @@ public static class PatchScript
                 GetAny(fields, ["rate", "automation", "automation_rate"], "control"),
                 GetAny(fields, ["notes", "note"], "")));
         }
+
+        private float GetBoundFloat(
+            IReadOnlyDictionary<string, string> fields,
+            int line,
+            float fallback,
+            string fieldPath,
+            params string[] keys) =>
+            TryGetAny(fields, keys, out var value) ? ParseBoundFloat(value, line, fallback, fieldPath) : fallback;
+
+        private float ParseBoundFloat(string value, int line, float fallback, string fieldPath)
+        {
+            if (!value.StartsWith('@'))
+            {
+                return ParseFloat(value, line);
+            }
+
+            var parameterPath = value[1..];
+            if (!parameterPath.StartsWith('/'))
+            {
+                throw new PatchScriptException(line, "parameter reference must use `@/path`");
+            }
+            var parameter = _parameters.FirstOrDefault(candidate => candidate.Path.Equals(parameterPath, StringComparison.OrdinalIgnoreCase));
+            if (parameter is null)
+            {
+                throw new PatchScriptException(line, $"unknown parameter `{parameterPath}`");
+            }
+            if (_parameterBindings.Any(binding => binding.FieldPath.Equals(fieldPath, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new PatchScriptException(line, $"duplicate parameter binding for `{fieldPath}`");
+            }
+
+            _parameterBindings.Add(new ParameterBinding(fieldPath, parameter.Path));
+            return parameter.Default;
+        }
+
+        private static string VoiceField(int voiceIndex, string field) => $"/voices/{voiceIndex}/{field}";
 
         private void AddSfxrPatch(SfxrParams parameters)
         {
