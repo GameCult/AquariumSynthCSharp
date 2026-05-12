@@ -5,8 +5,12 @@ targets, not through speculative field sprawl. `state/spine.yaml` and
 `docs/reference-synth-roadmap.md` are the handoff surfaces for agents working on
 the synth library while Aquarium work continues elsewhere.
 
-The next likely slice is DX7/Dexed:
+The next likely slice is parameter contracts, then DX7/Dexed:
 
+- Add explicit patch parameter contracts: stable path, label, default, min, max,
+  step, unit/scale, and automation-rate notes.
+- Update Faust emission so declared parameters become runtime controls instead
+  of baked constants.
 - Add neutral reference model contracts with provenance/license/hash fields.
 - Implement a DX7 SysEx parser skeleton for single voices and cartridge payloads.
 - Extract operator topology, envelopes, ratios, feedback, levels, LFO, and pitch

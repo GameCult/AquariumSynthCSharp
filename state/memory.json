@@ -41,6 +41,11 @@
     ],
     "rule": "Add DSL abstractions only when reference rebuilds prove the missing invariant."
   },
+  "runtime_parameters": {
+    "rule": "Patch parameters are runtime controls, not compile-time constants.",
+    "faust_surface": "Faust UI controls expose parameter zones that hosts can update with setParamValue/getParamValue-style APIs.",
+    "aquarium_requirement": "Aquarium DSL patches must be able to declare stable exposed parameters with path/default/min/max/step metadata so callers can vary sound without recompiling."
+  },
   "last_verified": {
     "command": "dotnet test",
     "result": "15 passed",

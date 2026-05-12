@@ -23,6 +23,9 @@ because a field name seemed maybe useful at 2 AM.
 
 - Aquarium owns its patch graph. External synths are reference targets, not
 runtime dependencies.
+- Expressive parameters are part of the patch contract. Callers must be able to
+  change exposed values at runtime through the hosted DSP parameter API instead
+  of recompiling the patch.
 - Reference importers must preserve source provenance, license status, and the
 source format hash.
 - Tests may compare against rendered fixtures, extracted parameter topology, or
@@ -182,6 +185,7 @@ public sealed record ReferencePatch(
     string Name,
     ReferenceSource Source,
     IReadOnlyList<ReferenceFeature> Features,
+    IReadOnlyList<PatchParameter> Parameters,
     string? AquariumScript);
 
 public sealed record ReferenceSource(
@@ -190,22 +194,63 @@ public sealed record ReferenceSource(
     string License,
     string Hash,
     string Notes);
+
+public sealed record PatchParameter(
+    string Path,
+    string Label,
+    float Default,
+    float Min,
+    float Max,
+    float Step,
+    string Unit,
+    string AutomationRate,
+    string Notes);
 ```
 
-This keeps source authority visible. A reference can be "known target, not yet
-translated" without pretending it is an Aquarium patch.
+This keeps source authority and runtime control authority visible. A reference
+can be "known target, not yet translated" without pretending it is an Aquarium
+patch, and an Aquarium patch can say which values callers may vary without
+changing graph shape.
+
+## Runtime Parameter Surface
+
+Faust supports this directly through UI controls such as `hslider`, `vslider`,
+`nentry`, `button`, and `checkbox`. Hosted DSP code can expose a parameter map
+and update control zones with `setParamValue`/`getParamValue` style APIs, so
+Aquarium should compile once for a graph shape and then push parameter values at
+runtime.
+
+Aquarium DSL needs an explicit parameter declaration surface, likely separate
+from modulation buses:
+
+```text
+param name=brightness path=/macro/brightness default=0.45 min=0 max=1 step=0.001
+param name=strike path=/exciter/strike default=0.2 min=0 max=1 step=0.001
+```
+
+Lowering rules:
+
+- Parameter paths must be stable across recompiles unless the script changes the
+  declared path.
+- Parameters lower to Faust controls with the declared default, range, and step.
+- Audio-sensitive parameters should be smoothed at the signal crossing.
+- Modulators and exposed parameters may target the same semantic value, but the
+  combined authority must be explicit.
+- Recompile only when the graph, routing, oscillator type, operator topology, or
+  other structural shape changes.
 
 ## Work Order
 
-1. Create reference model contracts and tests.
-2. Add DX7 SysEx parser and feature extraction.
-3. Add two DX7-derived Aquarium DSL rebuilds.
-4. Add audio fixture workflow for rendered references.
-5. Add Zyn XML feature extraction.
-6. Add Faust reference catalog entries and compile checks.
-7. Reassess DSL shape: keep voice DSL, split lower-level graph DSL, or add
+1. Create reference model contracts, parameter contracts, and tests.
+2. Add explicit patch parameter declarations and Faust parameter emission.
+3. Add DX7 SysEx parser and feature extraction.
+4. Add two DX7-derived Aquarium DSL rebuilds with exposed macro controls.
+5. Add audio fixture workflow for rendered references.
+6. Add Zyn XML feature extraction.
+7. Add Faust reference catalog entries and compile checks.
+8. Reassess DSL shape: keep voice DSL, split lower-level graph DSL, or add
    explicit operator/routing sublanguage.
-8. Only then touch Surge or Cardinal.
+9. Only then touch Surge or Cardinal.
 
 ## Rejected Shortcuts
 
