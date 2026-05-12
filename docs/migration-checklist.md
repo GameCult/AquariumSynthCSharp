@@ -10,15 +10,16 @@ there.
 - Patch graph model: voices, envelopes, pitch motion, duty motion, filters,
   phasers, arpeggios, FM, color shaping, formants, repeat, and control lanes.
 - Patch script parser: `patch`, `default`, `def`, `voice`, `mod`/`bus`, and
-  `lfo`/`control`.
-- Rust DSL shorthand aliases used by the golfed scripts, including `p`, `d`,
+  `lfo`/`control`, including field-only continuation lines for readable
+  multi-line patches.
+- DSL shorthand aliases kept for authoring convenience, including `p`, `d`,
   `v`, `u`, `w`, `f`, `g`, `s`, `pr`, `pdr`, `du`, `dur`, `l`, `h`, `drv`,
   `fl`, `fmix`, `fmi`, `mods`, and `m`.
 - Modulation routing in both direct style (`mod n=wob g=.4 l=.5`) and routed
   style (`bus n=sway to=g:.1,l:-.2,fmix:.3`).
-- Built-in script catalog for classic SFXR, classic 808, FM bell, and wobble
-  bass primitive golf scripts.
-- Abstract SFXR golf script using defaults and templates.
+- Built-in reference script catalog for classic SFXR, BFXR-flavored effects,
+  classic 808, FM bell, and wobble bass patches.
+- Abstract SFXR reference script using defaults and templates.
 - SFXR parameter presets, mutation, shorthand atoms, and SFXR-to-patch mapping.
 - Aquarium preset patches: pluck, heartbeat, voice, and SFXR named bridge.
 - Patch script scoring: terse, readability, and balanced metrics.
@@ -26,7 +27,7 @@ there.
   features, distance metrics, and score.
 - Faust source emitter and installed-compiler wrapper for C, C++, C#, and Rust
   target code generation.
-- Tests that parse/export all built-in primitive scripts and validate Faust
+- Tests that parse/export all built-in reference scripts and validate Faust
   source when Faust is installed.
 
 ## Still Deliberate

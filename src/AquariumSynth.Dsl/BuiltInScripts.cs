@@ -3,13 +3,47 @@ namespace AquariumSynth.Dsl;
 public static class BuiltInScripts
 {
     public const string PatchScriptExample = """
-        # One command per line. Comments start with #.
-        patch gain=0.7 soft_clip=true
-        mod name=wobble wave=sine hz=5 pitch=0.01 formant=0.08
-        bus n=shimmer w=triangle hz=2 to=gain:0.08,lpf:-0.04,fmix:0.12
-        voice wave=sine freq=220 gain=0.12 attack=0.002 sustain=0.03 decay=0.2 vibrato=0.02 vibrato_hz=5 formants=620:90:1,1040:150:0.8 formant_mix=0.45 mods=formant:sine:2:0.12,pitch:triangle:3:0.015
-        voice wave=triangle freq=440 gain=0.04 attack=0 sustain=0.02 decay=0.18 lpf=0.7 hpf=0.02 mods=gain:sine:8:0.18,lpf:hold:12:0.08
-        sfxr preset=laser mutate_seed=9 mutate=0.01
+        # Commands can span lines. A field-only line belongs to the command above it.
+        patch
+            gain=0.7
+            soft_clip=true
+
+        mod name=wobble
+            wave=sine
+            hz=5
+            pitch=0.01
+            formant_mix=0.08
+
+        bus name=shimmer
+            wave=triangle
+            hz=2
+            to=gain:0.08,lpf:-0.04,formant_mix:0.12
+
+        voice
+            wave=sine
+            freq=220
+            gain=0.12
+            attack=0.002
+            sustain=0.03
+            decay=0.2
+            vibrato=0.02
+            vibrato_hz=5
+            formants=620:90:1,1040:150:0.8
+            formant_mix=0.45
+
+        voice
+            wave=triangle
+            freq=440
+            gain=0.04
+            sustain=0.02
+            decay=0.18
+            lpf=0.7
+            hpf=0.02
+
+        sfxr
+            preset=laser
+            mutate_seed=9
+            mutate=0.01
         """;
 
     public static readonly IReadOnlyList<string> ClassicSfxrNames =
@@ -27,63 +61,553 @@ public static class BuiltInScripts
 
     public static readonly IReadOnlyList<(string Name, string Script)> ClassicSfxrPrimitiveGolfScripts =
     [
-        ("pickup", "v w=sq f=148.7934 g=.22 s=.01451247166 d=.1306122449 pu=.45 drv=.201 ad=.081844 am=1.116121255"),
-        ("laser", "v w=saw f=229.0554 g=.22 s=.08185941043 d=.07346938776 pr=.703836 du=.31 dur=.056 h=.04 ph=.0001458 phr=-.000504 drv=.12"),
-        ("explosion", "p r=.174744;v w=n f=20 g=.22 s=.1907029478 d=.293877551 pu=.52 pr=.0320625 ph=-.0008712 phr=-.00035 vi=.11 vh=3.4112 nz=.35 drv=.2136 tr=.0264 th=13.04"),
-        ("powerup", "p r=.11315;v w=sin f=57.5946 g=.22 s=.1306122449 d=.1777777778 pr=-.208544 vi=.09 vh=3.9602 drv=.12 tr=.0216 th=13.94"),
-        ("hit", "v w=n f=51.4206 g=.22 s=.00566893424 d=.09070294785 pr=1.050624 h=.12 nz=.35 drv=.12"),
-        ("jump", "v w=sq f=78.2334 g=.22 s=.1097505669 d=.07346938776 pr=-.101156 du=.38 l=.72 h=.05 drv=.12"),
-        ("blip", "v w=sin f=78.2334 g=.22 s=.03832199546 d=.01451247166 h=.1 drv=.12")
+        ("pickup", """
+            voice
+                wave=square
+                freq=148.7934
+                gain=0.22
+                sustain=0.01451247166
+                decay=0.1306122449
+                punch=0.45
+                drive=0.201
+                arp_delay=0.081844
+                arp_mult=1.116121255
+            """),
+        ("laser", """
+            voice
+                wave=saw
+                freq=229.0554
+                gain=0.22
+                sustain=0.08185941043
+                decay=0.07346938776
+                pitch_ramp=0.703836
+                duty=0.31
+                duty_ramp=0.056
+                hpf=0.04
+                phaser=0.0001458
+                phaser_ramp=-0.000504
+                drive=0.12
+            """),
+        ("explosion", """
+            patch repeat=0.174744
+            voice
+                wave=noise
+                freq=20
+                gain=0.22
+                sustain=0.1907029478
+                decay=0.293877551
+                punch=0.52
+                pitch_ramp=0.0320625
+                phaser=-0.0008712
+                phaser_ramp=-0.00035
+                vibrato=0.11
+                vibrato_hz=3.4112
+                noise=0.35
+                drive=0.2136
+                tremolo=0.0264
+                tremolo_hz=13.04
+            """),
+        ("powerup", """
+            patch repeat=0.11315
+            voice
+                wave=sine
+                freq=57.5946
+                gain=0.22
+                sustain=0.1306122449
+                decay=0.1777777778
+                pitch_ramp=-0.208544
+                vibrato=0.09
+                vibrato_hz=3.9602
+                drive=0.12
+                tremolo=0.0216
+                tremolo_hz=13.94
+            """),
+        ("hit", """
+            voice
+                wave=noise
+                freq=51.4206
+                gain=0.22
+                sustain=0.00566893424
+                decay=0.09070294785
+                pitch_ramp=1.050624
+                hpf=0.12
+                noise=0.35
+                drive=0.12
+            """),
+        ("jump", """
+            voice
+                wave=square
+                freq=78.2334
+                gain=0.22
+                sustain=0.1097505669
+                decay=0.07346938776
+                pitch_ramp=-0.101156
+                duty=0.38
+                lpf=0.72
+                hpf=0.05
+                drive=0.12
+            """),
+        ("blip", """
+            voice
+                wave=sine
+                freq=78.2334
+                gain=0.22
+                sustain=0.03832199546
+                decay=0.01451247166
+                hpf=0.1
+                drive=0.12
+            """)
     ];
 
-    public const string ClassicSfxrAbstractGolfScript =
-        "d g=.22 drv=.12;" +
-        "def name=N w=n nz=.35;" +
-        "v w=sq f=148.7934 s=.01451247166 d=.1306122449 pu=.45 drv=.201 ad=.081844 am=1.116121255;" +
-        "v w=saw f=229.0554 s=.08185941043 d=.07346938776 pr=.703836 du=.31 dur=.056 h=.04 ph=.0001458 phr=-.000504;" +
-        "p r=.174744;v u=N f=20 s=.1907029478 d=.293877551 pu=.52 pr=.0320625 ph=-.0008712 phr=-.00035 vi=.11 vh=3.4112 drv=.2136 tr=.0264 th=13.04;" +
-        "p r=.11315;v w=sin f=57.5946 s=.1306122449 d=.1777777778 pr=-.208544 vi=.09 vh=3.9602 tr=.0216 th=13.94;" +
-        "v u=N f=51.4206 s=.00566893424 d=.09070294785 pr=1.050624 h=.12;" +
-        "v w=sq f=78.2334 s=.1097505669 d=.07346938776 pr=-.101156 du=.38 l=.72 h=.05;" +
-        "v w=sin f=78.2334 s=.03832199546 d=.01451247166 h=.1";
+    public const string ClassicSfxrAbstractGolfScript = """
+        defaults gain=0.22 drive=0.12
+        template name=Noise
+            wave=noise
+            noise=0.35
+
+        voice
+            wave=square
+            freq=148.7934
+            sustain=0.01451247166
+            decay=0.1306122449
+            punch=0.45
+            drive=0.201
+            arp_delay=0.081844
+            arp_mult=1.116121255
+
+        voice
+            wave=saw
+            freq=229.0554
+            sustain=0.08185941043
+            decay=0.07346938776
+            pitch_ramp=0.703836
+            duty=0.31
+            duty_ramp=0.056
+            hpf=0.04
+            phaser=0.0001458
+            phaser_ramp=-0.000504
+
+        patch repeat=0.174744
+        voice
+            use=Noise
+            freq=20
+            sustain=0.1907029478
+            decay=0.293877551
+            punch=0.52
+            pitch_ramp=0.0320625
+            phaser=-0.0008712
+            phaser_ramp=-0.00035
+            vibrato=0.11
+            vibrato_hz=3.4112
+            drive=0.2136
+            tremolo=0.0264
+            tremolo_hz=13.04
+
+        patch repeat=0.11315
+        voice
+            wave=sine
+            freq=57.5946
+            sustain=0.1306122449
+            decay=0.1777777778
+            pitch_ramp=-0.208544
+            vibrato=0.09
+            vibrato_hz=3.9602
+            tremolo=0.0216
+            tremolo_hz=13.94
+
+        voice
+            use=Noise
+            freq=51.4206
+            sustain=0.00566893424
+            decay=0.09070294785
+            pitch_ramp=1.050624
+            hpf=0.12
+
+        voice
+            wave=square
+            freq=78.2334
+            sustain=0.1097505669
+            decay=0.07346938776
+            pitch_ramp=-0.101156
+            duty=0.38
+            lpf=0.72
+            hpf=0.05
+
+        voice
+            wave=sine
+            freq=78.2334
+            sustain=0.03832199546
+            decay=0.01451247166
+            hpf=0.1
+        """;
+
+    public static readonly IReadOnlyList<string> BfxrNames = ["coin-spark", "shield-pop", "ui-bloom", "portal-chirp"];
+
+    public static readonly IReadOnlyList<(string Name, string Script)> BfxrReferenceScripts =
+    [
+        ("coin-spark", """
+            defaults
+                wave=sine
+                gain=0.18
+                attack=0
+                sustain=0.022
+                decay=0.42
+                hpf=0.05
+                drive=0.08
+
+            voice
+                freq=1180
+                fm=5
+                fm_index=3.2
+                fm_decay=0.16
+
+            voice
+                freq=1770
+                gain=0.09
+                fm=7
+                fm_index=1.7
+                fm_decay=0.11
+            """),
+        ("shield-pop", """
+            defaults
+                wave=triangle
+                gain=0.2
+                sustain=0.04
+                decay=0.36
+                punch=0.32
+                lpf=0.68
+                hpf=0.03
+                drive=0.12
+
+            voice
+                freq=260
+                pitch_ramp=-0.75
+                vibrato=0.04
+                vibrato_hz=7.2
+
+            voice
+                wave=noise
+                freq=900
+                gain=0.05
+                sustain=0.018
+                decay=0.16
+                noise=0.7
+                hpf=0.4
+            """),
+        ("ui-bloom", """
+            patch repeat=0.18
+            defaults
+                wave=sine
+                gain=0.12
+                sustain=0.05
+                decay=0.5
+                punch=0.22
+                lpf=0.78
+                drive=0.06
+
+            voice
+                freq=392
+                pitch_ramp=0.18
+                arp_delay=0.08
+                arp_mult=1.25
+
+            voice
+                freq=588
+                gain=0.06
+                attack=0.004
+                sustain=0.04
+                decay=0.38
+            """),
+        ("portal-chirp", """
+            defaults
+                wave=saw
+                freq=320
+                gain=0.14
+                sustain=0.09
+                decay=0.28
+                pitch_ramp=0.85
+                duty=0.38
+                hpf=0.08
+                lpf=0.72
+                drive=0.16
+                fold=0.08
+
+            mod name=waver
+                wave=sine
+                hz=9
+                pitch=0.018
+                duty=0.06
+                lpf=0.08
+
+            voice
+            voice wave=square freq=640 gain=0.05 duty=0.44
+            """)
+    ];
 
     public static readonly IReadOnlyList<string> Classic808Names = ["kick", "snare", "clap", "hat", "tom", "cowbell"];
 
     public static readonly IReadOnlyList<(string Name, string Script)> Classic808PrimitiveGolfScripts =
     [
-        ("kick", "d w=sin g=.8 drv=.18;v f=58 s=.045 d=.42 pu=.65 pr=-3.8 min=32 l=.85"),
-        ("snare", "d drv=.12;def n=N w=n nz=.85 h=.45 l=.55;v w=sin f=180 g=.08 s=.02 d=.12 pr=-1.2;v u=N f=140 g=.55 s=.035 d=.2"),
-        ("clap", "d w=n nz=.95 h=.55 l=.42 g=.22 d=.11 drv=.1;v f=1800 s=.018 ph=.004;v f=2200 s=.022 ph=.008;v f=2600 s=.028 ph=.012"),
-        ("hat", "d h=.9 l=.24 drv=.05;v w=n f=9000 g=.16 s=.006 d=.055 nz=1;v w=sq f=6800 g=.045 s=.005 d=.04"),
-        ("tom", "d w=sin g=.55 drv=.12;v f=115 s=.055 d=.34 pu=.28 pr=-1.45 min=62 l=.78"),
-        ("cowbell", "d w=sq h=.18 l=.82 drv=.16;v f=540 g=.16 s=.05 d=.18 du=.43;v f=800 g=.12 s=.045 d=.16 du=.47")
+        ("kick", """
+            defaults wave=sine gain=0.8 drive=0.18
+            voice
+                freq=58
+                sustain=0.045
+                decay=0.42
+                punch=0.65
+                pitch_ramp=-3.8
+                min_freq=32
+                lpf=0.85
+            """),
+        ("snare", """
+            defaults drive=0.12
+            template name=Noise
+                wave=noise
+                noise=0.85
+                hpf=0.45
+                lpf=0.55
+
+            voice
+                wave=sine
+                freq=180
+                gain=0.08
+                sustain=0.02
+                decay=0.12
+                pitch_ramp=-1.2
+
+            voice
+                use=Noise
+                freq=140
+                gain=0.55
+                sustain=0.035
+                decay=0.2
+            """),
+        ("clap", """
+            defaults
+                wave=noise
+                noise=0.95
+                hpf=0.55
+                lpf=0.42
+                gain=0.22
+                decay=0.11
+                drive=0.1
+
+            voice freq=1800 sustain=0.018 phaser=0.004
+            voice freq=2200 sustain=0.022 phaser=0.008
+            voice freq=2600 sustain=0.028 phaser=0.012
+            """),
+        ("hat", """
+            defaults hpf=0.9 lpf=0.24 drive=0.05
+            voice
+                wave=noise
+                freq=9000
+                gain=0.16
+                sustain=0.006
+                decay=0.055
+                noise=1
+
+            voice
+                wave=square
+                freq=6800
+                gain=0.045
+                sustain=0.005
+                decay=0.04
+            """),
+        ("tom", """
+            defaults wave=sine gain=0.55 drive=0.12
+            voice
+                freq=115
+                sustain=0.055
+                decay=0.34
+                punch=0.28
+                pitch_ramp=-1.45
+                min_freq=62
+                lpf=0.78
+            """),
+        ("cowbell", """
+            defaults wave=square hpf=0.18 lpf=0.82 drive=0.16
+            voice
+                freq=540
+                gain=0.16
+                sustain=0.05
+                decay=0.18
+                duty=0.43
+
+            voice
+                freq=800
+                gain=0.12
+                sustain=0.045
+                decay=0.16
+                duty=0.47
+            """)
     ];
 
     public static readonly IReadOnlyList<string> FmBellNames = ["bell", "chime", "coin", "gong"];
 
     public static readonly IReadOnlyList<(string Name, string Script)> FmBellPrimitiveGolfScripts =
     [
-        ("bell", "d w=sin g=.24 a=.002 s=.04 d=1.2 l=.9;def n=O fm=4.1 fmd=.55;v u=O f=440 fmi=5.8;v u=O f=880 g=.08 fmi=2.4"),
-        ("chime", "d w=sin g=.18 a=.001 s=.025 d=.9 h=.02;def n=O fm=3 fmd=.38;v u=O f=660 fmi=4.2;v u=O f=990 g=.07 fmi=2.1"),
-        ("coin", "d w=sin a=0 s=.02 d=.45 h=.04 drv=.08;v f=1200 g=.18 fm=5 fmi=3.4 fmd=.18;v f=1800 g=.09 fm=7 fmi=1.8 fmd=.12"),
-        ("gong", "d w=sin a=.003 s=.08 d=1.6 l=.82 drv=.1;v f=196 g=.24 fm=2.414 fmi=7.2 fmd=.9;v f=311 g=.12 fm=3.73 fmi=4.1 fmd=.7")
+        ("bell", """
+            defaults wave=sine gain=0.24 attack=0.002 sustain=0.04 decay=1.2 lpf=0.9
+            template name=Overtone
+                fm=4.1
+                fm_decay=0.55
+
+            voice use=Overtone freq=440 fm_index=5.8
+            voice use=Overtone freq=880 gain=0.08 fm_index=2.4
+            """),
+        ("chime", """
+            defaults wave=sine gain=0.18 attack=0.001 sustain=0.025 decay=0.9 hpf=0.02
+            template name=Overtone
+                fm=3
+                fm_decay=0.38
+
+            voice use=Overtone freq=660 fm_index=4.2
+            voice use=Overtone freq=990 gain=0.07 fm_index=2.1
+            """),
+        ("coin", """
+            defaults wave=sine attack=0 sustain=0.02 decay=0.45 hpf=0.04 drive=0.08
+            voice freq=1200 gain=0.18 fm=5 fm_index=3.4 fm_decay=0.18
+            voice freq=1800 gain=0.09 fm=7 fm_index=1.8 fm_decay=0.12
+            """),
+        ("gong", """
+            defaults wave=sine attack=0.003 sustain=0.08 decay=1.6 lpf=0.82 drive=0.1
+            voice freq=196 gain=0.24 fm=2.414 fm_index=7.2 fm_decay=0.9
+            voice freq=311 gain=0.12 fm=3.73 fm_index=4.1 fm_decay=0.7
+            """)
     ];
 
     public static readonly IReadOnlyList<string> WobbleBassNames = ["talker", "growl", "yoy", "neuro"];
 
     public static readonly IReadOnlyList<(string Name, string Script)> WobbleBassPrimitiveGolfScripts =
     [
-        ("talker", "d w=saw f=55 g=.18 s=.8 d=.25 l=.34 h=.02 drv=.3 fl=.08 fm=2 fmi=.8 fmd=.7 fs=520:90:.7,1250:170:1,2600:320:.45 fmix=.35;mod n=wob hz=4 w=tri g=.42 l=.48 fmix=.38 fmi=1.6 drv=.2 fl=.14;v;v f=110 g=.08 du=.42"),
-        ("growl", "d w=saw f=44 g=.2 s=.7 d=.3 l=.28 h=.01 drv=.42 fl=.18 fm=1.5 fmi=1.2 fmd=.45 nz=.05;mod n=wob hz=6 w=sin g=.32 l=.55 p=.035 drv=.28 fl=.22 nz=.08 fmi=2.2;v;v w=sq f=88 g=.09 du=.36"),
-        ("yoy", "d w=sq f=62 g=.16 s=.65 d=.22 l=.3 h=.03 drv=.25 fm=3 fmi=.7 fmd=.5 fs=400:80:.6,900:120:1,2100:260:.4 fmix=.28;mod n=wob hz=5 w=sq g=.5 l=.5 fmix=.45 p=.025 du=.08;v;v w=saw f=124 g=.07"),
-        ("neuro", "d w=saw f=49 g=.16 s=.75 d=.28 l=.25 h=.04 drv=.38 fl=.24 fm=2.7 fmi=1.5 fmd=.35 nz=.04;mod n=wob hz=7 w=hold g=.28 l=.52 p=.04 drv=.25 fl=.3 nz=.1 fmi=2.8;v;v w=tri f=147 g=.06")
+        ("talker", """
+            defaults
+                wave=saw
+                freq=55
+                gain=0.18
+                sustain=0.8
+                decay=0.25
+                lpf=0.34
+                hpf=0.02
+                drive=0.3
+                fold=0.08
+                fm=2
+                fm_index=0.8
+                fm_decay=0.7
+                formants=520:90:0.7,1250:170:1,2600:320:0.45
+                formant_mix=0.35
+
+            mod name=wobble
+                hz=4
+                wave=triangle
+                gain=0.42
+                lpf=0.48
+                formant_mix=0.38
+                fm_index=1.6
+                drive=0.2
+                fold=0.14
+
+            voice
+            voice freq=110 gain=0.08 duty=0.42
+            """),
+        ("growl", """
+            defaults
+                wave=saw
+                freq=44
+                gain=0.2
+                sustain=0.7
+                decay=0.3
+                lpf=0.28
+                hpf=0.01
+                drive=0.42
+                fold=0.18
+                fm=1.5
+                fm_index=1.2
+                fm_decay=0.45
+                noise=0.05
+
+            mod name=wobble
+                hz=6
+                wave=sine
+                gain=0.32
+                lpf=0.55
+                pitch=0.035
+                drive=0.28
+                fold=0.22
+                noise=0.08
+                fm_index=2.2
+
+            voice
+            voice wave=square freq=88 gain=0.09 duty=0.36
+            """),
+        ("yoy", """
+            defaults
+                wave=square
+                freq=62
+                gain=0.16
+                sustain=0.65
+                decay=0.22
+                lpf=0.3
+                hpf=0.03
+                drive=0.25
+                fm=3
+                fm_index=0.7
+                fm_decay=0.5
+                formants=400:80:0.6,900:120:1,2100:260:0.4
+                formant_mix=0.28
+
+            mod name=wobble
+                hz=5
+                wave=square
+                gain=0.5
+                lpf=0.5
+                formant_mix=0.45
+                pitch=0.025
+                duty=0.08
+
+            voice
+            voice wave=saw freq=124 gain=0.07
+            """),
+        ("neuro", """
+            defaults
+                wave=saw
+                freq=49
+                gain=0.16
+                sustain=0.75
+                decay=0.28
+                lpf=0.25
+                hpf=0.04
+                drive=0.38
+                fold=0.24
+                fm=2.7
+                fm_index=1.5
+                fm_decay=0.35
+                noise=0.04
+
+            mod name=wobble
+                hz=7
+                wave=hold
+                gain=0.28
+                lpf=0.52
+                pitch=0.04
+                drive=0.25
+                fold=0.3
+                noise=0.1
+                fm_index=2.8
+
+            voice
+            voice wave=triangle freq=147 gain=0.06
+            """)
     ];
 
-    public static IEnumerable<(string Family, string Name, string Script)> PrimitiveGolfScripts()
+    public static IEnumerable<(string Family, string Name, string Script)> ReferenceScripts()
     {
         foreach (var item in ClassicSfxrPrimitiveGolfScripts) yield return ("sfxr", item.Name, item.Script);
+        foreach (var item in BfxrReferenceScripts) yield return ("bfxr", item.Name, item.Script);
         foreach (var item in Classic808PrimitiveGolfScripts) yield return ("808", item.Name, item.Script);
         foreach (var item in FmBellPrimitiveGolfScripts) yield return ("fm-bell", item.Name, item.Script);
         foreach (var item in WobbleBassPrimitiveGolfScripts) yield return ("wobble-bass", item.Name, item.Script);
     }
+
+    public static IEnumerable<(string Family, string Name, string Script)> PrimitiveGolfScripts() => ReferenceScripts();
 }

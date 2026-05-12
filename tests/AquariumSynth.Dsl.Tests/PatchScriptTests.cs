@@ -34,6 +34,24 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
+    public void ParserFoldsFieldOnlyLinesIntoPreviousCommand()
+    {
+        var patch = PatchScript.Parse("""
+            voice
+                wave=square
+                freq=80
+                gain=0.2
+                sustain=0.1
+                decay=0.2
+            """);
+
+        var voice = Assert.Single(patch.Voices);
+        Assert.Equal(Waveform.Square, voice.Oscillator.Waveform);
+        Assert.Equal(80, voice.Oscillator.FrequencyHz);
+        Assert.Equal(0.2f, voice.Gain, 5);
+    }
+
+    [Fact]
     public void ParserSupportsExplicitControlLane()
     {
         var patch = PatchScript.Parse("lfo n=wob t=p w=sin hz=6 d=.04 ph=.25 b=.01;v w=saw f=80");
@@ -118,9 +136,9 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
-    public void BuiltInPrimitiveGolfScriptsParseAndExportFaust()
+    public void BuiltInReferenceScriptsParseAndExportFaust()
     {
-        foreach (var (family, name, script) in BuiltInScripts.PrimitiveGolfScripts())
+        foreach (var (family, name, script) in BuiltInScripts.ReferenceScripts())
         {
             var exception = Record.Exception(() =>
             {

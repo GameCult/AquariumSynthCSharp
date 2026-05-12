@@ -13,7 +13,7 @@ public static class PatchScript
     {
         var compiler = new Compiler();
         var line = 1;
-        foreach (var statement in Statements(script))
+        foreach (var statement in PatchScriptStatements.Enumerate(script))
         {
             compiler.Apply(statement.Text, statement.Line);
             line = statement.Line;
@@ -25,24 +25,6 @@ public static class PatchScript
         }
 
         return compiler.Build();
-    }
-
-    private static IEnumerable<(string Text, int Line)> Statements(string script)
-    {
-        var lineNumber = 1;
-        foreach (var rawLine in script.Replace("\r\n", "\n").Split('\n'))
-        {
-            var uncommented = rawLine.Split('#', 2)[0];
-            foreach (var part in uncommented.Split(';'))
-            {
-                var statement = part.Trim();
-                if (statement.Length > 0)
-                {
-                    yield return (statement, lineNumber);
-                }
-            }
-            lineNumber++;
-        }
     }
 
     private sealed class Compiler

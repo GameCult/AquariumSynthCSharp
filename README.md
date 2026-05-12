@@ -1,6 +1,6 @@
 # Aquarium Synth CSharp
 
-C# front-end for Aquarium Synth patch scripts. It parses the terse Aquarium DSL
+C# front-end for Aquarium Synth patch scripts. It parses the Aquarium patch DSL
 into a serializable patch graph, emits Faust `.dsp`, and can ask an installed
 Faust compiler to generate backend code such as C#, C++, C, or Rust.
 
@@ -20,15 +20,23 @@ dotnet test
 - `FaustEmitter.Emit(patch)` emits Faust source.
 - `FaustCompiler.ValidateAsync(source)` compile-checks with Faust when present.
 - `FaustCompiler.CompileAsync(source, options)` writes generated backend code.
-- `BuiltInScripts` carries the current Rust-side classic SFXR, 808, FM bell,
-  and wobble bass golf scripts so the migration has executable baggage checks.
+- `BuiltInScripts.ReferenceScripts()` carries readable SFXR, BFXR-flavored,
+  808, FM bell, and wobble bass patches. They are stable references for testing
+  and for judging whether the DSL can express useful sound designs cleanly.
 - `SfxrParams`, `PatchScriptScoring`, `AudioAnalyzer`, and `Presets` carry the
   reusable Rust-side analysis, scoring, SFXR, and preset tools.
 
 Faust `2.85.5` supports `-lang csharp`, so the intended hot path is:
 
 ```csharp
-var patch = PatchScript.Parse("v w=saw f=55 g=.2 s=.5 d=.2");
+var patch = PatchScript.Parse("""
+    voice
+        wave=saw
+        freq=55
+        gain=0.2
+        sustain=0.5
+        decay=0.2
+    """);
 var export = FaustEmitter.Emit(patch, new FaustExportOptions("bass"));
 await FaustCompiler.CompileAsync(
     export.Source,
@@ -37,7 +45,7 @@ await FaustCompiler.CompileAsync(
 
 ## Status
 
-The current slice covers the modular graph surface needed by the Rust golfed
+The current slice covers the modular graph surface needed by the reference
 scripts, SFXR atoms, script scoring, audio comparison, presets, Faust emission,
 and installed Faust validation. Migration coverage is tracked in
 [`docs/migration-checklist.md`](docs/migration-checklist.md), because leaving

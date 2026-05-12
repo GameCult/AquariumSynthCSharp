@@ -15,7 +15,9 @@ public static class PatchScriptScoring
 {
     public static PatchScriptMetrics Measure(string script)
     {
-        var statements = Statements(script).ToList();
+        var statements = PatchScriptStatements.Enumerate(script)
+            .Select(statement => statement.Text)
+            .ToList();
         var statementCount = statements.Count;
         var lineCount = script.Replace("\r\n", "\n")
             .Split('\n')
@@ -79,19 +81,6 @@ public static class PatchScriptScoring
             terseScore,
             readabilityScore,
             balancedScore);
-    }
-
-    private static IEnumerable<string> Statements(string script)
-    {
-        foreach (var rawLine in script.Replace("\r\n", "\n").Split('\n'))
-        {
-            var uncommented = rawLine.Split('#', 2)[0];
-            foreach (var part in uncommented.Split(';'))
-            {
-                var statement = part.Trim();
-                if (statement.Length > 0) yield return statement;
-            }
-        }
     }
 }
 
