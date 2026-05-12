@@ -124,7 +124,7 @@ public static class FaustEmitter
         source.AppendLine($"{name}_colored = ({name}_osc * (1.0 - {noiseMix}) + no.noise * {noiseMix});");
         source.AppendLine($"{name}_driven = ma.tanh({name}_colored * (1.0 + {driveExpression} * 12.0)) / ma.tanh(1.0 + {driveExpression} * 12.0);");
         source.AppendLine($"{name}_folded = {name}_driven * (1.0 - {foldExpression}) + fold({name}_driven * (1.0 + {foldExpression} * 3.5)) * {foldExpression};");
-        source.AppendLine($"{name}_filtered = {name}_folded : {lowpass} : fi.highpass(1, max(20.0, {hpf} * 8000.0));");
+        source.AppendLine($"{name}_filtered = {name}_folded : {lowpass} : fi.highpass(1, max(5.0, ({hpf}) * ({hpf}) * 7000.0));");
         if (voice.Phaser.OffsetSeconds != 0 || voice.Phaser.RampSecondsPerSecond != 0)
         {
             var delay = $"min(2047.0, max(0.0, abs({F(voice.Phaser.OffsetSeconds)} + {F(voice.Phaser.RampSecondsPerSecond)} * age) * ma.SR))";
