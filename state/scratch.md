@@ -7,6 +7,20 @@ the synth library while Aquarium work continues elsewhere.
 
 Completed this slice:
 
+- Added `ReferenceRebuild` and `ReferenceRebuildCatalog` for explicit
+  reference-target rebuild attempts.
+- Added two DX7-style Aquarium DSL rebuilds:
+  - `dx7/algo32-additive-organ`: algorithm 32's six-carrier additive shape,
+    which maps cleanly to six Aquarium voices.
+  - `dx7/algo8-bright-pair`: algorithm 8's two-carrier FM shape, which is only
+    an approximation because the current voice DSL cannot express
+    `6->5`, `4+5->3`, `2->1`, or operator-local self-feedback.
+- Added matched/missing feature records so topology mismatch becomes evidence
+  instead of being hidden inside prose.
+- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 34 passed.
+
+Previous slice:
+
 - Added DX7 algorithm topology metadata for algorithms 1-32 using Ken
   Shirriff's reverse-engineered OPS algorithm ROM table.
 - `Dx7SysEx.AlgorithmTopology` now exposes carrier operators, modulation
@@ -18,7 +32,7 @@ Completed this slice:
 - Representative tests cover algorithm 8, algorithm 16, and algorithm 32.
 - Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 31 passed.
 
-Previous slice:
+Earlier slice:
 
 - Added `Dx7SysEx` records and parsing for DX7 voice edit buffers, packed
   128-byte voices, and packed 32-voice SysEx banks.
@@ -29,7 +43,7 @@ Previous slice:
 - Checksum validation rejects bad wrapped SysEx payloads.
 - Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 28 passed.
 
-Earlier slice:
+Parameter slice:
 
 - Added explicit `PatchParameter` contracts: stable path, label, default, min,
   max, step, unit, automation-rate notes, and notes.
@@ -48,8 +62,7 @@ Earlier slice:
 
 Next likely slice:
 
-- Rebuild one or two small DX7-style sounds in Aquarium DSL.
-- Compare those rebuilds against DX7 topology features and document the missing
-  graph concepts before adding any new DSL shape.
+- Decide whether the repeated DX7 algorithm-8 mismatch justifies a first-class
+  operator graph model. Map ownership before implementing it.
 - Keep tests focused on structure first, then add rendered audio comparison once
   the render path is explicit.

@@ -602,6 +602,111 @@ public static class BuiltInScripts
 
     public static readonly IReadOnlyList<string> AdvancedNames = ["aurora-pad", "machine-breath", "glass-creature", "ritual-sequence"];
 
+    public static readonly IReadOnlyList<string> Dx7StyleNames = ["algo32-additive-organ", "algo8-bright-pair"];
+
+    public const string Dx7StyleAlgorithm32AdditiveOrgan = """
+        patch
+            gain=0.58
+            soft_clip=true
+
+        param
+            name=drawbar
+            path=/macro/drawbar
+            default=0.78
+            min=0
+            max=1
+            step=0.001
+            unit=normalized
+
+        param
+            name=shimmer
+            path=/macro/shimmer
+            default=0.08
+            min=0
+            max=0.3
+            step=0.001
+            unit=normalized
+
+        defaults
+            wave=sine
+            attack=0.002
+            sustain=0.48
+            decay=0.32
+            lpf=0.96
+            hpf=0.015
+            drive=0.03
+
+        voice freq=196 gain=0.14
+        voice freq=392 gain=@/macro/drawbar
+        voice freq=588 gain=0.12
+        voice freq=784 gain=0.08
+        voice freq=980 gain=0.055
+        voice
+            freq=1176
+            gain=0.035
+            fold=@/macro/shimmer
+            fm=1
+            fm_index=0.18
+            fm_decay=0.24
+        """;
+
+    public const string Dx7StyleAlgorithm8BrightPair = """
+        patch
+            gain=0.52
+            soft_clip=true
+
+        param
+            name=brightness
+            path=/macro/brightness
+            default=2.6
+            min=0
+            max=5
+            step=0.001
+            unit=index
+
+        param
+            name=strike
+            path=/macro/strike
+            default=0.18
+            min=0.02
+            max=0.6
+            step=0.001
+            unit=seconds
+
+        defaults
+            wave=sine
+            attack=0.001
+            sustain=0.045
+            decay=@/macro/strike
+            hpf=0.02
+            lpf=0.9
+
+        voice
+            freq=330
+            gain=0.16
+            fm=2
+            fm_index=@/macro/brightness
+            fm_decay=0.22
+
+        voice
+            freq=660
+            gain=0.1
+            fm=3
+            fm_index=1.4
+            fm_decay=0.16
+            drive=0.08
+            fold=0.05
+
+        voice
+            freq=990
+            gain=0.045
+            sustain=0.025
+            decay=0.34
+            fm=1
+            fm_index=0.55
+            fm_decay=0.12
+        """;
+
     public static readonly IReadOnlyList<(string Name, string Script)> AdvancedReferenceScripts =
     [
         ("aurora-pad", """
@@ -791,6 +896,7 @@ public static class BuiltInScripts
         foreach (var item in Classic808PrimitiveGolfScripts) yield return ("808", item.Name, item.Script);
         foreach (var item in FmBellPrimitiveGolfScripts) yield return ("fm-bell", item.Name, item.Script);
         foreach (var item in WobbleBassPrimitiveGolfScripts) yield return ("wobble-bass", item.Name, item.Script);
+        foreach (var item in ReferenceRebuildCatalog.Dx7Rebuilds) yield return ("dx7", item.Name, item.Script);
         foreach (var item in AdvancedReferenceScripts) yield return ("advanced", item.Name, item.Script);
     }
 

@@ -210,6 +210,53 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
+    public void Dx7StyleReferenceRebuildsParseExportAndDeclarePressure()
+    {
+        foreach (var rebuild in ReferenceRebuildCatalog.Dx7Rebuilds)
+        {
+            var patch = PatchScript.Parse(rebuild.Script);
+            var export = FaustEmitter.Emit(patch, new FaustExportOptions(rebuild.Id.Replace('/', '_').Replace('-', '_')));
+
+            Assert.Contains("process =", export.Source);
+            Assert.NotEmpty(rebuild.MatchedFeatures);
+            Assert.NotEmpty(rebuild.MissingFeatures);
+            Assert.All(rebuild.MissingFeatures, feature => Assert.False(string.IsNullOrWhiteSpace(feature.Notes)));
+        }
+    }
+
+    [Fact]
+    public void Dx7Algorithm32RebuildMatchesAdditiveCarrierShape()
+    {
+        var rebuild = ReferenceRebuildCatalog.Dx7Rebuilds.Single(item => item.ReferenceId == "dx7/algo32-additive-organ");
+        var patch = PatchScript.Parse(rebuild.Script);
+        var topology = Dx7SysEx.AlgorithmTopology(32);
+
+        Assert.Equal(topology.CarrierOperators.Count, patch.Voices.Count);
+        Assert.Contains(rebuild.MatchedFeatures, feature => feature.Name == "carrier_operators" && feature.Value == "1,2,3,4,5,6");
+        Assert.Contains(rebuild.MatchedFeatures, feature => feature.Name == "modulation_edge_count" && feature.Value == "0");
+        Assert.Equal(2, patch.Parameters.Count);
+        Assert.Equal(2, patch.ParameterBindings.Count);
+    }
+
+    [Fact]
+    public void Dx7Algorithm8RebuildRecordsMissingOperatorGraph()
+    {
+        var rebuild = ReferenceRebuildCatalog.Dx7Rebuilds.Single(item => item.ReferenceId == "dx7/algo8-bright-pair");
+        var patch = PatchScript.Parse(rebuild.Script);
+        var topology = Dx7SysEx.AlgorithmTopology(8);
+
+        Assert.Equal(2, topology.CarrierOperators.Count);
+        Assert.True(patch.Voices.Count > topology.CarrierOperators.Count, "Approximation adds a shimmer layer beyond the two DX7 carriers.");
+        Assert.Contains(rebuild.MissingFeatures, feature => feature.Name == "modulation_edges");
+        Assert.Contains(rebuild.MissingFeatures, feature => feature.Name == "self_feedback_operators");
+        Assert.Equal(2, patch.Parameters.Count);
+        Assert.Equal(3, patch.ParameterBindings.Count);
+        Assert.Contains(patch.ParameterBindings, binding => binding.FieldPath == "/voices/0/fm/index");
+        Assert.Contains(patch.ParameterBindings, binding => binding.FieldPath == "/voices/0/env/decay");
+        Assert.Contains(patch.ParameterBindings, binding => binding.FieldPath == "/voices/1/env/decay");
+    }
+
+    [Fact]
     public void FaustEmitterProducesWobbleSource()
     {
         var export = FaustEmitter.EmitScript(WobbleTalker, new FaustExportOptions("wobble_talker", Stereo: true));

@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-13T00:49:07+01:00
+updated: 2026-05-13T00:54:02+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -18,6 +18,7 @@ current_mechanism:
   analysis: src/AquariumSynth.Dsl/AudioAnalysis.cs
   built_ins: src/AquariumSynth.Dsl/BuiltInScripts.cs
   dx7_references: src/AquariumSynth.Dsl/Dx7SysEx.cs
+  reference_rebuilds: src/AquariumSynth.Dsl/ReferenceRebuilds.cs
   tests: tests/AquariumSynth.Dsl.Tests/PatchScriptTests.cs
   doctrine: docs/audio-doctrine.md
   roadmap: docs/reference-synth-roadmap.md
@@ -41,10 +42,10 @@ reference_targets:
     priority: 1
     purpose: "Structured FM/operator graph pressure test."
     source: "https://github.com/asb2m10/dexed"
-    status: "DX7 SysEx parser and algorithm topology extraction exist; tiny Aquarium DSL rebuilds are next."
+    status: "DX7 SysEx parser, algorithm topology extraction, and two Aquarium DSL rebuild attempts exist; operator-graph decision is next."
     first_slice:
-      - "Rebuild two small DX7-style references in Aquarium DSL."
-      - "Compare rebuilds against DX7 topology features and document missing graph concepts."
+      - "Decide whether DX7 algorithm-8-style mismatches justify a first-class operator graph model."
+      - "If yes, map ownership before implementing it."
   zynaddsubfx:
     priority: 2
     purpose: "Additive, subtractive, PAD, formant, kit, and layered-instrument pressure test."
@@ -78,9 +79,9 @@ reference_targets:
 
 next_agent_start_here:
   recommended_first_task: >
-    Rebuild one or two tiny DX7-style references in Aquarium DSL, using the
-    parsed DX7 topology features as pressure evidence. Do not import a giant
-    bank.
+    Decide whether the DX7 algorithm-8 rebuild mismatch justifies a first-class
+    operator graph model. Map ownership first; do not smuggle it into Voice
+    fields.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -92,6 +93,13 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-13
+    summary: >
+      Added ReferenceRebuild catalog entries and two DX7-style Aquarium DSL
+      rebuilds. Algorithm 32 maps cleanly to six additive voices; algorithm 8
+      exposes missing operator graph concepts including explicit modulation
+      edges, summed modulators, and operator-local self-feedback.
+    verification: "dotnet test AquariumSynthCSharp.slnx --no-restore: 34 passed"
   - date: 2026-05-13
     summary: >
       Added DX7 algorithm topology metadata for algorithms 1-32 from the
