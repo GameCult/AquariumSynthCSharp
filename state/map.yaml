@@ -9,9 +9,11 @@ surfaces:
   memory: state/memory.json
   scratch: state/scratch.md
   evidence: state/evidence.jsonl
+  spine: state/spine.yaml
   solution: AquariumSynthCSharp.slnx
   library: src/AquariumSynth.Dsl
   tests: tests/AquariumSynth.Dsl.Tests
+  reference_roadmap: docs/reference-synth-roadmap.md
 modules:
   model: src/AquariumSynth.Dsl/Model.cs
   parser: src/AquariumSynth.Dsl/PatchScript.cs

@@ -26,11 +26,24 @@
   ],
   "doctrine_refs": [
     "docs/audio-doctrine.md",
-    "docs/migration-checklist.md"
+    "docs/migration-checklist.md",
+    "docs/reference-synth-roadmap.md",
+    "state/spine.yaml"
   ],
+  "reference_strategy": {
+    "purpose": "Use external synths and DSP corpora as pressure tests for Aquarium's patch DSL and Faust emitter.",
+    "priority_order": [
+      "DX7/Dexed SysEx for FM operator topology",
+      "ZynAddSubFX instruments for additive, subtractive, PAD, formant, and layered patches",
+      "Faust examples/libraries for general DSP graph topology",
+      "Surge XT for modern hybrid synth modulation",
+      "Cardinal/VCV-style patches for modular cable/rate semantics"
+    ],
+    "rule": "Add DSL abstractions only when reference rebuilds prove the missing invariant."
+  },
   "last_verified": {
     "command": "dotnet test",
-    "result": "13 passed",
-    "commit": "3246672"
+    "result": "15 passed",
+    "commit": "pending reference roadmap handoff"
   }
 }

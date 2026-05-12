@@ -14,6 +14,7 @@ compiler behavior.
 ## Persistent State
 
 - `state/map.yaml` is the canonical repo map.
+- `state/spine.yaml` is the rehydration spine for multi-agent synth library work.
 - `state/memory.json` stores durable project taste, doctrine, and decisions.
 - `state/scratch.md` is disposable current-slice working context.
 - `state/evidence.jsonl` stores short lessons that should change future work.

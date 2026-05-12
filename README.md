@@ -52,3 +52,7 @@ and installed Faust validation. Migration coverage is tracked in
 [`docs/migration-checklist.md`](docs/migration-checklist.md), because leaving
 important things behind in the old repo would be a very efficient way to become
 our own haunted house.
+
+Reference-driven DSL growth is tracked in
+[`docs/reference-synth-roadmap.md`](docs/reference-synth-roadmap.md). Agent
+handoff state lives in [`state/spine.yaml`](state/spine.yaml).

@@ -1,12 +1,16 @@
 # Scratch
 
-Current standing order: keep migrating reusable synth tooling into C# while
-leaving only the Rust renderer/runtime and experimental compiler branch behind.
+Current standing order: grow AquariumSynthCSharp through external reference
+targets, not through speculative field sprawl. `state/spine.yaml` and
+`docs/reference-synth-roadmap.md` are the handoff surfaces for agents working on
+the synth library while Aquarium work continues elsewhere.
 
-The next likely slice is serialization and host integration:
+The next likely slice is DX7/Dexed:
 
-- Define JSON contracts for `SynthPatch` and related records.
-- Add a CLI for `.aqs` script -> `.dsp` / generated C#.
-- Add compile cache keyed by script/options/source hash.
-- Keep doctrine aligned with realtime constraints before adding runtime-facing
-  APIs.
+- Add neutral reference model contracts with provenance/license/hash fields.
+- Implement a DX7 SysEx parser skeleton for single voices and cartridge payloads.
+- Extract operator topology, envelopes, ratios, feedback, levels, LFO, and pitch
+  envelope into feature records before trying to translate.
+- Rebuild one or two small DX7-style sounds in Aquarium DSL.
+- Keep tests focused on structure first, then add rendered audio comparison once
+  the render path is explicit.

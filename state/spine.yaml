@@ -1,0 +1,91 @@
+project: AquariumSynthCSharp
+spine_version: 1
+updated: 2026-05-12T22:55:00+01:00
+
+prime_directive: >
+  Build coherent synth machinery. References exist to reveal missing structure,
+  not to justify piling parameters onto the current patch DSL.
+
+current_objective: >
+  Turn AquariumSynthCSharp into a reference-driven patch authoring and Faust
+  generation library. Use external synths and DSP corpora as pressure tests so
+  Aquarium's DSL grows only when a real target proves the abstraction belongs.
+
+current_mechanism:
+  parser: src/AquariumSynth.Dsl/PatchScript.cs
+  model: src/AquariumSynth.Dsl/Model.cs
+  faust_emitter: src/AquariumSynth.Dsl/FaustExport.cs
+  analysis: src/AquariumSynth.Dsl/AudioAnalysis.cs
+  built_ins: src/AquariumSynth.Dsl/BuiltInScripts.cs
+  tests: tests/AquariumSynth.Dsl.Tests/PatchScriptTests.cs
+  doctrine: docs/audio-doctrine.md
+  roadmap: docs/reference-synth-roadmap.md
+
+live_invariants:
+  - Aquarium owns its patch graph; external synths are references, not runtime dependencies.
+  - Patch scripts lower into explicit graph records before Faust emission.
+  - Generated Faust should remain inspectable and deterministic.
+  - Reference fixtures must preserve provenance, license status, source hash, and feature pressure.
+  - Audio metrics are evidence, not final judgment.
+  - Do not add a generic graph escape hatch until specific references force it.
+  - Do not hide missing graph structure behind unrelated voice fields.
+
+reference_targets:
+  dx7_dexed:
+    priority: 1
+    purpose: "Structured FM/operator graph pressure test."
+    source: "https://github.com/asb2m10/dexed"
+    first_slice:
+      - "Parse DX7 SysEx single voice and cartridge payloads."
+      - "Extract six-operator topology, envelopes, ratios, feedback, levels, LFO, pitch envelope."
+      - "Rebuild two small DX7-style references in Aquarium DSL."
+  zynaddsubfx:
+    priority: 2
+    purpose: "Additive, subtractive, PAD, formant, kit, and layered-instrument pressure test."
+    source: "https://github.com/zynaddsubfx/zynaddsubfx"
+    first_slice:
+      - "Parse selected instrument XML files into neutral reference records."
+      - "Classify additive, PAD, formant, and effect usage before translation."
+  faust:
+    priority: 3
+    purpose: "General DSP graph topology pressure test."
+    sources:
+      - "https://github.com/grame-cncm/faust"
+      - "https://faustlibraries.grame.fr/"
+    first_slice:
+      - "Add ExternalFaustReference catalog entries."
+      - "Compile selected official examples as external references."
+      - "Use failures to decide whether Aquarium needs a lower-level graph DSL."
+  surge_xt:
+    priority: 4
+    purpose: "Modern hybrid synth and modulation matrix pressure test."
+    source: "https://github.com/surge-synthesizer/surge"
+    first_slice:
+      - "Inspect factory patch format and license/provenance."
+      - "Build feature extractor before translation."
+  cardinal:
+    priority: 5
+    purpose: "Modular graph and cable/rate semantics pressure test."
+    source: "https://github.com/DISTRHO/Cardinal"
+    first_slice:
+      - "Defer until a lower-level graph layer exists."
+
+next_agent_start_here:
+  recommended_first_task: >
+    Implement reference model contracts and a DX7 SysEx parser skeleton with
+    feature extraction tests. Do not start by importing a giant bank.
+  must_read:
+    - AGENTS.md
+    - docs/audio-doctrine.md
+    - docs/reference-synth-roadmap.md
+    - state/spine.yaml
+    - state/memory.json
+    - state/evidence.jsonl
+  verification:
+    - "dotnet test AquariumSynthCSharp.slnx --no-restore"
+
+cut_line:
+  - "Cut any importer that cannot state source provenance and license."
+  - "Cut weak tests that only prove parser leniency."
+  - "Cut voice-field sprawl when a target needs topology."
+  - "Split a lower-level graph DSL if Faust/Cardinal-style references make the voice DSL lie."
