@@ -21,8 +21,9 @@ dotnet test
 - `FaustCompiler.ValidateAsync(source)` compile-checks with Faust when present.
 - `FaustCompiler.CompileAsync(source, options)` writes generated backend code.
 - `BuiltInScripts.ReferenceScripts()` carries readable SFXR, BFXR-flavored,
-  808, FM bell, and wobble bass patches. They are stable references for testing
-  and for judging whether the DSL can express useful sound designs cleanly.
+  808, FM bell, wobble bass, and advanced layered patches. They are stable
+  references for testing and for judging whether the DSL can express useful
+  sound designs cleanly.
 - `SfxrParams`, `PatchScriptScoring`, `AudioAnalyzer`, and `Presets` carry the
   reusable Rust-side analysis, scoring, SFXR, and preset tools.
 

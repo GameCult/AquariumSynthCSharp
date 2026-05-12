@@ -152,6 +152,19 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
+    public void AdvancedReferenceScriptsExerciseLayeredPatchFeatures()
+    {
+        foreach (var (name, script) in BuiltInScripts.AdvancedReferenceScripts)
+        {
+            var patch = PatchScript.Parse(script);
+
+            Assert.True(patch.Voices.Count >= 4, $"{name} should demonstrate layered voices.");
+            Assert.True(patch.Controls.Count >= 1, $"{name} should demonstrate modulation.");
+            Assert.Contains(patch.Voices, voice => voice.Fm.Index > 0 || voice.Formants.Count > 0 || voice.Color.NoiseMix > 0);
+        }
+    }
+
+    [Fact]
     public void FaustEmitterProducesWobbleSource()
     {
         var export = FaustEmitter.EmitScript(WobbleTalker, new FaustExportOptions("wobble_talker", Stereo: true));

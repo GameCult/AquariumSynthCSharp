@@ -600,6 +600,190 @@ public static class BuiltInScripts
             """)
     ];
 
+    public static readonly IReadOnlyList<string> AdvancedNames = ["aurora-pad", "machine-breath", "glass-creature", "ritual-sequence"];
+
+    public static readonly IReadOnlyList<(string Name, string Script)> AdvancedReferenceScripts =
+    [
+        ("aurora-pad", """
+            patch
+                gain=0.58
+                soft_clip=true
+
+            defaults
+                wave=sine
+                attack=0.018
+                sustain=1.15
+                decay=1.6
+                lpf=0.86
+                hpf=0.018
+                drive=0.05
+
+            template name=GlassPartial
+                fm=2.414
+                fm_index=1.4
+                fm_decay=0.8
+                formants=420:80:0.25,1180:180:0.75,2450:360:0.42
+                formant_mix=0.18
+
+            mod name=tide
+                wave=sine
+                hz=0.21
+                gain=0.08
+                pitch=0.012
+                lpf=0.09
+                formant_mix=0.16
+                fm_index=0.35
+
+            mod name=shiver
+                wave=triangle
+                hz=4.6
+                pitch=0.004
+                drive=0.035
+
+            voice use=GlassPartial freq=220 gain=0.12
+            voice use=GlassPartial freq=330 gain=0.08 fm=3.01 fm_index=0.9
+            voice use=GlassPartial freq=440 gain=0.06 fm=1.618 fm_index=0.7 formant_mix=0.26
+            voice wave=noise freq=1600 gain=0.018 sustain=1.4 decay=2.0 noise=0.72 hpf=0.62 lpf=0.38
+            """),
+        ("machine-breath", """
+            patch
+                gain=0.7
+                soft_clip=true
+
+            defaults
+                wave=saw
+                freq=72
+                gain=0.1
+                attack=0.004
+                sustain=0.72
+                decay=0.55
+                lpf=0.28
+                hpf=0.025
+                drive=0.34
+                fold=0.12
+                fm=1.5
+                fm_index=0.8
+                fm_decay=0.45
+
+            mod name=piston
+                wave=sample_hold
+                hz=5.5
+                gain=0.16
+                pitch=0.028
+                lpf=0.24
+                drive=0.18
+                fold=0.16
+
+            mod name=valve
+                wave=square
+                hz=2.75
+                noise=0.18
+                hpf=0.12
+                formant_mix=0.25
+
+            voice
+                formants=290:55:0.55,760:120:1,1780:260:0.5
+                formant_mix=0.22
+
+            voice
+                wave=square
+                freq=36
+                gain=0.13
+                duty=0.37
+                pitch_ramp=-0.18
+
+            voice
+                wave=noise
+                freq=700
+                gain=0.055
+                sustain=0.5
+                decay=0.35
+                noise=0.8
+                hpf=0.42
+                lpf=0.45
+
+            voice
+                wave=triangle
+                freq=144
+                gain=0.045
+                sustain=0.62
+                decay=0.48
+                fm=2.25
+                fm_index=1.1
+                fm_decay=0.5
+                formants=510:90:0.35,1320:170:0.9,2100:300:0.45
+                formant_mix=0.18
+            """),
+        ("glass-creature", """
+            patch
+                gain=0.52
+                soft_clip=true
+
+            defaults
+                wave=triangle
+                attack=0.002
+                sustain=0.18
+                decay=1.05
+                lpf=0.92
+                hpf=0.03
+                drive=0.08
+
+            template name=Ping
+                fm=3.5
+                fm_index=2.8
+                fm_decay=0.5
+                vibrato=0.018
+                vibrato_hz=6.4
+
+            mod name=blink
+                wave=sine
+                hz=1.8
+                pitch=0.02
+                gain=0.18
+                fm_index=0.8
+
+            voice use=Ping freq=523.25 gain=0.12 punch=0.12
+            voice use=Ping freq=659.25 gain=0.08 sustain=0.11 decay=0.84 fm=4.2
+            voice use=Ping freq=783.99 gain=0.07 sustain=0.08 decay=0.72 fm_index=1.9
+            voice wave=sine freq=261.63 gain=0.045 sustain=0.7 decay=1.3 fm=1.5 fm_index=0.65 fm_decay=1.2
+            voice wave=noise freq=2400 gain=0.012 sustain=0.04 decay=0.55 noise=0.9 hpf=0.72 lpf=0.5
+            """),
+        ("ritual-sequence", """
+            patch
+                gain=0.62
+                repeat=0.42
+                soft_clip=true
+
+            defaults
+                wave=sine
+                gain=0.13
+                attack=0.001
+                sustain=0.045
+                decay=0.5
+                punch=0.18
+                lpf=0.82
+                hpf=0.035
+                drive=0.1
+
+            template name=Step
+                fm=2
+                fm_index=1.8
+                fm_decay=0.32
+                arp_delay=0.065
+                arp_mult=1.4983
+
+            bus name=cycle
+                wave=triangle
+                hz=2.38
+                to=gain:0.2,pitch:0.018,lpf:0.12,fm_index:0.75
+
+            voice use=Step freq=196
+            voice use=Step freq=293.66 gain=0.09 sustain=0.035 decay=0.38 arp_mult=1.3348
+            voice use=Step freq=392 gain=0.07 sustain=0.028 decay=0.32 arp_mult=1.2599
+            voice wave=noise freq=3100 gain=0.025 sustain=0.018 decay=0.16 noise=1 hpf=0.68 lpf=0.46
+            """)
+    ];
+
     public static IEnumerable<(string Family, string Name, string Script)> ReferenceScripts()
     {
         foreach (var item in ClassicSfxrPrimitiveGolfScripts) yield return ("sfxr", item.Name, item.Script);
@@ -607,6 +791,7 @@ public static class BuiltInScripts
         foreach (var item in Classic808PrimitiveGolfScripts) yield return ("808", item.Name, item.Script);
         foreach (var item in FmBellPrimitiveGolfScripts) yield return ("fm-bell", item.Name, item.Script);
         foreach (var item in WobbleBassPrimitiveGolfScripts) yield return ("wobble-bass", item.Name, item.Script);
+        foreach (var item in AdvancedReferenceScripts) yield return ("advanced", item.Name, item.Script);
     }
 
     public static IEnumerable<(string Family, string Name, string Script)> PrimitiveGolfScripts() => ReferenceScripts();

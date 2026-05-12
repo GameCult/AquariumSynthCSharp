@@ -18,7 +18,7 @@ there.
 - Modulation routing in both direct style (`mod n=wob g=.4 l=.5`) and routed
   style (`bus n=sway to=g:.1,l:-.2,fmix:.3`).
 - Built-in reference script catalog for classic SFXR, BFXR-flavored effects,
-  classic 808, FM bell, and wobble bass patches.
+  classic 808, FM bell, wobble bass, and advanced layered patches.
 - Abstract SFXR reference script using defaults and templates.
 - SFXR parameter presets, mutation, shorthand atoms, and SFXR-to-patch mapping.
 - Aquarium preset patches: pluck, heartbeat, voice, and SFXR named bridge.
