@@ -56,6 +56,28 @@ public sealed record Dx7Lfo(
     Dx7LfoWaveform Waveform,
     int PitchModulationSensitivity);
 
+public sealed record Dx7AlgorithmRomStep(
+    int Operator,
+    int TargetOperator,
+    int Selector,
+    bool FeedbackRegisterWrite,
+    int MemoryRegisterMode,
+    int OutputCompensation);
+
+public sealed record Dx7ModulationEdge(
+    IReadOnlyList<int> SourceOperators,
+    int TargetOperator,
+    string Kind);
+
+public sealed record Dx7AlgorithmTopology(
+    int Algorithm,
+    IReadOnlyList<int> CarrierOperators,
+    IReadOnlyList<Dx7ModulationEdge> ModulationEdges,
+    IReadOnlyList<int> FeedbackSourceOperators,
+    IReadOnlyList<int> SelfFeedbackOperators,
+    IReadOnlyList<int> DelayedFeedbackTargets,
+    IReadOnlyList<Dx7AlgorithmRomStep> RomSteps);
+
 public sealed record Dx7Voice(
     string Name,
     IReadOnlyList<Dx7Operator> Operators,
@@ -77,6 +99,7 @@ public sealed record Dx7Voice(
 
     public IReadOnlyList<ReferenceFeature> Features()
     {
+        var topology = Dx7SysEx.AlgorithmTopology(Algorithm);
         var enabledOperators = Operators.Count(op => op.OutputLevel > 0);
         var loudest = Operators.OrderByDescending(op => op.OutputLevel).First();
         return
@@ -84,7 +107,11 @@ public sealed record Dx7Voice(
             new("operator_count", Operators.Count.ToString(), "DX7 voices use six operators."),
             new("enabled_operator_count", enabledOperators.ToString(), "Operators with non-zero output level."),
             new("algorithm", Algorithm.ToString(), "DX7 algorithm number, 1-32."),
+            new("carrier_operators", string.Join(",", topology.CarrierOperators), "Operators routed to the audio output."),
+            new("modulation_edge_count", topology.ModulationEdges.Count.ToString(), "Number of extracted algorithm modulation edges."),
             new("feedback", Feedback.ToString(), "Global DX7 feedback level, 0-7."),
+            new("feedback_sources", string.Join(",", topology.FeedbackSourceOperators), "Operators that write the DX7 feedback register in this algorithm."),
+            new("self_feedback_operators", string.Join(",", topology.SelfFeedbackOperators), "Operators with direct self-feedback paths."),
             new("oscillator_sync", OscillatorSync ? "on" : "off"),
             new("lfo_waveform", Lfo.Waveform.ToString()),
             new("lfo_pitch_mod_depth", Lfo.PitchModulationDepth.ToString()),
@@ -124,6 +151,83 @@ public static class Dx7SysEx
 
     public static ReferenceSource SourceForBytes(string uri, string license, ReadOnlySpan<byte> bytes, string notes = "") =>
         new("dx7-sysex", uri, license, Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant(), notes);
+
+    public static Dx7AlgorithmTopology AlgorithmTopology(int algorithm)
+    {
+        if (algorithm is < 1 or > 32)
+        {
+            throw new ArgumentOutOfRangeException(nameof(algorithm), algorithm, "DX7 algorithm must be 1-32");
+        }
+
+        var steps = AlgorithmRom[algorithm - 1]
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select((entry, index) => ParseAlgorithmStep(operatorNumber: 6 - index, entry))
+            .ToList();
+
+        var carrierOperators = steps
+            .Where(step => step.OutputCompensation > 0)
+            .Select(step => step.TargetOperator)
+            .Order()
+            .ToList();
+        if (carrierOperators.Count == 0)
+        {
+            carrierOperators.Add(1);
+        }
+
+        var memory = new SortedSet<int>();
+        var feedbackSources = new SortedSet<int>();
+        var selfFeedback = new SortedSet<int>();
+        var delayedFeedbackTargets = new SortedSet<int>();
+        var edges = new List<Dx7ModulationEdge>();
+
+        foreach (var step in steps)
+        {
+            var nextMemory = step.MemoryRegisterMode switch
+            {
+                0 => [],
+                1 => [step.Operator],
+                2 => new SortedSet<int>(memory),
+                3 => new SortedSet<int>(memory.Concat([step.Operator])),
+                _ => new SortedSet<int>(memory)
+            };
+
+            switch (step.Selector)
+            {
+                case 1:
+                    edges.Add(new Dx7ModulationEdge([step.Operator], step.TargetOperator, "direct"));
+                    break;
+                case 2 when nextMemory.Count > 0:
+                    edges.Add(new Dx7ModulationEdge(nextMemory.ToArray(), step.TargetOperator, "sum"));
+                    break;
+                case 3 when memory.Count > 0:
+                    edges.Add(new Dx7ModulationEdge(memory.ToArray(), step.TargetOperator, "delayed-sum"));
+                    break;
+                case 4 when feedbackSources.Count > 0:
+                    delayedFeedbackTargets.Add(step.TargetOperator);
+                    edges.Add(new Dx7ModulationEdge(feedbackSources.ToArray(), step.TargetOperator, "delayed-feedback"));
+                    break;
+                case 5:
+                    selfFeedback.Add(step.TargetOperator);
+                    edges.Add(new Dx7ModulationEdge([step.TargetOperator], step.TargetOperator, "self-feedback"));
+                    break;
+            }
+
+            if (step.FeedbackRegisterWrite)
+            {
+                feedbackSources.Add(step.Operator);
+            }
+            memory = nextMemory;
+        }
+
+        return new Dx7AlgorithmTopology(
+            algorithm,
+            carrierOperators,
+            edges,
+            feedbackSources.ToArray(),
+            selfFeedback.ToArray(),
+            delayedFeedbackTargets.ToArray(),
+            steps);
+    }
 
     public static byte[] UnpackVoice(ReadOnlySpan<byte> packed)
     {
@@ -322,4 +426,61 @@ public static class Dx7SysEx
     private static int Value(ReadOnlySpan<byte> data, int index) => SevenBit(data[index]);
 
     private static byte SevenBit(byte value) => (byte)(value & 0x7F);
+
+    private static Dx7AlgorithmRomStep ParseAlgorithmStep(int operatorNumber, string entry)
+    {
+        var pieces = entry.Split('/');
+        if (pieces.Length != 3 || pieces[1].Length != 3)
+        {
+            throw new FormatException($"bad DX7 algorithm ROM entry `{entry}`");
+        }
+
+        var selector = int.Parse(pieces[0]);
+        var control = pieces[1];
+        return new Dx7AlgorithmRomStep(
+            operatorNumber,
+            operatorNumber == 1 ? 6 : operatorNumber - 1,
+            selector,
+            control[0] == '1',
+            int.Parse(control[1..], System.Globalization.NumberStyles.BinaryNumber),
+            int.Parse(pieces[2]));
+    }
+
+    // Extracted from Ken Shirriff's reverse-engineered DX7 OPS algorithm ROM table.
+    // Each row contains operator 6..1 entries as selector/feedback+memory/compensation.
+    private static readonly string[] AlgorithmRom =
+    [
+        "1/100/0 1/000/0 1/000/1 0/001/0 1/010/1 5/011/0",
+        "1/000/0 1/000/0 1/000/1 5/001/0 1/110/1 0/011/0",
+        "1/100/0 1/000/1 0/001/0 1/010/0 1/010/1 5/011/0",
+        "1/000/0 1/000/1 0/101/0 1/010/0 1/010/1 5/011/0",
+        "1/100/2 0/001/0 1/010/2 0/011/0 1/010/2 5/011/0",
+        "1/000/2 0/101/0 1/010/2 0/011/0 1/010/2 5/011/0",
+        "1/100/0 0/001/0 2/011/1 0/001/0 1/010/1 5/011/0",
+        "1/000/0 5/001/0 2/111/1 0/001/0 1/010/1 0/011/0",
+        "1/000/0 0/001/0 2/011/1 5/001/0 1/110/1 0/011/0",
+        "0/001/0 2/011/1 5/001/0 1/110/0 1/010/1 0/011/0",
+        "0/101/0 2/011/1 0/001/0 1/010/0 1/010/1 5/011/0",
+        "0/001/0 0/011/0 2/011/1 5/001/0 1/110/1 0/011/0",
+        "0/101/0 0/011/0 2/011/1 0/001/0 1/010/1 5/011/0",
+        "0/101/0 2/011/0 1/000/1 0/001/0 1/010/1 5/011/0",
+        "0/001/0 2/011/0 1/000/1 5/001/0 1/110/1 0/011/0",
+        "1/100/0 0/001/0 1/010/0 0/011/0 2/011/0 5/001/0",
+        "1/000/0 0/001/0 1/010/0 5/011/0 2/111/0 0/001/0",
+        "1/000/0 1/000/0 5/001/0 0/111/0 2/011/0 0/001/0",
+        "1/100/2 4/001/2 0/011/0 1/010/0 1/010/2 5/011/0",
+        "0/001/0 2/011/2 5/001/0 1/110/2 4/011/2 0/011/0",
+        "1/001/3 3/001/3 5/011/0 1/110/3 4/011/3 0/011/0",
+        "1/100/3 4/001/3 4/011/3 0/011/0 1/010/3 5/011/0",
+        "1/100/3 4/001/3 0/011/0 1/010/3 0/011/3 5/011/0",
+        "1/100/4 4/001/4 4/011/4 0/011/4 0/011/4 5/011/0",
+        "1/100/4 4/001/4 0/011/4 0/011/4 0/011/4 5/011/0",
+        "0/101/0 2/011/2 0/001/0 1/010/2 0/011/2 5/011/0",
+        "0/001/0 2/011/2 5/001/0 1/110/2 0/011/2 0/011/0",
+        "5/001/0 1/110/0 1/010/2 0/011/0 1/010/2 0/011/2",
+        "1/100/3 0/001/0 1/010/3 0/011/3 0/011/3 5/011/0",
+        "5/001/0 1/110/0 1/010/3 0/011/3 0/011/3 0/011/3",
+        "1/100/4 0/001/4 0/011/4 0/011/4 0/011/4 5/011/0",
+        "0/101/5 0/011/5 0/011/5 0/011/5 0/011/5 5/011/5"
+    ];
 }

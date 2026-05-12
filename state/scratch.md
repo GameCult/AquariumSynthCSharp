@@ -7,6 +7,19 @@ the synth library while Aquarium work continues elsewhere.
 
 Completed this slice:
 
+- Added DX7 algorithm topology metadata for algorithms 1-32 using Ken
+  Shirriff's reverse-engineered OPS algorithm ROM table.
+- `Dx7SysEx.AlgorithmTopology` now exposes carrier operators, modulation
+  edges, feedback-register writers, direct self-feedback operators,
+  delayed-feedback targets, and raw ROM steps.
+- `Dx7Voice.Features()` now emits `carrier_operators`,
+  `modulation_edge_count`, `feedback_sources`, and
+  `self_feedback_operators`.
+- Representative tests cover algorithm 8, algorithm 16, and algorithm 32.
+- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 31 passed.
+
+Previous slice:
+
 - Added `Dx7SysEx` records and parsing for DX7 voice edit buffers, packed
   128-byte voices, and packed 32-voice SysEx banks.
 - Extracted six operators, envelopes, algorithm, feedback, oscillator sync,
@@ -16,7 +29,7 @@ Completed this slice:
 - Checksum validation rejects bad wrapped SysEx payloads.
 - Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 28 passed.
 
-Previous slice:
+Earlier slice:
 
 - Added explicit `PatchParameter` contracts: stable path, label, default, min,
   max, step, unit, automation-rate notes, and notes.
@@ -35,9 +48,8 @@ Previous slice:
 
 Next likely slice:
 
-- Add explicit DX7 algorithm topology metadata: carrier operators, modulator
-  edges, and feedback edge location for algorithms 1-32. Keep it as reference
-  topology data, not Aquarium graph translation yet.
 - Rebuild one or two small DX7-style sounds in Aquarium DSL.
+- Compare those rebuilds against DX7 topology features and document the missing
+  graph concepts before adding any new DSL shape.
 - Keep tests focused on structure first, then add rendered audio comparison once
   the render path is explicit.

@@ -87,6 +87,8 @@ public sealed class Dx7SysExTests
         Assert.Contains(reference.Features, feature => feature.Name == "operator_count" && feature.Value == "6");
         Assert.Contains(reference.Features, feature => feature.Name == "algorithm" && feature.Value == "12");
         Assert.Contains(reference.Features, feature => feature.Name == "feedback" && feature.Value == "4");
+        Assert.Contains(reference.Features, feature => feature.Name == "carrier_operators");
+        Assert.Contains(reference.Features, feature => feature.Name == "modulation_edge_count");
     }
 
     [Fact]
@@ -98,6 +100,54 @@ public sealed class Dx7SysExTests
         var exception = Assert.Throws<ArgumentException>(() => Dx7SysEx.ParseVoice(wrapped));
 
         Assert.Contains("checksum", exception.Message);
+    }
+
+    [Fact]
+    public void AlgorithmEightTopologyMatchesDocumentedExample()
+    {
+        var topology = Dx7SysEx.AlgorithmTopology(8);
+
+        Assert.Equal([1, 3], topology.CarrierOperators);
+        Assert.Contains(topology.ModulationEdges, edge =>
+            edge.Kind == "direct" &&
+            edge.TargetOperator == 5 &&
+            edge.SourceOperators.SequenceEqual([6]));
+        Assert.Contains(topology.ModulationEdges, edge =>
+            edge.Kind == "self-feedback" &&
+            edge.TargetOperator == 4 &&
+            edge.SourceOperators.SequenceEqual([4]));
+        Assert.Contains(topology.ModulationEdges, edge =>
+            edge.Kind == "sum" &&
+            edge.TargetOperator == 3 &&
+            edge.SourceOperators.SequenceEqual([4, 5]));
+        Assert.Contains(topology.ModulationEdges, edge =>
+            edge.Kind == "direct" &&
+            edge.TargetOperator == 1 &&
+            edge.SourceOperators.SequenceEqual([2]));
+        Assert.Contains(4, topology.FeedbackSourceOperators);
+        Assert.Equal([4], topology.SelfFeedbackOperators);
+    }
+
+    [Fact]
+    public void AlgorithmSixteenFallsBackToSingleCarrierOperatorOne()
+    {
+        var topology = Dx7SysEx.AlgorithmTopology(16);
+
+        Assert.Equal([1], topology.CarrierOperators);
+        Assert.Contains(topology.ModulationEdges, edge =>
+            edge.Kind == "sum" &&
+            edge.TargetOperator == 1 &&
+            edge.SourceOperators.Count >= 2);
+    }
+
+    [Fact]
+    public void AlgorithmThirtyTwoExposesSixCarrierAdditiveTopology()
+    {
+        var topology = Dx7SysEx.AlgorithmTopology(32);
+
+        Assert.Equal([1, 2, 3, 4, 5, 6], topology.CarrierOperators);
+        Assert.DoesNotContain(topology.ModulationEdges, edge => edge.Kind is "direct" or "sum" or "delayed-sum");
+        Assert.Equal([6], topology.SelfFeedbackOperators);
     }
 
     private static byte[] InitVoice(string name, int algorithm, int feedback)
