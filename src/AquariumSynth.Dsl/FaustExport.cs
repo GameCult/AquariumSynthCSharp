@@ -56,6 +56,12 @@ public static class FaustEmitter
         source.AppendLine("lfo_hold(hz, phase) = no.noise : ba.latch(os.oscrs(hz));");
         source.AppendLine();
 
+        EmitParameterControls(source, patch, warnings);
+        if (patch.Parameters.Count > 0)
+        {
+            source.AppendLine();
+        }
+
         foreach (var (target, name) in ModTargets)
         {
             source.AppendLine($"patch_mod_{name} = {ModExpressionForTarget(patch.Controls, target)};");
@@ -72,8 +78,22 @@ public static class FaustEmitter
 
         var final = $"({string.Join(" + ", voices)}) * {F(patch.Gain)}";
         if (patch.SoftClip) final = $"softclip({final})";
+        if (patch.Parameters.Count > 0)
+        {
+            final = $"({final}) + 0.0 * ({string.Join(" + ", patch.Parameters.Select((_, i) => ParameterIdentifier(i)))})";
+        }
         source.AppendLine(options.Stereo ? $"process = {final} <: _,_;" : $"process = {final};");
         return new FaustExport(source.ToString(), warnings);
+    }
+
+    private static void EmitParameterControls(StringBuilder source, SynthPatch patch, List<string> warnings)
+    {
+        for (var i = 0; i < patch.Parameters.Count; i++)
+        {
+            var parameter = patch.Parameters[i];
+            warnings.Add($"parameter {parameter.Path}: declared as a runtime control; target binding is not implemented yet");
+            source.AppendLine($"{ParameterIdentifier(i)} = hslider(\"{Escape(parameter.Path)}\", {F(parameter.Default)}, {F(parameter.Min)}, {F(parameter.Max)}, {F(parameter.Step)}) : si.smoo;");
+        }
     }
 
     private static void EmitVoice(StringBuilder source, SynthPatch patch, Voice voice, string name, List<string> warnings)
@@ -220,6 +240,8 @@ public static class FaustEmitter
         double.IsFinite(value) ? value.ToString("0.########", CultureInfo.InvariantCulture) : "0.0";
 
     private static string FmDecay(float seconds) => seconds > 0 ? $"exp(-age / {F(Math.Max(seconds, 0.0001f))})" : "1.0";
+
+    private static string ParameterIdentifier(int index) => $"patch_param_{index}";
 
     private static string Escape(string value) => value.Replace("\\", "\\\\").Replace("\"", "\\\"");
 }

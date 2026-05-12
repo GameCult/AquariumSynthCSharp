@@ -66,6 +66,31 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
+    public void ParserPreservesDeclaredPatchParameters()
+    {
+        var patch = PatchScript.Parse("param name=brightness path=/macro/brightness default=.45 min=0 max=1 step=.001 unit=normalized rate=control;v w=saw f=80");
+
+        var parameter = Assert.Single(patch.Parameters);
+        Assert.Equal("/macro/brightness", parameter.Path);
+        Assert.Equal("brightness", parameter.Label);
+        Assert.Equal(.45f, parameter.Default, 5);
+        Assert.Equal(0, parameter.Min);
+        Assert.Equal(1, parameter.Max);
+        Assert.Equal(.001f, parameter.Step, 5);
+        Assert.Equal("normalized", parameter.Unit);
+        Assert.Equal("control", parameter.AutomationRate);
+    }
+
+    [Fact]
+    public void ParserRejectsDuplicatePatchParameterPaths()
+    {
+        var exception = Assert.Throws<PatchScriptException>(() =>
+            PatchScript.Parse("param path=/macro/brightness;param path=/macro/brightness;v w=sin"));
+
+        Assert.Contains("duplicate parameter path", exception.Message);
+    }
+
+    [Fact]
     public void BuiltInExampleParsesAndExportsFaust()
     {
         var patch = PatchScript.Parse(BuiltInScripts.PatchScriptExample);
@@ -177,9 +202,33 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
+    public void FaustEmitterExposesDeclaredPatchParametersAsControls()
+    {
+        var export = FaustEmitter.EmitScript("param path=/macro/brightness default=.45 min=0 max=1 step=.001;v w=saw f=80");
+
+        Assert.Contains("patch_param_0 = hslider(\"/macro/brightness\", 0.45, 0, 1, 0.001) : si.smoo;", export.Source);
+        Assert.Contains("patch_param_0", export.Source);
+        Assert.Contains("target binding is not implemented yet", Assert.Single(export.Warnings));
+    }
+
+    [Fact]
     public async Task FaustCompilerValidatesGeneratedSourceWhenInstalled()
     {
         var export = FaustEmitter.EmitScript(WobbleTalker);
+        var validation = await FaustCompiler.ValidateAsync(export.Source);
+
+        if (validation is null)
+        {
+            return;
+        }
+
+        Assert.True(validation.Success, validation.Stderr);
+    }
+
+    [Fact]
+    public async Task FaustCompilerValidatesParameterizedPatchWhenInstalled()
+    {
+        var export = FaustEmitter.EmitScript("param path=/macro/brightness default=.45 min=0 max=1 step=.001;v w=saw f=80");
         var validation = await FaustCompiler.ValidateAsync(export.Source);
 
         if (validation is null)

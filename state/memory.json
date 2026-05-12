@@ -10,6 +10,8 @@
     ],
     "own_here": [
       "patch graph model",
+      "patch parameter contracts",
+      "reference patch contracts",
       "patch script parser",
       "SFXR atoms and parameter mapping",
       "analysis/comparison metrics",
@@ -47,8 +49,8 @@
     "aquarium_requirement": "Aquarium DSL patches must be able to declare stable exposed parameters with path/default/min/max/step metadata so callers can vary sound without recompiling."
   },
   "last_verified": {
-    "command": "dotnet test",
-    "result": "15 passed",
-    "commit": "pending reference roadmap handoff"
+    "command": "dotnet test AquariumSynthCSharp.slnx --no-restore",
+    "result": "20 passed",
+    "commit": "pending parameter contract commit"
   }
 }

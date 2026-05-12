@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-12T23:08:00+01:00
+updated: 2026-05-13T00:27:06+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -20,6 +20,7 @@ current_mechanism:
   tests: tests/AquariumSynth.Dsl.Tests/PatchScriptTests.cs
   doctrine: docs/audio-doctrine.md
   roadmap: docs/reference-synth-roadmap.md
+  parameter_contracts: src/AquariumSynth.Dsl/Model.cs
 
 live_invariants:
   - Aquarium owns its patch graph; external synths are references, not runtime dependencies.
@@ -75,9 +76,9 @@ reference_targets:
 
 next_agent_start_here:
   recommended_first_task: >
-    Implement reference model and patch parameter contracts, then add a DX7
-    SysEx parser skeleton with feature extraction tests. Do not start by
-    importing a giant bank.
+    Decide whether parameter declarations need explicit target binding before
+    DX7 work, then add a DX7 SysEx parser skeleton with feature extraction
+    tests. Do not start by importing a giant bank.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -87,6 +88,15 @@ next_agent_start_here:
     - state/evidence.jsonl
   verification:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
+
+completed_slices:
+  - date: 2026-05-13
+    summary: >
+      Added PatchParameter and ReferencePatch contracts, `param` script parsing,
+      duplicate path validation, and Faust hslider emission for declared
+      controls. Parameter target binding is intentionally not implemented yet;
+      the emitter warns so the gap stays visible.
+    verification: "dotnet test AquariumSynthCSharp.slnx --no-restore: 20 passed"
 
 cut_line:
   - "Cut any importer that cannot state source provenance and license."

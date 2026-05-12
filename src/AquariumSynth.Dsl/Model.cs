@@ -89,6 +89,35 @@ public sealed record Modulator(
 
 public sealed record ControlLane(string Name, Modulator Modulator);
 
+public sealed record PatchParameter(
+    string Path,
+    string Label,
+    float Default,
+    float Min,
+    float Max,
+    float Step,
+    string Unit = "",
+    string AutomationRate = "control",
+    string Notes = "");
+
+public sealed record ReferenceSource(
+    string Kind,
+    string Uri,
+    string License,
+    string Hash,
+    string Notes = "");
+
+public sealed record ReferenceFeature(string Name, string Value, string Notes = "");
+
+public sealed record ReferencePatch(
+    string Id,
+    string Family,
+    string Name,
+    ReferenceSource Source,
+    IReadOnlyList<ReferenceFeature> Features,
+    IReadOnlyList<PatchParameter> Parameters,
+    string? AquariumScript = null);
+
 public sealed record Repeat(float IntervalSeconds);
 
 public sealed record Voice
@@ -111,6 +140,7 @@ public sealed record SynthPatch
 {
     public IReadOnlyList<Voice> Voices { get; init; } = Array.Empty<Voice>();
     public IReadOnlyList<ControlLane> Controls { get; init; } = Array.Empty<ControlLane>();
+    public IReadOnlyList<PatchParameter> Parameters { get; init; } = Array.Empty<PatchParameter>();
     public Repeat? Repeat { get; init; }
     public float Gain { get; init; } = 1;
     public bool SoftClip { get; init; } = true;

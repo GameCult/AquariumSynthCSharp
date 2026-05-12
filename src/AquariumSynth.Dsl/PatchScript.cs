@@ -31,6 +31,7 @@ public static class PatchScript
     {
         private readonly Dictionary<string, Dictionary<string, string>> _templates = new(StringComparer.OrdinalIgnoreCase);
         private readonly List<ControlLane> _controls = [];
+        private readonly List<PatchParameter> _parameters = [];
         private readonly Dictionary<string, string> _defaults = new(StringComparer.OrdinalIgnoreCase);
 
         public List<Voice> Voices { get; } = [];
@@ -42,6 +43,7 @@ public static class PatchScript
         {
             Voices = Voices,
             Controls = _controls,
+            Parameters = _parameters,
             Repeat = Repeat,
             Gain = Gain,
             SoftClip = SoftClip
@@ -79,6 +81,9 @@ public static class PatchScript
                     break;
                 case "control":
                     AddControlLane(fields, line);
+                    break;
+                case "param":
+                    AddParameter(fields, line);
                     break;
                 case "sfxr":
                     AddSfxrPatch(ParseSfxrCommand(fields, line));
@@ -235,6 +240,51 @@ public static class PatchScript
                     GetFloat(fields, line, 0, "bias", "b"))));
         }
 
+        private void AddParameter(IReadOnlyDictionary<string, string> fields, int line)
+        {
+            var path = Required(fields, "path", line);
+            if (!path.StartsWith('/'))
+            {
+                throw new PatchScriptException(line, "parameter path must start with `/`");
+            }
+            if (_parameters.Any(parameter => parameter.Path.Equals(path, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new PatchScriptException(line, $"duplicate parameter path `{path}`");
+            }
+
+            var label = TryGetAny(fields, ["label", "name", "n"], out var labelText)
+                ? labelText
+                : path.Split('/', StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? path;
+            var min = GetFloat(fields, line, 0, "min");
+            var max = GetFloat(fields, line, 1, "max");
+            var step = GetFloat(fields, line, 0.001f, "step");
+            var fallbackDefault = Math.Clamp(0.5f, Math.Min(min, max), Math.Max(min, max));
+            var defaultValue = GetFloat(fields, line, fallbackDefault, "default", "value", "v");
+            if (max < min)
+            {
+                throw new PatchScriptException(line, "parameter max must be greater than or equal to min");
+            }
+            if (step < 0)
+            {
+                throw new PatchScriptException(line, "parameter step must be non-negative");
+            }
+            if (defaultValue < min || defaultValue > max)
+            {
+                throw new PatchScriptException(line, "parameter default must be inside min/max");
+            }
+
+            _parameters.Add(new PatchParameter(
+                path,
+                label,
+                defaultValue,
+                min,
+                max,
+                step,
+                GetAny(fields, ["unit"], ""),
+                GetAny(fields, ["rate", "automation", "automation_rate"], "control"),
+                GetAny(fields, ["notes", "note"], "")));
+        }
+
         private void AddSfxrPatch(SfxrParams parameters)
         {
             var mapped = parameters.ToPatch();
@@ -362,6 +412,7 @@ public static class PatchScript
         "v" or "voice" => "voice",
         "mod" or "wob" or "wobble" or "bus" => "mod",
         "lfo" or "control" => "control",
+        "param" or "parameter" => "param",
         "s" or "sfxr" => "sfxr",
         _ => command
     };
