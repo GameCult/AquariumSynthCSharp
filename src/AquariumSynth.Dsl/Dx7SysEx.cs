@@ -1,0 +1,325 @@
+using System.Security.Cryptography;
+
+namespace AquariumSynth.Dsl;
+
+public enum Dx7FrequencyMode
+{
+    Ratio,
+    Fixed
+}
+
+public enum Dx7LfoWaveform
+{
+    Triangle,
+    SawDown,
+    SawUp,
+    Square,
+    Sine,
+    SampleHold
+}
+
+public sealed record Dx7Envelope(
+    int Rate1,
+    int Rate2,
+    int Rate3,
+    int Rate4,
+    int Level1,
+    int Level2,
+    int Level3,
+    int Level4);
+
+public sealed record Dx7Operator(
+    int Number,
+    Dx7Envelope Envelope,
+    int BreakPoint,
+    int LeftDepth,
+    int RightDepth,
+    int LeftCurve,
+    int RightCurve,
+    int RateScaling,
+    int AmplitudeModulationSensitivity,
+    int KeyVelocitySensitivity,
+    int OutputLevel,
+    Dx7FrequencyMode FrequencyMode,
+    int FrequencyCoarse,
+    int FrequencyFine,
+    int Detune);
+
+public sealed record Dx7PitchEnvelope(Dx7Envelope Envelope);
+
+public sealed record Dx7Lfo(
+    int Speed,
+    int Delay,
+    int PitchModulationDepth,
+    int AmplitudeModulationDepth,
+    bool KeySync,
+    Dx7LfoWaveform Waveform,
+    int PitchModulationSensitivity);
+
+public sealed record Dx7Voice(
+    string Name,
+    IReadOnlyList<Dx7Operator> Operators,
+    Dx7PitchEnvelope PitchEnvelope,
+    int Algorithm,
+    int Feedback,
+    bool OscillatorSync,
+    Dx7Lfo Lfo,
+    int Transpose)
+{
+    public ReferencePatch ToReferencePatch(string id, ReferenceSource source) =>
+        new(
+            id,
+            "dx7",
+            Name,
+            source,
+            Features(),
+            Array.Empty<PatchParameter>());
+
+    public IReadOnlyList<ReferenceFeature> Features()
+    {
+        var enabledOperators = Operators.Count(op => op.OutputLevel > 0);
+        var loudest = Operators.OrderByDescending(op => op.OutputLevel).First();
+        return
+        [
+            new("operator_count", Operators.Count.ToString(), "DX7 voices use six operators."),
+            new("enabled_operator_count", enabledOperators.ToString(), "Operators with non-zero output level."),
+            new("algorithm", Algorithm.ToString(), "DX7 algorithm number, 1-32."),
+            new("feedback", Feedback.ToString(), "Global DX7 feedback level, 0-7."),
+            new("oscillator_sync", OscillatorSync ? "on" : "off"),
+            new("lfo_waveform", Lfo.Waveform.ToString()),
+            new("lfo_pitch_mod_depth", Lfo.PitchModulationDepth.ToString()),
+            new("lfo_amp_mod_depth", Lfo.AmplitudeModulationDepth.ToString()),
+            new("loudest_operator", loudest.Number.ToString(), $"Output level {loudest.OutputLevel}.")
+        ];
+    }
+}
+
+public sealed record Dx7VoiceBank(IReadOnlyList<Dx7Voice> Voices);
+
+public static class Dx7SysEx
+{
+    public const int VoiceEditBufferLength = 155;
+    public const int PackedVoiceLength = 128;
+    public const int PackedBankVoiceCount = 32;
+    public const int PackedBankDataLength = PackedVoiceLength * PackedBankVoiceCount;
+
+    public static Dx7Voice ParseVoice(ReadOnlySpan<byte> bytes)
+    {
+        var data = VoiceEditBuffer(bytes);
+        return ParseVoiceEditBuffer(data);
+    }
+
+    public static Dx7VoiceBank ParseBank(ReadOnlySpan<byte> bytes)
+    {
+        var data = PackedBankData(bytes);
+        var voices = new List<Dx7Voice>(PackedBankVoiceCount);
+        for (var i = 0; i < PackedBankVoiceCount; i++)
+        {
+            var packed = data.AsSpan(i * PackedVoiceLength, PackedVoiceLength);
+            voices.Add(ParseVoiceEditBuffer(UnpackVoice(packed)));
+        }
+
+        return new Dx7VoiceBank(voices);
+    }
+
+    public static ReferenceSource SourceForBytes(string uri, string license, ReadOnlySpan<byte> bytes, string notes = "") =>
+        new("dx7-sysex", uri, license, Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant(), notes);
+
+    public static byte[] UnpackVoice(ReadOnlySpan<byte> packed)
+    {
+        if (packed.Length != PackedVoiceLength)
+        {
+            throw new ArgumentException($"packed DX7 voice must be {PackedVoiceLength} bytes", nameof(packed));
+        }
+
+        var voice = new byte[VoiceEditBufferLength];
+        for (var op = 0; op < 6; op++)
+        {
+            var packedOffset = op * 17;
+            var editOffset = op * 21;
+            for (var i = 0; i <= 10; i++) voice[editOffset + i] = SevenBit(packed[packedOffset + i]);
+
+            var curves = SevenBit(packed[packedOffset + 11]);
+            voice[editOffset + 11] = (byte)(curves & 0x03);
+            voice[editOffset + 12] = (byte)((curves >> 2) & 0x03);
+
+            var rateScalingAndDetune = SevenBit(packed[packedOffset + 12]);
+            voice[editOffset + 13] = (byte)(rateScalingAndDetune & 0x07);
+            voice[editOffset + 20] = (byte)((rateScalingAndDetune >> 3) & 0x0F);
+
+            var sensitivities = SevenBit(packed[packedOffset + 13]);
+            voice[editOffset + 14] = (byte)(sensitivities & 0x03);
+            voice[editOffset + 15] = (byte)((sensitivities >> 2) & 0x07);
+
+            voice[editOffset + 16] = SevenBit(packed[packedOffset + 14]);
+
+            var frequency = SevenBit(packed[packedOffset + 15]);
+            voice[editOffset + 17] = (byte)(frequency & 0x01);
+            voice[editOffset + 18] = (byte)((frequency >> 1) & 0x1F);
+            voice[editOffset + 19] = SevenBit(packed[packedOffset + 16]);
+        }
+
+        for (var i = 0; i < 8; i++) voice[126 + i] = SevenBit(packed[102 + i]);
+        voice[134] = (byte)(SevenBit(packed[110]) & 0x1F);
+
+        var feedbackAndSync = SevenBit(packed[111]);
+        voice[135] = (byte)(feedbackAndSync & 0x07);
+        voice[136] = (byte)((feedbackAndSync >> 3) & 0x01);
+
+        voice[137] = SevenBit(packed[112]);
+        voice[138] = SevenBit(packed[113]);
+        voice[139] = SevenBit(packed[114]);
+        voice[140] = SevenBit(packed[115]);
+
+        var lfo = SevenBit(packed[116]);
+        voice[141] = (byte)(lfo & 0x01);
+        voice[142] = (byte)((lfo >> 1) & 0x07);
+        voice[143] = (byte)((lfo >> 4) & 0x07);
+        voice[144] = SevenBit(packed[117]);
+
+        for (var i = 0; i < 10; i++) voice[145 + i] = SevenBit(packed[118 + i]);
+        return voice;
+    }
+
+    private static Dx7Voice ParseVoiceEditBuffer(ReadOnlySpan<byte> data)
+    {
+        if (data.Length != VoiceEditBufferLength)
+        {
+            throw new ArgumentException($"DX7 voice edit buffer must be {VoiceEditBufferLength} bytes", nameof(data));
+        }
+
+        var operators = new List<Dx7Operator>(6);
+        for (var op = 0; op < 6; op++)
+        {
+            var offset = op * 21;
+            operators.Add(new Dx7Operator(
+                6 - op,
+                new Dx7Envelope(
+                    Value(data, offset + 0),
+                    Value(data, offset + 1),
+                    Value(data, offset + 2),
+                    Value(data, offset + 3),
+                    Value(data, offset + 4),
+                    Value(data, offset + 5),
+                    Value(data, offset + 6),
+                    Value(data, offset + 7)),
+                Value(data, offset + 8),
+                Value(data, offset + 9),
+                Value(data, offset + 10),
+                Value(data, offset + 11),
+                Value(data, offset + 12),
+                Value(data, offset + 13),
+                Value(data, offset + 14),
+                Value(data, offset + 15),
+                Value(data, offset + 16),
+                Value(data, offset + 17) == 0 ? Dx7FrequencyMode.Ratio : Dx7FrequencyMode.Fixed,
+                Value(data, offset + 18),
+                Value(data, offset + 19),
+                Value(data, offset + 20)));
+        }
+
+        var pitchEnvelope = new Dx7PitchEnvelope(new Dx7Envelope(
+            Value(data, 126),
+            Value(data, 127),
+            Value(data, 128),
+            Value(data, 129),
+            Value(data, 130),
+            Value(data, 131),
+            Value(data, 132),
+            Value(data, 133)));
+
+        return new Dx7Voice(
+            VoiceName(data.Slice(145, 10)),
+            operators,
+            pitchEnvelope,
+            Value(data, 134) + 1,
+            Value(data, 135),
+            Value(data, 136) != 0,
+            new Dx7Lfo(
+                Value(data, 137),
+                Value(data, 138),
+                Value(data, 139),
+                Value(data, 140),
+                Value(data, 141) != 0,
+                ParseLfoWaveform(Value(data, 142)),
+                Value(data, 143)),
+            Value(data, 144));
+    }
+
+    private static byte[] VoiceEditBuffer(ReadOnlySpan<byte> bytes)
+    {
+        if (bytes.Length == VoiceEditBufferLength) return bytes.ToArray();
+
+        if (bytes.Length == VoiceEditBufferLength + 8 &&
+            bytes[0] == 0xF0 &&
+            bytes[1] == 0x43 &&
+            bytes[3] == 0x00 &&
+            bytes[4] == 0x01 &&
+            bytes[5] == 0x1B &&
+            bytes[^1] == 0xF7)
+        {
+            VerifyChecksum(bytes.Slice(6, VoiceEditBufferLength), bytes[^2]);
+            return bytes.Slice(6, VoiceEditBufferLength).ToArray();
+        }
+
+        if (bytes.Length == PackedVoiceLength) return UnpackVoice(bytes);
+
+        throw new ArgumentException($"unsupported DX7 voice payload length {bytes.Length}", nameof(bytes));
+    }
+
+    private static byte[] PackedBankData(ReadOnlySpan<byte> bytes)
+    {
+        if (bytes.Length == PackedBankDataLength) return bytes.ToArray();
+
+        if (bytes.Length == PackedBankDataLength + 8 &&
+            bytes[0] == 0xF0 &&
+            bytes[1] == 0x43 &&
+            bytes[3] == 0x09 &&
+            bytes[4] == 0x20 &&
+            bytes[5] == 0x00 &&
+            bytes[^1] == 0xF7)
+        {
+            VerifyChecksum(bytes.Slice(6, PackedBankDataLength), bytes[^2]);
+            return bytes.Slice(6, PackedBankDataLength).ToArray();
+        }
+
+        throw new ArgumentException($"unsupported DX7 bank payload length {bytes.Length}", nameof(bytes));
+    }
+
+    private static void VerifyChecksum(ReadOnlySpan<byte> data, byte checksum)
+    {
+        var sum = 0;
+        foreach (var value in data) sum = (sum + SevenBit(value)) & 0x7F;
+        if (((sum + SevenBit(checksum)) & 0x7F) != 0)
+        {
+            throw new ArgumentException("DX7 SysEx checksum is invalid");
+        }
+    }
+
+    private static Dx7LfoWaveform ParseLfoWaveform(int value) => value switch
+    {
+        0 => Dx7LfoWaveform.Triangle,
+        1 => Dx7LfoWaveform.SawDown,
+        2 => Dx7LfoWaveform.SawUp,
+        3 => Dx7LfoWaveform.Square,
+        4 => Dx7LfoWaveform.Sine,
+        5 => Dx7LfoWaveform.SampleHold,
+        _ => Dx7LfoWaveform.Triangle
+    };
+
+    private static string VoiceName(ReadOnlySpan<byte> bytes)
+    {
+        var chars = new char[bytes.Length];
+        for (var i = 0; i < bytes.Length; i++)
+        {
+            var value = SevenBit(bytes[i]);
+            chars[i] = value is >= 32 and <= 126 ? (char)value : ' ';
+        }
+
+        return new string(chars).Trim();
+    }
+
+    private static int Value(ReadOnlySpan<byte> data, int index) => SevenBit(data[index]);
+
+    private static byte SevenBit(byte value) => (byte)(value & 0x7F);
+}

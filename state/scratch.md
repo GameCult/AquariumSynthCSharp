@@ -7,6 +7,17 @@ the synth library while Aquarium work continues elsewhere.
 
 Completed this slice:
 
+- Added `Dx7SysEx` records and parsing for DX7 voice edit buffers, packed
+  128-byte voices, and packed 32-voice SysEx banks.
+- Extracted six operators, envelopes, algorithm, feedback, oscillator sync,
+  pitch envelope, LFO, transpose, and voice name into neutral DX7 records.
+- Added `Dx7Voice.ToReferencePatch` and structural feature extraction so DX7
+  voices can pressure the reference model before translation exists.
+- Checksum validation rejects bad wrapped SysEx payloads.
+- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 28 passed.
+
+Previous slice:
+
 - Added explicit `PatchParameter` contracts: stable path, label, default, min,
   max, step, unit, automation-rate notes, and notes.
 - Added neutral `ReferencePatch`, `ReferenceSource`, and `ReferenceFeature`
@@ -24,9 +35,9 @@ Completed this slice:
 
 Next likely slice:
 
-- Implement a DX7 SysEx parser skeleton for single voices and cartridge payloads.
-- Extract operator topology, envelopes, ratios, feedback, levels, LFO, and pitch
-  envelope into feature records before trying to translate.
+- Add explicit DX7 algorithm topology metadata: carrier operators, modulator
+  edges, and feedback edge location for algorithms 1-32. Keep it as reference
+  topology data, not Aquarium graph translation yet.
 - Rebuild one or two small DX7-style sounds in Aquarium DSL.
 - Keep tests focused on structure first, then add rendered audio comparison once
   the render path is explicit.

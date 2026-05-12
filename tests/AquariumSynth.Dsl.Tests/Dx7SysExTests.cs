@@ -1,0 +1,194 @@
+using AquariumSynth.Dsl;
+
+namespace AquariumSynth.Dsl.Tests;
+
+public sealed class Dx7SysExTests
+{
+    [Fact]
+    public void ParsesSingleVoiceEditBuffer()
+    {
+        var data = InitVoice("AQ BRIGHT", algorithm: 5, feedback: 3);
+
+        var voice = Dx7SysEx.ParseVoice(data);
+
+        Assert.Equal("AQ BRIGHT", voice.Name);
+        Assert.Equal(6, voice.Operators.Count);
+        Assert.Equal(5, voice.Algorithm);
+        Assert.Equal(3, voice.Feedback);
+        Assert.True(voice.OscillatorSync);
+        Assert.Equal(Dx7LfoWaveform.Sine, voice.Lfo.Waveform);
+        Assert.Equal(99, voice.Operators.Single(op => op.Number == 1).OutputLevel);
+        Assert.Equal(1, voice.Operators.Single(op => op.Number == 1).FrequencyCoarse);
+    }
+
+    [Fact]
+    public void UnpacksPackedVoiceData()
+    {
+        var data = InitVoice("PACKED", algorithm: 32, feedback: 7);
+        data[0] = 88;
+        data[11] = 2;
+        data[12] = 1;
+        data[13] = 5;
+        data[20] = 10;
+        data[14] = 3;
+        data[15] = 6;
+        data[17] = 1;
+        data[18] = 12;
+
+        var voice = Dx7SysEx.ParseVoice(PackVoice(data));
+        var op6 = voice.Operators.Single(op => op.Number == 6);
+
+        Assert.Equal("PACKED", voice.Name);
+        Assert.Equal(32, voice.Algorithm);
+        Assert.Equal(7, voice.Feedback);
+        Assert.Equal(88, op6.Envelope.Rate1);
+        Assert.Equal(2, op6.LeftCurve);
+        Assert.Equal(1, op6.RightCurve);
+        Assert.Equal(5, op6.RateScaling);
+        Assert.Equal(10, op6.Detune);
+        Assert.Equal(3, op6.AmplitudeModulationSensitivity);
+        Assert.Equal(6, op6.KeyVelocitySensitivity);
+        Assert.Equal(Dx7FrequencyMode.Fixed, op6.FrequencyMode);
+        Assert.Equal(12, op6.FrequencyCoarse);
+    }
+
+    [Fact]
+    public void ParsesPackedThirtyTwoVoiceSysExBank()
+    {
+        var bankData = new byte[Dx7SysEx.PackedBankDataLength];
+        for (var i = 0; i < Dx7SysEx.PackedBankVoiceCount; i++)
+        {
+            var name = $"AQ{i + 1:00}";
+            PackVoice(InitVoice(name, algorithm: i % 32 + 1, feedback: i % 8))
+                .CopyTo(bankData.AsSpan(i * Dx7SysEx.PackedVoiceLength));
+        }
+
+        var bank = Dx7SysEx.ParseBank(WrapSysEx(format: 9, data: bankData));
+
+        Assert.Equal(32, bank.Voices.Count);
+        Assert.Equal("AQ01", bank.Voices[0].Name);
+        Assert.Equal("AQ32", bank.Voices[31].Name);
+        Assert.Equal(32, bank.Voices[31].Algorithm);
+        Assert.Equal(7, bank.Voices[31].Feedback);
+    }
+
+    [Fact]
+    public void BuildsReferencePatchWithStructuralFeatures()
+    {
+        var data = InitVoice("FEATURES", algorithm: 12, feedback: 4);
+        var source = Dx7SysEx.SourceForBytes("memory://features.syx", "project-authored", data);
+
+        var reference = Dx7SysEx.ParseVoice(data).ToReferencePatch("dx7/features", source);
+
+        Assert.Equal("dx7", reference.Family);
+        Assert.Equal("FEATURES", reference.Name);
+        Assert.Equal("dx7-sysex", reference.Source.Kind);
+        Assert.Equal(64, reference.Source.Hash.Length);
+        Assert.Contains(reference.Features, feature => feature.Name == "operator_count" && feature.Value == "6");
+        Assert.Contains(reference.Features, feature => feature.Name == "algorithm" && feature.Value == "12");
+        Assert.Contains(reference.Features, feature => feature.Name == "feedback" && feature.Value == "4");
+    }
+
+    [Fact]
+    public void RejectsBadSysExChecksum()
+    {
+        var wrapped = WrapSysEx(format: 0, data: InitVoice("BAD SUM", algorithm: 1, feedback: 0));
+        wrapped[^2] ^= 0x01;
+
+        var exception = Assert.Throws<ArgumentException>(() => Dx7SysEx.ParseVoice(wrapped));
+
+        Assert.Contains("checksum", exception.Message);
+    }
+
+    private static byte[] InitVoice(string name, int algorithm, int feedback)
+    {
+        var data = new byte[Dx7SysEx.VoiceEditBufferLength];
+        for (var op = 0; op < 6; op++)
+        {
+            var offset = op * 21;
+            data[offset + 0] = 99;
+            data[offset + 1] = 99;
+            data[offset + 2] = 99;
+            data[offset + 3] = 99;
+            data[offset + 4] = 99;
+            data[offset + 5] = 99;
+            data[offset + 6] = 99;
+            data[offset + 7] = op == 5 ? (byte)0 : (byte)99;
+            data[offset + 16] = op == 5 ? (byte)99 : (byte)0;
+            data[offset + 18] = 1;
+            data[offset + 20] = 7;
+        }
+
+        data[126] = 99;
+        data[127] = 99;
+        data[128] = 99;
+        data[129] = 99;
+        data[130] = 50;
+        data[131] = 50;
+        data[132] = 50;
+        data[133] = 50;
+        data[134] = (byte)(algorithm - 1);
+        data[135] = (byte)feedback;
+        data[136] = 1;
+        data[137] = 35;
+        data[141] = 1;
+        data[142] = 4;
+        data[143] = 3;
+        data[144] = 24;
+
+        var paddedName = name.PadRight(10)[..10];
+        for (var i = 0; i < paddedName.Length; i++) data[145 + i] = (byte)paddedName[i];
+        return data;
+    }
+
+    private static byte[] PackVoice(byte[] edit)
+    {
+        var packed = new byte[Dx7SysEx.PackedVoiceLength];
+        for (var op = 0; op < 6; op++)
+        {
+            var packedOffset = op * 17;
+            var editOffset = op * 21;
+            for (var i = 0; i <= 10; i++) packed[packedOffset + i] = edit[editOffset + i];
+            packed[packedOffset + 11] = (byte)(edit[editOffset + 11] | (edit[editOffset + 12] << 2));
+            packed[packedOffset + 12] = (byte)(edit[editOffset + 13] | (edit[editOffset + 20] << 3));
+            packed[packedOffset + 13] = (byte)(edit[editOffset + 14] | (edit[editOffset + 15] << 2));
+            packed[packedOffset + 14] = edit[editOffset + 16];
+            packed[packedOffset + 15] = (byte)(edit[editOffset + 17] | (edit[editOffset + 18] << 1));
+            packed[packedOffset + 16] = edit[editOffset + 19];
+        }
+
+        for (var i = 0; i < 8; i++) packed[102 + i] = edit[126 + i];
+        packed[110] = edit[134];
+        packed[111] = (byte)(edit[135] | (edit[136] << 3));
+        packed[112] = edit[137];
+        packed[113] = edit[138];
+        packed[114] = edit[139];
+        packed[115] = edit[140];
+        packed[116] = (byte)(edit[141] | (edit[142] << 1) | (edit[143] << 4));
+        packed[117] = edit[144];
+        for (var i = 0; i < 10; i++) packed[118 + i] = edit[145 + i];
+        return packed;
+    }
+
+    private static byte[] WrapSysEx(byte format, byte[] data)
+    {
+        var bytes = new byte[data.Length + 8];
+        bytes[0] = 0xF0;
+        bytes[1] = 0x43;
+        bytes[2] = 0x00;
+        bytes[3] = format;
+        bytes[4] = (byte)((data.Length >> 7) & 0x7F);
+        bytes[5] = (byte)(data.Length & 0x7F);
+        data.CopyTo(bytes.AsSpan(6));
+        bytes[^2] = Checksum(data);
+        bytes[^1] = 0xF7;
+        return bytes;
+    }
+
+    private static byte Checksum(byte[] data)
+    {
+        var sum = 0;
+        foreach (var value in data) sum = (sum + value) & 0x7F;
+        return (byte)((128 - sum) & 0x7F);
+    }
+}

@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-13T00:37:07+01:00
+updated: 2026-05-13T00:43:44+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -17,6 +17,7 @@ current_mechanism:
   faust_emitter: src/AquariumSynth.Dsl/FaustExport.cs
   analysis: src/AquariumSynth.Dsl/AudioAnalysis.cs
   built_ins: src/AquariumSynth.Dsl/BuiltInScripts.cs
+  dx7_references: src/AquariumSynth.Dsl/Dx7SysEx.cs
   tests: tests/AquariumSynth.Dsl.Tests/PatchScriptTests.cs
   doctrine: docs/audio-doctrine.md
   roadmap: docs/reference-synth-roadmap.md
@@ -40,9 +41,9 @@ reference_targets:
     priority: 1
     purpose: "Structured FM/operator graph pressure test."
     source: "https://github.com/asb2m10/dexed"
+    status: "DX7 SysEx parser and structural feature extraction exist; topology edge maps are next."
     first_slice:
-      - "Parse DX7 SysEx single voice and cartridge payloads."
-      - "Extract six-operator topology, envelopes, ratios, feedback, levels, LFO, pitch envelope."
+      - "Add algorithm topology metadata for carrier operators, modulator edges, and feedback edge location."
       - "Rebuild two small DX7-style references in Aquarium DSL."
   zynaddsubfx:
     priority: 2
@@ -77,8 +78,9 @@ reference_targets:
 
 next_agent_start_here:
   recommended_first_task: >
-    Add a DX7 SysEx parser skeleton with feature extraction tests. Do not start
-    by importing a giant bank.
+    Add DX7 algorithm topology metadata for algorithms 1-32, then rebuild one
+    or two tiny DX7-style references in Aquarium DSL. Do not import a giant
+    bank.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -90,6 +92,13 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-13
+    summary: >
+      Added DX7 SysEx records and parsing for 155-byte voice edit buffers,
+      128-byte packed voices, and 4104-byte packed 32-voice banks. Extracted
+      operators, envelopes, algorithm, feedback, oscillator sync, LFO,
+      transpose, voice name, checksum validation, and ReferencePatch features.
+    verification: "dotnet test AquariumSynthCSharp.slnx --no-restore: 28 passed"
   - date: 2026-05-13
     summary: >
       Added PatchParameter and ReferencePatch contracts, `param` script parsing,

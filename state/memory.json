@@ -12,6 +12,7 @@
       "patch graph model",
       "patch parameter contracts",
       "reference patch contracts",
+      "DX7 SysEx structural parsing",
       "patch script parser",
       "SFXR atoms and parameter mapping",
       "analysis/comparison metrics",
@@ -43,6 +44,10 @@
     ],
     "rule": "Add DSL abstractions only when reference rebuilds prove the missing invariant."
   },
+  "dx7_reference_path": {
+    "status": "DX7 SysEx parser extracts voice edit buffers, packed voices, packed 32-voice banks, six operators, envelopes, algorithm, feedback, oscillator sync, LFO, transpose, voice name, checksum validation, and ReferencePatch features.",
+    "next": "Add algorithm topology metadata for algorithms 1-32 before translating DX7 voices into Aquarium DSL."
+  },
   "runtime_parameters": {
     "rule": "Patch parameters are runtime controls, not compile-time constants.",
     "faust_surface": "Faust UI controls expose parameter zones that hosts can update with setParamValue/getParamValue-style APIs.",
@@ -51,7 +56,7 @@
   },
   "last_verified": {
     "command": "dotnet test AquariumSynthCSharp.slnx --no-restore",
-    "result": "23 passed",
-    "commit": "pending field-site parameter binding commit"
+    "result": "28 passed",
+    "commit": "pending DX7 SysEx reference parsing commit"
   }
 }
