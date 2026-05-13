@@ -21,6 +21,7 @@
       "DX7 SysEx structural parsing",
       "DX7 algorithm topology metadata",
       "DX7 effective operator-level approximation",
+      "staged operator envelope DSL",
       "DX7 envelope-to-ADSR approximation",
       "standard ADSR envelope model",
       "note frequency/gate model",
@@ -58,9 +59,9 @@
     "rule": "Add DSL abstractions only when reference rebuilds prove the missing invariant. Do not consume references that cannot be backed by parity tests; parsing alone is inventory, not evidence of expressivity."
   },
   "dx7_reference_path": {
-    "status": "DX7 SysEx parser extracts voice edit buffers, packed voices, packed 32-voice banks, six operators, envelopes, algorithm, feedback, oscillator sync, LFO, transpose, voice name, checksum validation, ReferencePatch features, algorithm topology from the reverse-engineered OPS algorithm ROM table, envelope-to-ADSR approximations, effective operator-level approximations, two Aquarium DSL rebuild attempts, first-class OperatorGraph support, public-domain SysEx fixture coverage, dexed-py reference rendering, Aquarium candidate rendering through Faust-generated C#, one thresholded rendered parity test for analog1.syx voice 13, and renderable delayed operator feedback.",
-    "lesson": "Algorithm 32's additive six-carrier shape maps cleanly to six Aquarium voices. Algorithm 8 justified OperatorGraph: operators, modulation edges, carriers, and feedback belong to a graph authority, not Voice fields. The first rendered parity rung is behavioral and sine-like, not exact DX7 operator execution. A harder algorithm-8 target exposed that feedback must be delayed recursion in Faust, not a direct cyclic self-reference. Static DX7 output-level approximation helps import/rebuild math but does not solve hard parity alone; PRC SYNTH1 still points at DX7-style operator envelope/gain evolution. Readable authoring uses operator/route/carrier declarations; compact ops/edges tuples are scaffolding only.",
-    "next": "Choose whether to add a DX7-style four-rate/four-level operator envelope surface or a reference-rebuild-only gain-envelope approximation before attempting the next hard parity threshold; exact DX7 feedback scaling remains separate pressure."
+    "status": "DX7 SysEx parser extracts voice edit buffers, packed voices, packed 32-voice banks, six operators, envelopes, algorithm, feedback, oscillator sync, LFO, transpose, voice name, checksum validation, ReferencePatch features, algorithm topology from the reverse-engineered OPS algorithm ROM table, envelope-to-ADSR approximations, effective operator-level approximations, staged operator envelopes, two Aquarium DSL rebuild attempts, first-class OperatorGraph support, public-domain SysEx fixture coverage, dexed-py reference rendering, Aquarium candidate rendering through Faust-generated C#, one thresholded rendered parity test for analog1.syx voice 13, and renderable delayed operator feedback.",
+    "lesson": "Algorithm 32's additive six-carrier shape maps cleanly to six Aquarium voices. Algorithm 8 justified OperatorGraph: operators, modulation edges, carriers, and feedback belong to a graph authority, not Voice fields. The first rendered parity rung is behavioral and sine-like, not exact DX7 operator execution. A harder algorithm-8 target exposed that feedback must be delayed recursion in Faust, not a direct cyclic self-reference. Static DX7 output-level approximation helps import/rebuild math but does not solve hard parity alone. Staged operator envelopes now let Aquarium express four-rate/four-level contours in readable DSL, but direct DX7 lowering on PRC SYNTH1 only reached ~0.316 in quick probes; the next problem is DX7 EG timing/gain calibration, not more surface.",
+    "next": "Calibrate DX7 EG timing/gain lowering against PRC SYNTH1 before trying another hard DX7 parity threshold; exact DX7 feedback scaling remains separate pressure."
   },
   "note_and_envelope_model": {
     "rule": "Notes own frequency, gate duration, and host/MIDI source. Envelopes own ADSR level shape.",
@@ -75,7 +76,7 @@
   },
   "last_verified": {
     "command": "dotnet test AquariumSynthCSharp.slnx --no-restore",
-    "result": "50 passed",
-    "commit": "pending DX7 operator level approximation"
+    "result": "53 passed",
+    "commit": "pending staged operator envelopes"
   }
 }

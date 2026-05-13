@@ -57,6 +57,9 @@ public static class FaustEmitter
         source.AppendLine("fold(x) = 2.0 * abs(2.0 * (x / 4.0 - floor(x / 4.0)) - 1.0) - 1.0;");
         source.AppendLine("release_start(a,d,g) = max(g, a + d);");
         source.AppendLine("oneshot_adsr(a,d,s,r,g) = select2(age < a, select2(age < a + d, select2(age < release_start(a,d,g), select2(age < release_start(a,d,g) + r, 0.0, s * (1.0 - (age - release_start(a,d,g)) / max(0.0001, r))), s), 1.0 - (1.0 - s) * ((age - a) / max(0.0001, d))), age / max(0.0001, a));");
+        source.AppendLine("seg(t,t0,d,a,b) = a + (b - a) * clip01((t - t0) / max(0.0001, d));");
+        source.AppendLine("rl_release_start(r1,r2,r3,g) = max(g, r1 + r2 + r3);");
+        source.AppendLine("rl4_env(r1,l1,r2,l2,r3,l3,r4,l4,g) = select2(age < r1, select2(age < r1 + r2, select2(age < r1 + r2 + r3, select2(age < rl_release_start(r1,r2,r3,g), select2(age < rl_release_start(r1,r2,r3,g) + r4, l4, seg(age, rl_release_start(r1,r2,r3,g), r4, l3, l4)), l3), seg(age, r1 + r2, r3, l2, l3)), seg(age, r1, r2, l1, l2)), seg(age, 0, r1, 0, l1));");
         source.AppendLine("lfo_sin(hz, phase) = sin(2.0 * ma.PI * (age * hz + phase));");
         source.AppendLine("lfo_tri(hz, phase) = 1.0 - 4.0 * abs((age * hz + phase - floor(age * hz + phase)) - 0.5);");
         source.AppendLine("lfo_sq(hz, phase) = select2((age * hz + phase - floor(age * hz + phase)) < 0.5, -1.0, 1.0);");
@@ -279,6 +282,9 @@ public static class FaustEmitter
             : $"oneshot_adsr({attack}, {decay}, {sustain}, {release}, {gate})";
     }
 
+    private static string RateLevelEnvelopeExpression(RateLevelEnvelope envelope, string gate) =>
+        $"rl4_env({F(envelope.Rate1Seconds)}, {F(envelope.Level1)}, {F(envelope.Rate2Seconds)}, {F(envelope.Level2)}, {F(envelope.Rate3Seconds)}, {F(envelope.Level3)}, {F(envelope.Rate4Seconds)}, {F(envelope.Level4)}, {gate})";
+
     private static string OscillatorExpression(SynthPatch patch, Voice voice, int voiceIndex, string frequency, string duty, string fmIndex, ParameterMap parameters)
     {
         var hasFmMod = patch.Controls.Any(control => control.Modulator.Target == ModTarget.FmIndex) ||
@@ -346,18 +352,22 @@ public static class FaustEmitter
                 .Select(edge => $"{name}_op_{edge.SourceId} * {parameters.Expression($"{graphPath}/routes/{edge.SourceId}>{edge.TargetId}/index", edge.Index)}")
                 .ToList();
             var externalPhaseMod = incoming.Count == 0 ? "0.0" : string.Join(" + ", incoming);
-            var envelope = EnvelopeExpression(
-                op.Envelope,
-                UsesHostPlayback(playback) || op.Note.Source == NoteSource.Host ? graphNoteGate : F(op.Note.GateSeconds),
-                UsesHostPlayback(playback) || op.Note.Source == NoteSource.Host,
-                field => field switch
-                {
-                    "env/attack" => parameters.Expression($"{operatorPath}/env/attack", op.Envelope.AttackSeconds),
-                    "env/decay" => parameters.Expression($"{operatorPath}/env/decay", op.Envelope.DecaySeconds),
-                    "env/sustain_level" => parameters.Expression($"{operatorPath}/env/sustain_level", op.Envelope.SustainLevel),
-                    "env/release" => parameters.Expression($"{operatorPath}/env/release", op.Envelope.ReleaseSeconds),
-                    _ => throw new ArgumentOutOfRangeException(nameof(field), field, null)
-                });
+            var envelope = op.RateLevelEnvelope is not null
+                ? RateLevelEnvelopeExpression(
+                    op.RateLevelEnvelope,
+                    UsesHostPlayback(playback) || op.Note.Source == NoteSource.Host ? graphNoteGate : F(op.Note.GateSeconds))
+                : EnvelopeExpression(
+                    op.Envelope,
+                    UsesHostPlayback(playback) || op.Note.Source == NoteSource.Host ? graphNoteGate : F(op.Note.GateSeconds),
+                    UsesHostPlayback(playback) || op.Note.Source == NoteSource.Host,
+                    field => field switch
+                    {
+                        "env/attack" => parameters.Expression($"{operatorPath}/env/attack", op.Envelope.AttackSeconds),
+                        "env/decay" => parameters.Expression($"{operatorPath}/env/decay", op.Envelope.DecaySeconds),
+                        "env/sustain_level" => parameters.Expression($"{operatorPath}/env/sustain_level", op.Envelope.SustainLevel),
+                        "env/release" => parameters.Expression($"{operatorPath}/env/release", op.Envelope.ReleaseSeconds),
+                        _ => throw new ArgumentOutOfRangeException(nameof(field), field, null)
+                    });
             if (op.Feedback != 0)
             {
                 var feedback = parameters.Expression($"{operatorPath}/feedback", op.Feedback);

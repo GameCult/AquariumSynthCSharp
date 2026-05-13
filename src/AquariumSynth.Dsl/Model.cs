@@ -40,6 +40,16 @@ public sealed record Envelope(
     public float DurationSeconds => AttackSeconds + DecaySeconds + ReleaseSeconds;
 }
 
+public sealed record RateLevelEnvelope(
+    float Rate1Seconds,
+    float Level1,
+    float Rate2Seconds,
+    float Level2,
+    float Rate3Seconds,
+    float Level3,
+    float Rate4Seconds,
+    float Level4);
+
 public enum NoteSource
 {
     OneShot,
@@ -120,7 +130,8 @@ public sealed record OperatorNode(
     float Level = 1,
     float Feedback = 0,
     Note Note = null!,
-    Envelope Envelope = null!)
+    Envelope Envelope = null!,
+    RateLevelEnvelope? RateLevelEnvelope = null)
 {
     public Note Note { get; init; } = Note ?? new();
     public Envelope Envelope { get; init; } = Envelope ?? new();

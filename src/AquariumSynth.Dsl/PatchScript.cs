@@ -380,7 +380,7 @@ public static class PatchScript
             var id = ParseOperatorId(Required(fields, "name", line), line);
             var operatorPath = $"{graph.Path}/operators/{id}";
             var envelopeSpec = TryGetAny(fields, ["env", "envelope"], out var envSpec)
-                ? ParseEnvelopeSpec(envSpec, line, operatorPath)
+                ? ParseEnvelopeSpec(envSpec, fields, line, operatorPath)
                 : new ParsedEnvelope(
                     new Envelope(
                         GetBoundFloat(fields, line, 0, $"{operatorPath}/env/attack", "attack", "a"),
@@ -395,7 +395,8 @@ public static class PatchScript
                 GetBoundFloat(fields, line, 1, $"{operatorPath}/level", "level", "l"),
                 GetBoundFloat(fields, line, 0, $"{operatorPath}/feedback", "feedback", "fb"),
                 graph.Note with { GateSeconds = envelopeSpec.GateSeconds },
-                envelopeSpec.Envelope));
+                envelopeSpec.Envelope,
+                envelopeSpec.RateLevelEnvelope));
         }
 
         private void AddOperatorRoute(IReadOnlyDictionary<string, string> fields, int line)
@@ -585,7 +586,7 @@ public static class PatchScript
                 .Select(part => ParseInt(part, line))
                 .ToList();
 
-        private ParsedEnvelope ParseEnvelopeSpec(string value, int line, string fieldPath)
+        private ParsedEnvelope ParseEnvelopeSpec(string value, IReadOnlyDictionary<string, string> fields, int line, string fieldPath)
         {
             var pieces = value.Split(':');
             return pieces[0].ToLowerInvariant() switch
@@ -599,13 +600,66 @@ public static class PatchScript
                         ParseBoundFloat(pieces[2], line, 0, $"{fieldPath}/env/decay"),
                         ParseBoundFloat(pieces[3], line, 1, $"{fieldPath}/env/sustain_level"),
                         ParseBoundFloat(pieces[4], line, 0.1f, $"{fieldPath}/env/release")),
-                    0.1f),
+                    GateSeconds(fields, line, 0.1f, fieldPath)),
+                "rl" or "ratelevel" when pieces.Length == 1 => ParseRateLevelEnvelope(fields, line, fieldPath),
+                "rl" or "ratelevel" when pieces.Length == 9 => ParseRateLevelEnvelope(pieces, fields, line, fieldPath),
                 _ => throw new PatchScriptException(line, $"bad envelope `{value}`")
             };
         }
 
         private static ParsedEnvelope AdEnvelope(float attackSeconds, float decaySeconds) =>
             new(new Envelope(attackSeconds, decaySeconds, 0, 0), attackSeconds + decaySeconds);
+
+        private ParsedEnvelope ParseRateLevelEnvelope(IReadOnlyDictionary<string, string> fields, int line, string fieldPath)
+        {
+            var rates = ParseFloatList(Required(fields, "rates", line), line, "rates");
+            var levels = ParseFloatList(Required(fields, "levels", line), line, "levels");
+            if (rates.Count != 4 || levels.Count != 4)
+            {
+                throw new PatchScriptException(line, "rate/level envelope needs four rates and four levels");
+            }
+
+            return RateLevelParsedEnvelope(rates, levels, fields, line, fieldPath);
+        }
+
+        private ParsedEnvelope ParseRateLevelEnvelope(string[] pieces, IReadOnlyDictionary<string, string> fields, int line, string fieldPath)
+        {
+            var rates = new[] { pieces[1], pieces[3], pieces[5], pieces[7] }
+                .Select(part => ParseFloat(part, line))
+                .ToArray();
+            var levels = new[] { pieces[2], pieces[4], pieces[6], pieces[8] }
+                .Select(part => ParseFloat(part, line))
+                .ToArray();
+            return RateLevelParsedEnvelope(rates, levels, fields, line, fieldPath);
+        }
+
+        private ParsedEnvelope RateLevelParsedEnvelope(IReadOnlyList<float> rates, IReadOnlyList<float> levels, IReadOnlyDictionary<string, string> fields, int line, string fieldPath)
+        {
+            var envelope = new RateLevelEnvelope(
+                Math.Max(0, rates[0]), Math.Clamp(levels[0], 0, 1.5f),
+                Math.Max(0, rates[1]), Math.Clamp(levels[1], 0, 1.5f),
+                Math.Max(0, rates[2]), Math.Clamp(levels[2], 0, 1.5f),
+                Math.Max(0, rates[3]), Math.Clamp(levels[3], 0, 1.5f));
+            var defaultGate = Math.Max(envelope.Rate1Seconds + envelope.Rate2Seconds + envelope.Rate3Seconds, 0.02f);
+            return new ParsedEnvelope(
+                new Envelope(envelope.Rate1Seconds, envelope.Rate2Seconds + envelope.Rate3Seconds, envelope.Level3, envelope.Rate4Seconds),
+                GateSeconds(fields, line, defaultGate, fieldPath),
+                envelope);
+        }
+
+        private float GateSeconds(IReadOnlyDictionary<string, string> fields, int line, float defaultValue, string fieldPath) =>
+            GetBoundFloat(fields, line, defaultValue, $"{fieldPath}/note/gate", "gate", "hold", "duration");
+
+        private static IReadOnlyList<float> ParseFloatList(string value, int line, string fieldName)
+        {
+            var parts = value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (parts.Length == 0)
+            {
+                throw new PatchScriptException(line, $"{fieldName} list cannot be empty");
+            }
+
+            return parts.Select(part => ParseFloat(part, line)).ToArray();
+        }
 
         private static int ParseOperatorId(string value, int line)
         {
@@ -684,7 +738,7 @@ public static class PatchScript
             public List<int> Carriers { get; } = [];
         }
 
-        private sealed record ParsedEnvelope(Envelope Envelope, float GateSeconds);
+        private sealed record ParsedEnvelope(Envelope Envelope, float GateSeconds, RateLevelEnvelope? RateLevelEnvelope = null);
     }
 
     private static readonly (string[] Keys, ModTarget Target)[] ModTargets =

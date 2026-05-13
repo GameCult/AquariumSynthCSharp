@@ -199,6 +199,28 @@ public sealed class Dx7SysExTests
         Assert.Contains("nonlinear", operatorLevel.Notes);
     }
 
+    [Fact]
+    public void ApproximatesDx7RateLevelEnvelopeAsStagedEnvelope()
+    {
+        var approximation = Dx7SysEx.ApproximateRateLevelEnvelope(new Dx7Envelope(
+            Rate1: 98,
+            Rate2: 72,
+            Rate3: 75,
+            Rate4: 61,
+            Level1: 99,
+            Level2: 89,
+            Level3: 99,
+            Level4: 0));
+
+        Assert.Equal(1, approximation.Envelope.Level1);
+        Assert.Equal(89 / 99f, approximation.Envelope.Level2, 5);
+        Assert.Equal(1, approximation.Envelope.Level3);
+        Assert.Equal(0, approximation.Envelope.Level4);
+        Assert.True(approximation.GateSeconds >= approximation.Envelope.Rate1Seconds + approximation.Envelope.Rate2Seconds + approximation.Envelope.Rate3Seconds);
+        Assert.StartsWith("env=rl rates=", approximation.ToScriptSpec());
+        Assert.Contains("intermediate target levels", approximation.Notes);
+    }
+
     private static byte[] InitVoice(string name, int algorithm, int feedback)
     {
         var data = new byte[Dx7SysEx.VoiceEditBufferLength];

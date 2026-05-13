@@ -15,6 +15,23 @@ Doctrine update:
 
 Completed this slice:
 
+- Added staged operator envelopes for operator graphs:
+  `env=rl rates=.004,.12,.2,.4 levels=1,.7,.25,0`. This gives the DSL a
+  readable four-stage rate/level contour without infecting the general ADSR
+  voice envelope model.
+- Added `RateLevelEnvelope` to the operator model, parser support for readable
+  and compact `env=rl` syntax, Faust `rl4_env(...)` rendering, and a DX7 helper
+  that emits staged envelope script specs from four-rate/four-level operator EG
+  data.
+- Verified the surface structurally and through the render path:
+  `dotnet test AquariumSynthCSharp.slnx --no-restore`: 53 passed.
+- Retried the hard `PRC SYNTH1` probe with direct DX7 rate/level lowering. The
+  best quick score was only ~0.316, worse than the hand-tweaked ADSR candidate.
+  The DSL can now express the missing contour shape, but DX7 EG timing/gain
+  calibration remains the next pressure.
+
+Previous slice:
+
 - Added `Dx7OperatorLevelApproximation`, which distills DX7 operator output
   level plus key/velocity scaling into a normal Aquarium `level=`-style value.
   This remains DX7 reference-import knowledge, not a generic DSL feature.

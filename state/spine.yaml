@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-13T15:43:00+01:00
+updated: 2026-05-13T16:28:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -43,7 +43,8 @@ live_invariants:
   - Operator graph parameter binding also uses exact field-site paths under `/opgraphs/...`; do not add graph-wide macro routing.
   - Operator feedback must render through Faust as delayed recursion, not as a direct cyclic self-reference.
   - DX7 operator output level approximation belongs in reference import/rebuild helpers, not the generic DSL model.
-  - DX7 rate/level envelopes may lower to labeled ADSR approximations, but exact DX7 EG execution remains missing pressure.
+  - Staged operator envelopes own multi-target operator level contours through `env=rl rates=... levels=...`; do not force DX7-style contours back into the general ADSR voice envelope model.
+  - DX7 rate/level envelopes may lower to staged operator envelopes or labeled ADSR approximations, but exact DX7 EG timing/gain calibration remains missing pressure.
   - Recompile only for graph shape changes; vary declared parameters through the hosted DSP control API.
   - Reference fixtures must preserve provenance, license status, source hash, and feature pressure.
   - Public-domain reference fixtures and dexed-py helpers are test/development material only; the NuGet package must ship only AquariumSynth.Dsl.
@@ -57,7 +58,7 @@ reference_targets:
     priority: 1
     purpose: "Structured FM/operator graph pressure test."
     source: "https://github.com/asb2m10/dexed"
-    status: "DX7 SysEx parser, public-domain SysEx fixture, dexed-py reference rendering, first thresholded rendered parity test for analog1.syx voice 13, renderable delayed operator feedback, DX7 effective operator-level approximation, algorithm topology extraction, envelope-to-ADSR approximation, two Aquarium DSL rebuild attempts, first-class operator graph support, and Aquarium candidate rendering through Faust-generated C# exist."
+    status: "DX7 SysEx parser, public-domain SysEx fixture, dexed-py reference rendering, first thresholded rendered parity test for analog1.syx voice 13, renderable delayed operator feedback, DX7 effective operator-level approximation, staged operator envelopes, algorithm topology extraction, envelope-to-ADSR approximation, two Aquarium DSL rebuild attempts, first-class operator graph support, and Aquarium candidate rendering through Faust-generated C# exist."
     first_slice:
       - "Add a harder public-domain DX7 parity target that audibly needs operator routing."
   zynaddsubfx:
@@ -93,10 +94,10 @@ reference_targets:
 
 next_agent_start_here:
   recommended_first_task: >
-    Choose a harder public-domain DX7 fixture voice whose rendered audio needs
-    audible operator routing, rebuild it with a readable Aquarium operator
-    graph, and compare dexed-py reference audio against Faust-rendered Aquarium
-    candidate audio with explicit parity thresholds.
+    Calibrate DX7 EG timing/gain approximation against the harder public-domain
+    `PRC SYNTH1` target before trying to bless another hard threshold. The DSL
+    now has staged operator envelopes; the missing work is making the DX7
+    lowering land close enough to prove the emulation path.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -108,6 +109,16 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-13
+    summary: >
+      Added staged operator envelopes for operator graphs through
+      `env=rl rates=... levels=...`, backed by a `RateLevelEnvelope` model,
+      parser support, Faust `rl4_env(...)` rendering, and DX7 helper output
+      from four-rate/four-level operator EG data. Direct DX7 rate/level
+      lowering on `PRC SYNTH1` only reached ~0.316 in quick probes, so the DSL
+      surface exists but DX7 EG timing/gain calibration remains the next
+      pressure.
+    verification: "dotnet test AquariumSynthCSharp.slnx --no-restore: 53 passed"
   - date: 2026-05-13
     summary: >
       Added `Dx7OperatorLevelApproximation`, which maps DX7 operator output

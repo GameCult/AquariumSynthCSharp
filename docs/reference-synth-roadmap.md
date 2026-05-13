@@ -78,7 +78,10 @@ First deliverable:
   public-domain fixture. Aquarium candidate rendering and `dexed-py` reference
   rendering exist, and `analog1.syx` voice 13 has the first thresholded parity
   rebuild. The next pressure is a harder voice that actually needs audible
-  operator routing rather than a sine-like behavioral match.
+  operator routing rather than a sine-like behavioral match. Staged operator
+  envelopes now exist as readable `env=rl rates=... levels=...` declarations;
+  direct DX7 rate/level lowering on `PRC SYNTH1` still fails hard enough to
+  make EG timing/gain calibration the live pressure.
 
 Source: [Dexed](https://github.com/asb2m10/dexed)
 

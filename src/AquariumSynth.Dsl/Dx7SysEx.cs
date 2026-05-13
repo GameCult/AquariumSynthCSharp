@@ -46,6 +46,18 @@ public sealed record Dx7OperatorLevelApproximation(
     int VelocityOffset,
     string Notes);
 
+public sealed record Dx7RateLevelEnvelopeApproximation(
+    RateLevelEnvelope Envelope,
+    float GateSeconds,
+    string Notes)
+{
+    public string ToScriptSpec() =>
+        $"env=rl rates={F(Envelope.Rate1Seconds)},{F(Envelope.Rate2Seconds)},{F(Envelope.Rate3Seconds)},{F(Envelope.Rate4Seconds)} " +
+        $"levels={F(Envelope.Level1)},{F(Envelope.Level2)},{F(Envelope.Level3)},{F(Envelope.Level4)} gate={F(GateSeconds)}";
+
+    private static string F(float value) => value.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture);
+}
+
 public sealed record Dx7Operator(
     int Number,
     Dx7Envelope Envelope,
@@ -197,6 +209,23 @@ public static class Dx7SysEx
             keyScaling,
             velocityOffset,
             "Approximation: DX7 output level uses nonlinear scaling plus key/velocity offsets before envelope gain.");
+    }
+
+    public static Dx7RateLevelEnvelopeApproximation ApproximateRateLevelEnvelope(Dx7Envelope envelope)
+    {
+        var l1 = Level(envelope.Level1);
+        var l2 = Level(envelope.Level2);
+        var l3 = Level(envelope.Level3);
+        var l4 = Level(envelope.Level4);
+        var r1 = SegmentSeconds(envelope.Rate1, Math.Abs(l1 - l4));
+        var r2 = SegmentSeconds(envelope.Rate2, Math.Abs(l1 - l2));
+        var r3 = SegmentSeconds(envelope.Rate3, Math.Abs(l2 - l3));
+        var r4 = SegmentSeconds(envelope.Rate4, Math.Abs(l3 - l4));
+
+        return new Dx7RateLevelEnvelopeApproximation(
+            new RateLevelEnvelope(r1, l1, r2, l2, r3, l3, r4, l4),
+            Math.Max(r1 + r2 + r3, 0.02f),
+            "Approximation: DX7 EG uses four rate/level segments; Aquarium staged envelopes preserve the intermediate target levels.");
     }
 
     public static Dx7VoiceBank ParseBank(ReadOnlySpan<byte> bytes)

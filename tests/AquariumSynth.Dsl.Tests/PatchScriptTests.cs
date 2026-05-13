@@ -309,6 +309,34 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
+    public void OperatorGraphSyntaxParsesReadableRateLevelEnvelope()
+    {
+        var patch = PatchScript.Parse("""
+            opgraph name=pair freq=220 gain=.2
+            operator name=op2 ratio=2 level=.8 env=rl rates=.004,.12,.2,.4 levels=1,.7,.25,0 gate=.75
+            operator name=op1 ratio=1 level=1 env=adsr:.02:.1:.65:.3
+            route from=op2 to=op1 index=.8
+            carrier name=op1
+            """);
+        var export = FaustEmitter.Emit(patch);
+
+        var op2 = Assert.Single(patch.OperatorGraphs[0].Operators, op => op.Id == 2);
+        Assert.NotNull(op2.RateLevelEnvelope);
+        var envelope = op2.RateLevelEnvelope;
+
+        Assert.Equal(.004f, envelope.Rate1Seconds, 5);
+        Assert.Equal(1, envelope.Level1);
+        Assert.Equal(.12f, envelope.Rate2Seconds, 5);
+        Assert.Equal(.7f, envelope.Level2, 5);
+        Assert.Equal(.2f, envelope.Rate3Seconds, 5);
+        Assert.Equal(.25f, envelope.Level3, 5);
+        Assert.Equal(.4f, envelope.Rate4Seconds, 5);
+        Assert.Equal(0, envelope.Level4);
+        Assert.Equal(.75f, op2.Note.GateSeconds, 5);
+        Assert.Contains("rl4_env(0.004, 1, 0.12, 0.7, 0.2, 0.25, 0.4, 0, 0.75)", export.Source);
+    }
+
+    [Fact]
     public void ReadableOperatorGraphSyntaxBindsParametersAtFieldSites()
     {
         var patch = PatchScript.Parse("""
@@ -519,6 +547,27 @@ public sealed class PatchScriptTests
             carrier name=op1
             """);
         var render = await FaustCompiler.RenderAsync(export.Source, new FaustRenderOptions(DurationSeconds: .1f));
+
+        if (render is null)
+        {
+            return;
+        }
+
+        Assert.True(render.Samples.Length > 1000, render.Stderr);
+        Assert.True(render.Samples.Max(MathF.Abs) > 0.001f, render.Stderr);
+    }
+
+    [Fact]
+    public async Task FaustCompilerRendersRateLevelOperatorEnvelopeWhenInstalled()
+    {
+        var export = FaustEmitter.EmitScript("""
+            opgraph name=rl freq=220 gain=.2
+            operator name=op2 ratio=2 level=.8 env=rl rates=.004,.08,.12,.16 levels=1,.7,.25,0
+            operator name=op1 ratio=1 level=1 env=adsr:.004:.08:.7:.12
+            route from=op2 to=op1 index=.4
+            carrier name=op1
+            """);
+        var render = await FaustCompiler.RenderAsync(export.Source, new FaustRenderOptions(DurationSeconds: .25f));
 
         if (render is null)
         {
