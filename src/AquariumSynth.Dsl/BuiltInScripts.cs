@@ -65,10 +65,10 @@ public static class BuiltInScripts
             voice
                 wave=square
                 freq=148.7934
-                gain=0.22
+                gain=0.319
                 sustain=0.01451247166
                 decay=0.1306122449
-                sustain_level=1.45
+                sustain_level=0.6896552
                 drive=0.201
                 arp_delay=0.081844
                 arp_mult=1.116121255
@@ -93,10 +93,10 @@ public static class BuiltInScripts
             voice
                 wave=noise
                 freq=20
-                gain=0.22
+                gain=0.3344
                 sustain=0.1907029478
                 decay=0.293877551
-                sustain_level=1.52
+                sustain_level=0.6578947
                 pitch_ramp=0.0320625
                 phaser=-0.0008712
                 phaser_ramp=-0.00035
@@ -168,9 +168,10 @@ public static class BuiltInScripts
         voice
             wave=square
             freq=148.7934
+            gain=0.319
             sustain=0.01451247166
             decay=0.1306122449
-            sustain_level=1.45
+            sustain_level=0.6896552
             drive=0.201
             arp_delay=0.081844
             arp_mult=1.116121255
@@ -191,9 +192,10 @@ public static class BuiltInScripts
         voice
             use=Noise
             freq=20
+            gain=0.3344
             sustain=0.1907029478
             decay=0.293877551
-            sustain_level=1.52
+            sustain_level=0.6578947
             pitch_ramp=0.0320625
             phaser=-0.0008712
             phaser_ramp=-0.00035
@@ -271,10 +273,10 @@ public static class BuiltInScripts
         ("shield-pop", """
             defaults
                 wave=triangle
-                gain=0.2
+                gain=0.264
                 sustain=0.04
                 decay=0.36
-                sustain_level=1.32
+                sustain_level=0.7575758
                 lpf=0.68
                 hpf=0.03
                 drive=0.12
@@ -298,10 +300,10 @@ public static class BuiltInScripts
             patch repeat=0.18
             defaults
                 wave=sine
-                gain=0.12
+                gain=0.1464
                 sustain=0.05
                 decay=0.5
-                sustain_level=1.22
+                sustain_level=0.8196721
                 lpf=0.78
                 drive=0.06
 
@@ -349,12 +351,12 @@ public static class BuiltInScripts
     public static readonly IReadOnlyList<(string Name, string Script)> Classic808PrimitiveGolfScripts =
     [
         ("kick", """
-            defaults wave=sine gain=0.8 drive=0.18
+            defaults wave=sine gain=1.32 drive=0.18
             voice
                 freq=58
                 sustain=0.045
                 decay=0.42
-                sustain_level=1.65
+                sustain_level=0.6060606
                 pitch_ramp=-3.8
                 min_freq=32
                 lpf=0.85
@@ -414,12 +416,12 @@ public static class BuiltInScripts
                 decay=0.04
             """),
         ("tom", """
-            defaults wave=sine gain=0.55 drive=0.12
+            defaults wave=sine gain=0.704 drive=0.12
             voice
                 freq=115
                 sustain=0.055
                 decay=0.34
-                sustain_level=1.28
+                sustain_level=0.78125
                 pitch_ramp=-1.45
                 min_freq=62
                 lpf=0.78
@@ -878,7 +880,7 @@ public static class BuiltInScripts
                 gain=0.18
                 fm_index=0.8
 
-            voice use=Ping freq=523.25 gain=0.12 sustain_level=1.12
+            voice use=Ping freq=523.25 gain=0.1344 sustain_level=0.8928571
             voice use=Ping freq=659.25 gain=0.08 sustain=0.11 decay=0.84 fm=4.2
             voice use=Ping freq=783.99 gain=0.07 sustain=0.08 decay=0.72 fm_index=1.9
             voice wave=sine freq=261.63 gain=0.045 sustain=0.7 decay=1.3 fm=1.5 fm_index=0.65 fm_decay=1.2
@@ -892,11 +894,11 @@ public static class BuiltInScripts
 
             defaults
                 wave=sine
-                gain=0.13
+                gain=0.1534
                 attack=0.001
                 sustain=0.045
                 decay=0.5
-                sustain_level=1.18
+                sustain_level=0.8474576
                 lpf=0.82
                 hpf=0.035
                 drive=0.1

@@ -11,11 +11,12 @@ Completed this slice:
   gate duration, and host/MIDI source; `Envelope` now owns ADSR shape:
   attack, decay, sustain level, and release.
 - SFXR sustain duration now maps to `Note.GateSeconds`; SFXR punch maps to a
-  non-unit ADSR sustain level during import/legacy parsing.
+  lower ADSR sustain level plus voice gain compensation during import/legacy
+  parsing.
 - Added host note mode for MIDI-oriented patches through stable note frequency
   and note gate controls in generated Faust.
 - Moved built-in authoring examples off `punch=` and onto `sustain_level=`.
-- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 39 passed.
+- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 40 passed.
 
 Previous slice:
 

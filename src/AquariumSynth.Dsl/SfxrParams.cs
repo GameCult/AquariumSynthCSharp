@@ -165,6 +165,7 @@ public sealed record SfxrParams
     public SynthPatch ToPatch()
     {
         var baseFrequency = SfxrFrequencyHz(BaseFreq);
+        var punchGain = PunchGain(EnvPunch);
         var voice = new Voice
         {
             Oscillator = new Oscillator(WaveType, baseFrequency, 0.5f - Math.Clamp(Duty, 0, 1) * 0.5f),
@@ -172,7 +173,7 @@ public sealed record SfxrParams
             Envelope = new Envelope(
                 NormalizedEnvSeconds(EnvAttack),
                 0,
-                1 + Math.Clamp(EnvPunch, -1, 1),
+                1 / punchGain,
                 NormalizedEnvSeconds(EnvDecay)),
             Pitch = new PitchMotion(
                 Math.Min(SfxrFrequencyHz(FreqLimit), baseFrequency),
@@ -204,7 +205,7 @@ public sealed record SfxrParams
                 0,
                 Math.Clamp(VibStrength, 0, 1) * 0.12f,
                 8 + Math.Clamp(VibSpeed, 0, 1) * 18),
-            Gain = 0.22f
+            Gain = 0.22f * punchGain
         };
 
         return new SynthPatch
@@ -223,6 +224,7 @@ public sealed record SfxrParams
     }
 
     private static float NormalizedEnvSeconds(float value) => Square(Math.Clamp(value, 0, 1)) * 100000 / 44100;
+    private static float PunchGain(float value) => 1 + Math.Max(0, Math.Clamp(value, -1, 1));
     private static float Square(float value) => value * value;
     private static float Cube(float value) => value * value * value;
 }

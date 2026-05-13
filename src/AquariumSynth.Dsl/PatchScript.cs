@@ -160,9 +160,11 @@ public static class PatchScript
             var frequency = GetBoundFloat(fields, line, 440, VoiceField(voiceIndex, "note/frequency"), "freq", "frequency", "f");
             var gateSeconds = GetBoundFloat(fields, line, 0.1f, VoiceField(voiceIndex, "note/gate"), "gate", "hold", "duration", "sustain", "s");
             var sustainLevel = GetBoundFloat(fields, line, 1, VoiceField(voiceIndex, "env/sustain_level"), "sustain_level", "sl");
+            var gainScale = 1f;
             if (TryGetAny(fields, ["punch", "pu"], out var punch))
             {
-                sustainLevel = 1 + ParseBoundFloat(punch, line, 0, VoiceField(voiceIndex, "env/sustain_level"));
+                gainScale = PunchGain(ParseBoundFloat(punch, line, 0, VoiceField(voiceIndex, "env/sustain_level")));
+                sustainLevel = 1 / gainScale;
             }
             var noteSource = ParseNoteSource(GetAny(fields, ["note_source", "source"], "oneshot"), line);
             if (TryGetAny(fields, ["midi"], out var midi) && ParseBool(midi, line))
@@ -231,7 +233,7 @@ public static class PatchScript
                     GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "color/formant_mix"), "formant_mix", "fmix")),
                 Formants = formants,
                 Modulators = modulators,
-                Gain = GetBoundFloat(fields, line, 0.2f, VoiceField(voiceIndex, "gain"), "gain", "g")
+                Gain = GetBoundFloat(fields, line, 0.2f, VoiceField(voiceIndex, "gain"), "gain", "g") * gainScale
             };
         }
 
@@ -815,6 +817,8 @@ public static class PatchScript
         float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
             ? parsed
             : throw new PatchScriptException(line, $"bad number `{value}`");
+
+    private static float PunchGain(float value) => 1 + Math.Max(0, Math.Clamp(value, -1, 1));
 
     private static int ParseInt(string value, int line) =>
         int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)

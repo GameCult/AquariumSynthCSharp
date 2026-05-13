@@ -104,8 +104,10 @@ authorities.
   time.
 - Legacy SFXR sustain maps to note gate duration, because it is how long the
   generated sound is held before release.
-- Legacy SFXR punch maps to a non-unit sustain level when importing old SFXR
-  material. Keep that as compatibility mapping, not as a general envelope field.
+- Legacy SFXR punch maps to a lower sustain level plus voice gain compensation
+  when importing old SFXR material: ADSR peak stays implicit at 1, and the
+  sustain level falls below that peak. Keep that as compatibility mapping, not
+  as a general envelope field.
 - Host/MIDI note mode should expose stable note frequency and note gate controls
   that the engine can wire to MIDI note-on/note-off behavior.
 

@@ -4,14 +4,14 @@ public static class Presets
 {
     public static SynthPatch AquariumPluck()
     {
-        var envelope = new Envelope(0.002f, 0, 1.38f, 0.43f);
+        var envelope = new Envelope(0.002f, 0, 0.7246377f, 0.43f);
         return new SynthPatch
         {
             Voices =
             [
-                Simple(new Oscillator(Waveform.Sine, 440), envelope, 0.09f, 0.18f),
-                Simple(new Oscillator(Waveform.Triangle, 880), envelope, 0.09f, 0.05f),
-                Simple(new Oscillator(Waveform.Sine, 1760), envelope, 0.09f, 0.018f)
+                Simple(new Oscillator(Waveform.Sine, 440), envelope, 0.09f, 0.2484f),
+                Simple(new Oscillator(Waveform.Triangle, 880), envelope, 0.09f, 0.069f),
+                Simple(new Oscillator(Waveform.Sine, 1760), envelope, 0.09f, 0.02484f)
             ],
             Gain = 0.95f,
             SoftClip = true
@@ -20,13 +20,13 @@ public static class Presets
 
     public static SynthPatch AquariumHeartbeat()
     {
-        var envelope = new Envelope(0.004f, 0, 1.62f, 0.2f);
+        var envelope = new Envelope(0.004f, 0, 0.617284f, 0.2f);
         return new SynthPatch
         {
             Voices =
             [
-                Simple(new Oscillator(Waveform.Sine, 72), envelope, 0.08f, 0.22f),
-                Simple(new Oscillator(Waveform.Sine, 116), envelope, 0.08f, 0.09f)
+                Simple(new Oscillator(Waveform.Sine, 72), envelope, 0.08f, 0.3564f),
+                Simple(new Oscillator(Waveform.Sine, 116), envelope, 0.08f, 0.1458f)
             ],
             Gain = 0.9f,
             SoftClip = true
@@ -35,7 +35,7 @@ public static class Presets
 
     public static SynthPatch AquariumVoice()
     {
-        var voice = Simple(new Oscillator(Waveform.Triangle, 220), new Envelope(0.018f, 0, 1.08f, 0.28f), 0.34f, 0.18f) with
+        var voice = Simple(new Oscillator(Waveform.Triangle, 220), new Envelope(0.018f, 0, 0.9259259f, 0.28f), 0.34f, 0.1944f) with
         {
             Pitch = new PitchMotion(VibratoDepth: 0.018f, VibratoHz: 5.6f),
             Color = new VoiceColor(0.035f, 0.18f, 0.04f, 0.12f, 4.2f, 0.68f),

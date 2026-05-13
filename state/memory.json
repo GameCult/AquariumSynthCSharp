@@ -56,7 +56,7 @@
   },
   "note_and_envelope_model": {
     "rule": "Notes own frequency, gate duration, and host/MIDI source. Envelopes own ADSR level shape.",
-    "sfxr_mapping": "SFXR sustain is note gate duration. SFXR punch maps to non-unit sustain level as compatibility import behavior, not as a general envelope field.",
+    "sfxr_mapping": "SFXR sustain is note gate duration. SFXR punch maps to lower ADSR sustain level plus voice gain compensation so the implicit attack peak stays at 1 and the held level sits below it.",
     "faust_surface": "One-shot patches use generated ADSR over patch age and note gate duration. Host/MIDI patches expose note frequency and note gate controls for the engine to wire."
   },
   "runtime_parameters": {
@@ -67,7 +67,7 @@
   },
   "last_verified": {
     "command": "dotnet test AquariumSynthCSharp.slnx --no-restore",
-    "result": "39 passed",
-    "commit": "pending note/envelope standardization commit"
+    "result": "40 passed",
+    "commit": "pending punch mapping correction commit"
   }
 }

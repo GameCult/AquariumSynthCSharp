@@ -101,10 +101,11 @@ completed_slices:
     summary: >
       Standardized the live envelope model as ADSR and added explicit Note
       records for frequency, one-shot gate duration, and host/MIDI source.
-      SFXR sustain now maps to note gate duration; SFXR punch maps to non-unit
-      sustain level only as compatibility import behavior. Generated Faust can
-      emit one-shot ADSR envelopes or host gate/frequency controls.
-    verification: "dotnet test AquariumSynthCSharp.slnx --no-restore: 39 passed"
+      SFXR sustain now maps to note gate duration; SFXR punch maps to lower
+      ADSR sustain level plus voice gain compensation as compatibility import
+      behavior. Generated Faust can emit one-shot ADSR envelopes or host
+      gate/frequency controls.
+    verification: "dotnet test AquariumSynthCSharp.slnx --no-restore: 40 passed"
   - date: 2026-05-13
     summary: >
       Added readable operator graph authoring syntax with `operator`, `route`,

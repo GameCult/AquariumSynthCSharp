@@ -355,6 +355,16 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
+    public void LegacyPunchMapsToTransientPeakOverSustain()
+    {
+        var patch = PatchScript.Parse("v w=saw f=220 gain=.2 punch=.5");
+        var voice = Assert.Single(patch.Voices);
+
+        Assert.Equal(.3f, voice.Gain, 5);
+        Assert.Equal(2f / 3f, voice.Envelope.SustainLevel, 5);
+    }
+
+    [Fact]
     public void MidiVoiceEmitsHostNoteControls()
     {
         var patch = PatchScript.Parse("v w=saw f=220 midi=true attack=.01 env_decay=.08 sustain_level=.6 release=.3");
