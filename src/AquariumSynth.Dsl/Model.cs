@@ -46,10 +46,24 @@ public enum NoteSource
     Host
 }
 
+public enum PlaybackMode
+{
+    OneShot,
+    Mono,
+    Poly
+}
+
 public sealed record Note(
     float FrequencyHz = 440,
     float GateSeconds = 0.1f,
     NoteSource Source = NoteSource.OneShot);
+
+public sealed record Playback(
+    PlaybackMode Mode = PlaybackMode.OneShot,
+    int Voices = 1,
+    bool Midi = false,
+    float FrequencyHz = 440,
+    float Gain = 1);
 
 public sealed record Oscillator(
     Waveform Waveform = Waveform.Sine,
@@ -183,6 +197,7 @@ public sealed record SynthPatch
     public IReadOnlyList<ControlLane> Controls { get; init; } = Array.Empty<ControlLane>();
     public IReadOnlyList<PatchParameter> Parameters { get; init; } = Array.Empty<PatchParameter>();
     public IReadOnlyList<ParameterBinding> ParameterBindings { get; init; } = Array.Empty<ParameterBinding>();
+    public Playback Playback { get; init; } = new();
     public Repeat? Repeat { get; init; }
     public float Gain { get; init; } = 1;
     public bool SoftClip { get; init; } = true;

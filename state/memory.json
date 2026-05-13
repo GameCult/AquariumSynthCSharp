@@ -18,6 +18,7 @@
       "DX7 algorithm topology metadata",
       "standard ADSR envelope model",
       "note frequency/gate model",
+      "Faust-managed playback/polyphony contract",
       "patch script parser",
       "SFXR atoms and parameter mapping",
       "analysis/comparison metrics",
@@ -52,12 +53,12 @@
   "dx7_reference_path": {
     "status": "DX7 SysEx parser extracts voice edit buffers, packed voices, packed 32-voice banks, six operators, envelopes, algorithm, feedback, oscillator sync, LFO, transpose, voice name, checksum validation, ReferencePatch features, algorithm topology from the reverse-engineered OPS algorithm ROM table, two Aquarium DSL rebuild attempts, and first-class OperatorGraph support.",
     "lesson": "Algorithm 32's additive six-carrier shape maps cleanly to six Aquarium voices. Algorithm 8 justified OperatorGraph: operators, modulation edges, carriers, and feedback belong to a graph authority, not Voice fields. Readable authoring uses operator/route/carrier declarations; compact ops/edges tuples are scaffolding only.",
-    "next": "Refine operator graph parameter binding and host MIDI note retrigger semantics; exact DX7 feedback-register timing remains separate pressure."
+    "next": "Refine operator graph parameter binding and Faust MIDI integration details; exact DX7 feedback-register timing remains separate pressure."
   },
   "note_and_envelope_model": {
     "rule": "Notes own frequency, gate duration, and host/MIDI source. Envelopes own ADSR level shape.",
     "sfxr_mapping": "SFXR sustain is note gate duration. SFXR punch maps to lower ADSR sustain level plus voice gain compensation so the implicit attack peak stays at 1 and the held level sits below it.",
-    "faust_surface": "One-shot patches use generated ADSR over patch age and note gate duration. Host/MIDI patches expose note frequency and note gate controls for the engine to wire."
+    "faust_surface": "One-shot patches use generated ADSR over patch age and note gate duration. MIDI mono/poly patches emit Faust's standard freq/gain/gate controls and [midi:on][nvoices:n] metadata so Faust architectures own note allocation."
   },
   "runtime_parameters": {
     "rule": "Patch parameters are runtime controls, not compile-time constants.",
@@ -67,7 +68,7 @@
   },
   "last_verified": {
     "command": "dotnet test AquariumSynthCSharp.slnx --no-restore",
-    "result": "40 passed",
-    "commit": "pending punch mapping correction commit"
+    "result": "41 passed",
+    "commit": "pending Faust polyphony playback commit"
   }
 }

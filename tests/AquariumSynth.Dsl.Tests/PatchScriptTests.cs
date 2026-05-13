@@ -371,9 +371,29 @@ public sealed class PatchScriptTests
         var export = FaustEmitter.Emit(patch);
 
         Assert.Equal(NoteSource.Host, patch.Voices[0].Note.Source);
-        Assert.Contains("hslider(\"/voices/0/note/frequency\", 220", export.Source);
-        Assert.Contains("button(\"/voices/0/note/gate\")", export.Source);
+        Assert.Equal(PlaybackMode.Mono, patch.Playback.Mode);
+        Assert.True(patch.Playback.Midi);
+        Assert.Contains("declare options \"[midi:on][nvoices:1]\";", export.Source);
+        Assert.Contains("freq = nentry(\"freq\", 220", export.Source);
+        Assert.Contains("gain = nentry(\"gain\", 1", export.Source);
+        Assert.Contains("gate = button(\"gate\")", export.Source);
         Assert.Contains("en.adsr", export.Source);
+    }
+
+    [Fact]
+    public void PolyphonicPatchUsesFaustStandardMidiSurface()
+    {
+        var patch = PatchScript.Parse("instrument midi=true polyphony=8; v w=saw f=330 attack=.01 env_decay=.08 sustain_level=.6 release=.3");
+        var export = FaustEmitter.Emit(patch);
+
+        Assert.Equal(PlaybackMode.Poly, patch.Playback.Mode);
+        Assert.Equal(8, patch.Playback.Voices);
+        Assert.Contains("declare options \"[midi:on][nvoices:8]\";", export.Source);
+        Assert.Contains("freq = nentry(\"freq\", 440", export.Source);
+        Assert.Contains("gain = nentry(\"gain\", 1", export.Source);
+        Assert.Contains("gate = button(\"gate\")", export.Source);
+        Assert.DoesNotContain("/voices/0/note/frequency", export.Source);
+        Assert.DoesNotContain("/voices/0/note/gate", export.Source);
     }
 
     [Fact]
@@ -407,7 +427,7 @@ public sealed class PatchScriptTests
     [Fact]
     public async Task FaustCompilerValidatesMidiGatePatchWhenInstalled()
     {
-        var export = FaustEmitter.EmitScript("v w=saw f=220 midi=true attack=.01 env_decay=.08 sustain_level=.6 release=.3");
+        var export = FaustEmitter.EmitScript("instrument midi=true polyphony=8; v w=saw f=220 attack=.01 env_decay=.08 sustain_level=.6 release=.3");
         var validation = await FaustCompiler.ValidateAsync(export.Source);
 
         if (validation is null)

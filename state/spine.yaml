@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-13T12:20:00+01:00
+updated: 2026-05-13T12:36:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -31,6 +31,7 @@ live_invariants:
   - Operator graphs own FM topology: operators, modulation edges, carriers, and feedback. Do not hide this authority inside Voice fields.
   - Readable operator graph authoring uses `operator`, `route`, and `carrier` declarations; compact `ops=`/`edges=` is only scaffolding/interchange.
   - Notes own frequency, gate duration, and host/MIDI source; envelopes own ADSR level shape. Do not put note duration or SFXR punch back into the general envelope model.
+  - Faust-managed MIDI polyphony is preferred: emit one voice graph with standard `freq`, `gain`, and `gate` controls plus `[midi:on][nvoices:n]` instead of inflating Aquarium graphs for local allocation.
   - Generated Faust should remain inspectable and deterministic.
   - Reference-patch correctness and synth parity tests live in AquariumSynthCSharp, not Aquarium.
   - Exposed patch parameters are runtime controls, not compile-time constants.
@@ -48,7 +49,7 @@ reference_targets:
     source: "https://github.com/asb2m10/dexed"
     status: "DX7 SysEx parser, algorithm topology extraction, two Aquarium DSL rebuild attempts, and first-class operator graph support exist."
     first_slice:
-      - "Refine operator graph parameter binding and host MIDI note retrigger semantics."
+      - "Refine operator graph parameter binding and Faust MIDI integration details."
       - "Add rendered/audio comparison once a render path is explicit."
   zynaddsubfx:
     priority: 2
@@ -83,8 +84,8 @@ reference_targets:
 
 next_agent_start_here:
   recommended_first_task: >
-    Refine operator graph parameter binding and host MIDI note retrigger
-    semantics. Keep readable authoring syntax as operator/route/carrier
+    Refine operator graph parameter binding and Faust MIDI integration details.
+    Keep readable authoring syntax as operator/route/carrier
     declarations.
   must_read:
     - AGENTS.md
@@ -97,6 +98,13 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-13
+    summary: >
+      Added a patch-level Playback contract and `instrument` authoring surface
+      for Faust-managed MIDI mono/polyphony. `instrument midi=true polyphony=8`
+      emits `[midi:on][nvoices:8]` and standard `freq`, `gain`, and `gate`
+      controls instead of Aquarium-owned voice allocation.
+    verification: "dotnet test AquariumSynthCSharp.slnx --no-restore: 41 passed"
   - date: 2026-05-13
     summary: >
       Standardized the live envelope model as ADSR and added explicit Note

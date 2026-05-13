@@ -7,6 +7,16 @@ the synth library while Aquarium work continues elsewhere.
 
 Completed this slice:
 
+- Added a patch-level `Playback` contract for `OneShot`, `Mono`, and `Poly`
+  playback with Faust MIDI polyphony settings.
+- `instrument midi=true polyphony=8` now lowers to Faust's standard
+  `[midi:on][nvoices:8]` option and `freq`, `gain`, `gate` controls.
+- Host/MIDI playback no longer emits per-voice `/voices/0/note/frequency` and
+  `/voices/0/note/gate` controls; Faust architecture owns allocation.
+- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 41 passed.
+
+Previous slice:
+
 - Split note timing from envelope shape. `Note` now owns frequency, one-shot
   gate duration, and host/MIDI source; `Envelope` now owns ADSR shape:
   attack, decay, sustain level, and release.

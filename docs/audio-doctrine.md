@@ -110,6 +110,11 @@ authorities.
   as a general envelope field.
 - Host/MIDI note mode should expose stable note frequency and note gate controls
   that the engine can wire to MIDI note-on/note-off behavior.
+- Faust-managed polyphony is the preferred MIDI path. Aquarium should describe a
+  single voice graph and emit Faust's standard `freq`, `gain`, and `gate`
+  controls with `[midi:on][nvoices:n]` options, leaving MIDI decoding and voice
+  allocation to Faust architectures unless a concrete target proves that
+  boundary insufficient.
 
 ## Metrics
 

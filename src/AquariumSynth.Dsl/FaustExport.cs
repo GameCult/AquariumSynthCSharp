@@ -35,7 +35,7 @@ public static class FaustEmitter
         var source = new StringBuilder();
         source.AppendLine("import(\"stdfaust.lib\");");
         source.AppendLine($"declare name \"{Escape(options.Name)}\";");
-        source.AppendLine("declare options \"[nvoices:1]\";");
+        source.AppendLine($"declare options \"{FaustOptions(patch.Playback)}\";");
         source.AppendLine();
         source.AppendLine("time = ba.time / ma.SR;");
         if (patch.Repeat is { } repeat)
@@ -59,6 +59,13 @@ public static class FaustEmitter
         source.AppendLine("lfo_hold(hz, phase) = no.noise : ba.latch(os.oscrs(hz));");
         source.AppendLine();
 
+        var hostPlayback = UsesHostPlayback(patch.Playback);
+        if (hostPlayback)
+        {
+            EmitPlaybackControls(source, patch.Playback);
+            source.AppendLine();
+        }
+
         EmitParameterControls(source, patch, parameters);
         if (patch.Parameters.Count > 0)
         {
@@ -81,12 +88,13 @@ public static class FaustEmitter
         for (var i = 0; i < patch.OperatorGraphs.Count; i++)
         {
             var name = $"opgraph_{i}";
-            EmitOperatorGraph(source, patch.OperatorGraphs[i], name, warnings);
+            EmitOperatorGraph(source, patch.Playback, patch.OperatorGraphs[i], name, warnings);
             voices.Add(name);
         }
 
         var mix = voices.Count == 0 ? "0.0" : string.Join(" + ", voices);
         var final = $"({mix}) * {parameters.Expression("/patch/gain", patch.Gain)}";
+        if (hostPlayback) final = $"({final}) * gain";
         if (patch.SoftClip) final = $"softclip({final})";
         var unbound = parameters.UnboundParameterIds().ToList();
         if (unbound.Count > 0)
@@ -104,6 +112,23 @@ public static class FaustEmitter
             var parameter = patch.Parameters[i];
             source.AppendLine($"{ParameterIdentifier(i)} = hslider(\"{Escape(parameter.Path)}\", {F(parameter.Default)}, {F(parameter.Min)}, {F(parameter.Max)}, {F(parameter.Step)}) : si.smoo;");
         }
+    }
+
+    private static string FaustOptions(Playback playback)
+    {
+        var voices = playback.Mode == PlaybackMode.Poly ? Math.Max(1, playback.Voices) : 1;
+        var midi = playback.Midi || playback.Mode == PlaybackMode.Poly ? "[midi:on]" : "";
+        return $"{midi}[nvoices:{voices}]";
+    }
+
+    private static bool UsesHostPlayback(Playback playback) =>
+        playback.Midi || playback.Mode is PlaybackMode.Mono or PlaybackMode.Poly;
+
+    private static void EmitPlaybackControls(StringBuilder source, Playback playback)
+    {
+        source.AppendLine($"freq = nentry(\"freq\", {F(playback.FrequencyHz)}, 20, 20000, 0.01) : si.smoo;");
+        source.AppendLine($"gain = nentry(\"gain\", {F(playback.Gain)}, 0, 1, 0.001) : si.smoo;");
+        source.AppendLine("gate = button(\"gate\");");
     }
 
     private static void EmitVoice(
@@ -132,8 +157,8 @@ public static class FaustEmitter
         var hpfMod = ModExpressionForTarget(voice.Modulators, ModTarget.HighPass);
 
         var minFreq = parameters.Expression(VoiceField(voiceIndex, "pitch/min_freq"), voice.Pitch.MinFrequencyHz);
-        var noteFreq = NoteFrequencyExpression(source, voice.Note, name, VoiceField(voiceIndex, "note/frequency"), parameters);
-        var noteGate = NoteGateExpression(source, voice.Note, name, VoiceField(voiceIndex, "note/gate"), parameters);
+        var noteFreq = NoteFrequencyExpression(source, patch.Playback, voice.Note, name, VoiceField(voiceIndex, "note/frequency"), parameters);
+        var noteGate = NoteGateExpression(source, patch.Playback, voice.Note, name, VoiceField(voiceIndex, "note/gate"), parameters);
         var pitchRamp = parameters.Expression(VoiceField(voiceIndex, "pitch/ramp"), voice.Pitch.RampPerSecond);
         var pitchDelta = parameters.Expression(VoiceField(voiceIndex, "pitch/delta"), voice.Pitch.DeltaRampPerSecond);
         var vibratoDepth = parameters.Expression(VoiceField(voiceIndex, "pitch/vibrato"), voice.Pitch.VibratoDepth);
@@ -156,7 +181,7 @@ public static class FaustEmitter
         var envelope = EnvelopeExpression(
             voice.Envelope,
             noteGate,
-            voice.Note.Source == NoteSource.Host,
+            UsesHostPlayback(patch.Playback) || voice.Note.Source == NoteSource.Host,
             field => parameters.Expression(VoiceField(voiceIndex, field), field switch
             {
                 "env/attack" => voice.Envelope.AttackSeconds,
@@ -207,8 +232,12 @@ public static class FaustEmitter
         source.AppendLine();
     }
 
-    private static string NoteFrequencyExpression(StringBuilder source, Note note, string name, string fieldPath, ParameterMap parameters)
+    private static string NoteFrequencyExpression(StringBuilder source, Playback playback, Note note, string name, string fieldPath, ParameterMap parameters)
     {
+        if (UsesHostPlayback(playback))
+        {
+            return "freq";
+        }
         if (note.Source != NoteSource.Host)
         {
             return parameters.Expression(fieldPath, note.FrequencyHz);
@@ -219,8 +248,12 @@ public static class FaustEmitter
         return control;
     }
 
-    private static string NoteGateExpression(StringBuilder source, Note note, string name, string fieldPath, ParameterMap parameters)
+    private static string NoteGateExpression(StringBuilder source, Playback playback, Note note, string name, string fieldPath, ParameterMap parameters)
     {
+        if (UsesHostPlayback(playback))
+        {
+            return "gate";
+        }
         if (note.Source != NoteSource.Host)
         {
             return parameters.Expression(fieldPath, note.GateSeconds);
@@ -263,7 +296,7 @@ public static class FaustEmitter
         };
     }
 
-    private static void EmitOperatorGraph(StringBuilder source, OperatorGraph graph, string name, List<string> warnings)
+    private static void EmitOperatorGraph(StringBuilder source, Playback playback, OperatorGraph graph, string name, List<string> warnings)
     {
         if (graph.Operators.Count == 0)
         {
@@ -282,13 +315,17 @@ public static class FaustEmitter
             return;
         }
 
-        var graphNoteFreq = graph.Note.Source == NoteSource.Host
+        var graphNoteFreq = UsesHostPlayback(playback)
+            ? "freq"
+            : graph.Note.Source == NoteSource.Host
             ? $"{name}_note_freq"
             : F(graph.Note.FrequencyHz);
-        var graphNoteGate = graph.Note.Source == NoteSource.Host
+        var graphNoteGate = UsesHostPlayback(playback)
+            ? "gate"
+            : graph.Note.Source == NoteSource.Host
             ? $"{name}_note_gate"
             : F(graph.Note.GateSeconds);
-        if (graph.Note.Source == NoteSource.Host)
+        if (!UsesHostPlayback(playback) && graph.Note.Source == NoteSource.Host)
         {
             source.AppendLine($"{name}_note_freq = hslider(\"/{name}/note/frequency\", {F(graph.Note.FrequencyHz)}, 20, 20000, 0.01) : si.smoo;");
             source.AppendLine($"{name}_note_gate = button(\"/{name}/note/gate\");");
@@ -310,8 +347,8 @@ public static class FaustEmitter
             var phaseMod = incoming.Count == 0 ? "0.0" : string.Join(" + ", incoming);
             var envelope = EnvelopeExpression(
                 op.Envelope,
-                op.Note.Source == NoteSource.Host ? graphNoteGate : F(op.Note.GateSeconds),
-                op.Note.Source == NoteSource.Host,
+                UsesHostPlayback(playback) || op.Note.Source == NoteSource.Host ? graphNoteGate : F(op.Note.GateSeconds),
+                UsesHostPlayback(playback) || op.Note.Source == NoteSource.Host,
                 field => field switch
                 {
                     "env/attack" => F(op.Envelope.AttackSeconds),

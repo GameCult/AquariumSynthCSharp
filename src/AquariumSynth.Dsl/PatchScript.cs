@@ -41,6 +41,7 @@ public static class PatchScript
         public List<OperatorGraph> OperatorGraphs => _operatorGraphs;
         public bool HasOutput => Voices.Count > 0 || _operatorGraphs.Count > 0 || _pendingOperatorGraph is not null;
         private Repeat? Repeat { get; set; }
+        private Playback Playback { get; set; } = new();
         private float Gain { get; set; } = 1;
         private bool SoftClip { get; set; } = true;
 
@@ -54,6 +55,7 @@ public static class PatchScript
                 Controls = _controls,
                 Parameters = _parameters,
                 ParameterBindings = _parameterBindings,
+                Playback = Playback,
                 Repeat = Repeat,
                 Gain = Gain,
                 SoftClip = SoftClip
@@ -147,6 +149,37 @@ public static class PatchScript
         {
             if (TryGetAny(fields, ["gain", "g"], out var gain)) Gain = ParseBoundFloat(gain, line, Gain, "/patch/gain");
             if (TryGetAny(fields, ["soft_clip", "clip"], out var softClip)) SoftClip = ParseBool(softClip, line);
+            if (TryGetAny(fields, ["mode", "playback"], out var mode))
+            {
+                var playbackMode = ParsePlaybackMode(mode, line);
+                Playback = Playback with
+                {
+                    Mode = playbackMode,
+                    Midi = playbackMode == PlaybackMode.Poly || Playback.Midi
+                };
+            }
+            if (TryGetAny(fields, ["polyphony", "voices", "nvoices"], out var voices))
+            {
+                var count = ParseInt(voices, line);
+                if (count < 1) throw new PatchScriptException(line, "polyphony must be at least 1");
+                Playback = Playback with
+                {
+                    Voices = count,
+                    Mode = count > 1 ? PlaybackMode.Poly : Playback.Mode,
+                    Midi = count > 1 || Playback.Midi
+                };
+            }
+            if (TryGetAny(fields, ["midi"], out var midi))
+            {
+                var enabled = ParseBool(midi, line);
+                Playback = Playback with
+                {
+                    Midi = enabled,
+                    Mode = enabled && Playback.Mode == PlaybackMode.OneShot ? PlaybackMode.Mono : Playback.Mode
+                };
+            }
+            if (TryGetAny(fields, ["note_freq", "note_frequency"], out var noteFreq)) Playback = Playback with { FrequencyHz = ParseFloat(noteFreq, line) };
+            if (TryGetAny(fields, ["note_gain", "velocity"], out var noteGain)) Playback = Playback with { Gain = ParseFloat(noteGain, line) };
             if (TryGetAny(fields, ["repeat", "r", "rp"], out var repeat))
             {
                 var interval = ParseBoundFloat(repeat, line, 0.1f, "/patch/repeat");
@@ -170,6 +203,12 @@ public static class PatchScript
             if (TryGetAny(fields, ["midi"], out var midi) && ParseBool(midi, line))
             {
                 noteSource = NoteSource.Host;
+                Playback = Playback with
+                {
+                    Midi = true,
+                    Mode = Playback.Mode == PlaybackMode.OneShot ? PlaybackMode.Mono : Playback.Mode,
+                    FrequencyHz = frequency
+                };
             }
             var formants = TryGetAny(fields, ["formants", "fs"], out var formantSpec)
                 ? ParseFormants(formantSpec, line)
@@ -709,7 +748,7 @@ public static class PatchScript
 
         private static string CanonicalCommand(string command) => command.ToLowerInvariant() switch
     {
-        "p" or "patch" => "patch",
+        "p" or "patch" or "instrument" => "patch",
         "d" or "default" or "defaults" => "defaults",
         "def" or "t" or "template" => "template",
         "v" or "voice" => "voice",
@@ -763,6 +802,14 @@ public static class PatchScript
         "oneshot" or "one_shot" or "trigger" or "fixed" => NoteSource.OneShot,
         "host" or "midi" or "gate" => NoteSource.Host,
         _ => throw new PatchScriptException(line, $"unknown note source `{value}`")
+    };
+
+    private static PlaybackMode ParsePlaybackMode(string value, int line) => value.ToLowerInvariant() switch
+    {
+        "oneshot" or "one_shot" or "trigger" or "fixed" => PlaybackMode.OneShot,
+        "mono" or "monophonic" or "host" => PlaybackMode.Mono,
+        "poly" or "polyphonic" or "midi" => PlaybackMode.Poly,
+        _ => throw new PatchScriptException(line, $"unknown playback mode `{value}`")
     };
 
     private static ModTarget ParseModTarget(string value, int line)
