@@ -94,6 +94,8 @@ public sealed record OperatorNode(
     float Ratio = 1,
     float Level = 1,
     float Feedback = 0,
+    float AttackSeconds = 0,
+    float ReleaseSeconds = 0,
     Envelope Envelope = null!)
 {
     public Envelope Envelope { get; init; } = Envelope ?? new();

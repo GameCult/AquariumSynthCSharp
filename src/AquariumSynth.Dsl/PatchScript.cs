@@ -19,7 +19,7 @@ public static class PatchScript
             line = statement.Line;
         }
 
-        if (compiler.Voices.Count == 0 && compiler.OperatorGraphs.Count == 0)
+        if (!compiler.HasOutput)
         {
             throw new PatchScriptException(line, "patch script produced no voices or operator graphs");
         }
@@ -35,24 +35,30 @@ public static class PatchScript
         private readonly List<PatchParameter> _parameters = [];
         private readonly List<ParameterBinding> _parameterBindings = [];
         private readonly Dictionary<string, string> _defaults = new(StringComparer.OrdinalIgnoreCase);
+        private PendingOperatorGraph? _pendingOperatorGraph;
 
         public List<Voice> Voices { get; } = [];
         public List<OperatorGraph> OperatorGraphs => _operatorGraphs;
+        public bool HasOutput => Voices.Count > 0 || _operatorGraphs.Count > 0 || _pendingOperatorGraph is not null;
         private Repeat? Repeat { get; set; }
         private float Gain { get; set; } = 1;
         private bool SoftClip { get; set; } = true;
 
-        public SynthPatch Build() => new()
+        public SynthPatch Build()
         {
-            Voices = Voices,
-            OperatorGraphs = _operatorGraphs,
-            Controls = _controls,
-            Parameters = _parameters,
-            ParameterBindings = _parameterBindings,
-            Repeat = Repeat,
-            Gain = Gain,
-            SoftClip = SoftClip
-        };
+            FlushPendingOperatorGraph();
+            return new SynthPatch
+            {
+                Voices = Voices,
+                OperatorGraphs = _operatorGraphs,
+                Controls = _controls,
+                Parameters = _parameters,
+                ParameterBindings = _parameterBindings,
+                Repeat = Repeat,
+                Gain = Gain,
+                SoftClip = SoftClip
+            };
+        }
 
         public void Apply(string statement, int line)
         {
@@ -62,6 +68,7 @@ public static class PatchScript
             var fields = ParseFields(parts.Skip(1), line);
             if (SfxrParams.Named(rawCommand) is { } namedParams)
             {
+                FlushPendingOperatorGraph();
                 AddSfxrPatch(ApplySfxrFields(namedParams, fields, line));
                 return;
             }
@@ -69,31 +76,48 @@ public static class PatchScript
             switch (command)
             {
                 case "patch":
+                    FlushPendingOperatorGraph();
                     ApplyPatch(fields, line);
                     break;
                 case "defaults":
+                    FlushPendingOperatorGraph();
                     Merge(_defaults, fields);
                     break;
                 case "template":
+                    FlushPendingOperatorGraph();
                     var name = Required(fields, "name", line);
                     _templates[name] = Without(fields, "name");
                     break;
                 case "voice":
+                    FlushPendingOperatorGraph();
                     Voices.Add(ParseVoice(ExpandVoiceFields(fields, line), Voices.Count, line));
                     break;
                 case "opgraph":
-                    AddOperatorGraph(fields, line);
+                    StartOperatorGraph(fields, line);
+                    break;
+                case "operator":
+                    AddOperator(fields, line);
+                    break;
+                case "route":
+                    AddOperatorRoute(fields, line);
+                    break;
+                case "carrier":
+                    AddOperatorCarrier(fields, line);
                     break;
                 case "mod":
+                    FlushPendingOperatorGraph();
                     AddModBus(fields, line);
                     break;
                 case "control":
+                    FlushPendingOperatorGraph();
                     AddControlLane(fields, line);
                     break;
                 case "param":
+                    FlushPendingOperatorGraph();
                     AddParameter(fields, line);
                     break;
                 case "sfxr":
+                    FlushPendingOperatorGraph();
                     AddSfxrPatch(ParseSfxrCommand(fields, line));
                     break;
                 default:
@@ -260,15 +284,102 @@ public static class PatchScript
                 ? ParseOperatorIds(carrierSpec, line)
                 : operators.Select(op => op.Id).ToList();
 
-            var operatorIds = operators.Select(op => op.Id).ToHashSet();
-            foreach (var edge in edges)
+            AddValidatedOperatorGraph(line, new OperatorGraph(
+                GetAny(fields, ["name", "n"], $"opgraph{graphIndex}"),
+                GetBoundFloat(fields, line, 440, $"{graphPath}/freq", "freq", "frequency", "f"),
+                operators,
+                edges,
+                carriers,
+                GetBoundFloat(fields, line, 0.2f, $"{graphPath}/gain", "gain", "g")));
+        }
+
+        private void StartOperatorGraph(IReadOnlyDictionary<string, string> fields, int line)
+        {
+            FlushPendingOperatorGraph();
+            if (fields.ContainsKey("ops"))
+            {
+                AddOperatorGraph(fields, line);
+                return;
+            }
+
+            var graphIndex = _operatorGraphs.Count;
+            var graphPath = $"/opgraphs/{graphIndex}";
+            _pendingOperatorGraph = new PendingOperatorGraph(
+                line,
+                GetAny(fields, ["name", "n"], $"opgraph{graphIndex}"),
+                GetBoundFloat(fields, line, 440, $"{graphPath}/freq", "freq", "frequency", "f"),
+                GetBoundFloat(fields, line, 0.2f, $"{graphPath}/gain", "gain", "g"));
+        }
+
+        private void AddOperator(IReadOnlyDictionary<string, string> fields, int line)
+        {
+            var graph = RequiredPendingOperatorGraph(line);
+            var id = ParseOperatorId(Required(fields, "name", line), line);
+            var envelope = TryGetAny(fields, ["env", "envelope"], out var envSpec)
+                ? ParseEnvelopeSpec(envSpec, line)
+                : new Envelope(
+                    GetFloat(fields, line, 0, "attack", "a"),
+                    GetFloat(fields, line, 0.1f, "sustain", "s"),
+                    GetFloat(fields, line, 0.1f, "decay", "d"),
+                    GetFloat(fields, line, 0, "punch", "pu"));
+
+            graph.Operators.Add(new OperatorNode(
+                id,
+                GetFloat(fields, line, 1, "ratio", "r"),
+                GetFloat(fields, line, 1, "level", "l"),
+                GetFloat(fields, line, 0, "feedback", "fb"),
+                0,
+                GetFloat(fields, line, 0, "release"),
+                envelope));
+        }
+
+        private void AddOperatorRoute(IReadOnlyDictionary<string, string> fields, int line)
+        {
+            var graph = RequiredPendingOperatorGraph(line);
+            var source = ParseOperatorId(Required(fields, "from", line), line);
+            var target = ParseOperatorId(Required(fields, "to", line), line);
+            graph.Edges.Add(new OperatorEdge(source, target, GetFloat(fields, line, 1, "index", "amount", "depth")));
+        }
+
+        private void AddOperatorCarrier(IReadOnlyDictionary<string, string> fields, int line)
+        {
+            var graph = RequiredPendingOperatorGraph(line);
+            graph.Carriers.Add(ParseOperatorId(Required(fields, "name", line), line));
+        }
+
+        private PendingOperatorGraph RequiredPendingOperatorGraph(int line) =>
+            _pendingOperatorGraph ?? throw new PatchScriptException(line, "operator graph command needs an active opgraph");
+
+        private void FlushPendingOperatorGraph()
+        {
+            if (_pendingOperatorGraph is null) return;
+            var graph = _pendingOperatorGraph;
+            _pendingOperatorGraph = null;
+            AddValidatedOperatorGraph(graph.Line, new OperatorGraph(
+                graph.Name,
+                graph.FrequencyHz,
+                graph.Operators,
+                graph.Edges,
+                graph.Carriers.Count > 0 ? graph.Carriers : graph.Operators.Select(op => op.Id).ToList(),
+                graph.Gain));
+        }
+
+        private void AddValidatedOperatorGraph(int line, OperatorGraph graph)
+        {
+            if (graph.Operators.Count == 0)
+            {
+                throw new PatchScriptException(line, "operator graph needs at least one operator");
+            }
+
+            var operatorIds = graph.Operators.Select(op => op.Id).ToHashSet();
+            foreach (var edge in graph.Edges)
             {
                 if (!operatorIds.Contains(edge.SourceId) || !operatorIds.Contains(edge.TargetId))
                 {
                     throw new PatchScriptException(line, $"operator edge `{edge.SourceId}>{edge.TargetId}` references an unknown operator");
                 }
             }
-            foreach (var carrier in carriers)
+            foreach (var carrier in graph.Carriers)
             {
                 if (!operatorIds.Contains(carrier))
                 {
@@ -276,13 +387,7 @@ public static class PatchScript
                 }
             }
 
-            _operatorGraphs.Add(new OperatorGraph(
-                GetAny(fields, ["name", "n"], $"opgraph{graphIndex}"),
-                GetBoundFloat(fields, line, 440, $"{graphPath}/freq", "freq", "frequency", "f"),
-                operators,
-                edges,
-                carriers,
-                GetBoundFloat(fields, line, 0.2f, $"{graphPath}/gain", "gain", "g")));
+            _operatorGraphs.Add(graph);
         }
 
         private void AddParameter(IReadOnlyDictionary<string, string> fields, int line)
@@ -381,6 +486,8 @@ public static class PatchScript
                         ParseFloat(pieces[1], line),
                         ParseFloat(pieces[2], line),
                         pieces.Length >= 4 ? ParseFloat(pieces[3], line) : 0,
+                        0,
+                        0,
                         pieces.Length >= 6 ? new Envelope(0, ParseFloat(pieces[4], line), ParseFloat(pieces[5], line)) : new Envelope());
                 })
                 .ToList();
@@ -412,6 +519,32 @@ public static class PatchScript
             value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .Select(part => ParseInt(part, line))
                 .ToList();
+
+        private static Envelope ParseEnvelopeSpec(string value, int line)
+        {
+            var pieces = value.Split(':');
+            return pieces[0].ToLowerInvariant() switch
+            {
+                "ad" when pieces.Length == 3 => new Envelope(
+                    ParseFloat(pieces[1], line),
+                    0,
+                    ParseFloat(pieces[2], line)),
+                "adsr" when pieces.Length == 5 => new Envelope(
+                    ParseFloat(pieces[1], line),
+                    ParseFloat(pieces[2], line),
+                    ParseFloat(pieces[4], line),
+                    ParseFloat(pieces[3], line)),
+                _ => throw new PatchScriptException(line, $"bad envelope `{value}`")
+            };
+        }
+
+        private static int ParseOperatorId(string value, int line)
+        {
+            var normalized = value.StartsWith("op", StringComparison.OrdinalIgnoreCase)
+                ? value[2..]
+                : value;
+            return ParseInt(normalized, line);
+        }
 
         private void AddSfxrPatch(SfxrParams parameters)
         {
@@ -467,6 +600,17 @@ public static class PatchScript
             if (TryGetAny(fields, ["arp"], out var arp)) parameters = parameters with { ArpSpeed = Math.Clamp(ParseFloat(arp, line), 0, 1) };
             if (TryGetAny(fields, ["arp_mod", "am"], out var arpMod)) parameters = parameters with { ArpMod = Math.Clamp(ParseFloat(arpMod, line), -1, 1) };
             return parameters;
+        }
+
+        private sealed record PendingOperatorGraph(
+            int Line,
+            string Name,
+            float FrequencyHz,
+            float Gain)
+        {
+            public List<OperatorNode> Operators { get; } = [];
+            public List<OperatorEdge> Edges { get; } = [];
+            public List<int> Carriers { get; } = [];
         }
     }
 
@@ -532,13 +676,16 @@ public static class PatchScript
                 return (ParseModTarget(pieces[0], line), ParseFloat(pieces[1], line));
             });
 
-    private static string CanonicalCommand(string command) => command.ToLowerInvariant() switch
+        private static string CanonicalCommand(string command) => command.ToLowerInvariant() switch
     {
         "p" or "patch" => "patch",
         "d" or "default" or "defaults" => "defaults",
         "def" or "t" or "template" => "template",
         "v" or "voice" => "voice",
         "opgraph" or "ops" or "operators" => "opgraph",
+        "operator" or "op" => "operator",
+        "route" or "edge" => "route",
+        "carrier" or "out" => "carrier",
         "mod" or "wob" or "wobble" or "bus" => "mod",
         "lfo" or "control" => "control",
         "param" or "parameter" => "param",
@@ -556,6 +703,8 @@ public static class PatchScript
         "a" => "attack",
         "s" => "sustain",
         "d" => "decay",
+        "from" or "src" => "from",
+        "to" or "dst" => "to",
         _ => field
     };
 

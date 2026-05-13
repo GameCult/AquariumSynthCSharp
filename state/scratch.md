@@ -7,6 +7,16 @@ the synth library while Aquarium work continues elsewhere.
 
 Completed this slice:
 
+- Replaced the DX7 algorithm-8 authoring surface with readable operator graph
+  syntax: `operator`, `route`, and `carrier` declarations.
+- Added `env=ad:attack:decay` and `env=adsr:attack:sustain:level:release`
+  envelope forms for operator declarations.
+- Kept compact `ops=`/`edges=` syntax as parser/interchange scaffolding, but it
+  is no longer the built-in authoring example.
+- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 36 passed.
+
+Previous slice:
+
 - Added a first-class `OperatorGraph` model with operators, modulation edges,
   carriers, graph gain, and operator feedback.
 - Added `opgraph` patch-script syntax. Example:
@@ -17,7 +27,7 @@ Completed this slice:
   and DX7 rate/level envelopes, not graph ownership.
 - Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 35 passed.
 
-Previous slice:
+Earlier rebuild slice:
 
 - Added `ReferenceRebuild` and `ReferenceRebuildCatalog` for explicit
   reference-target rebuild attempts.
@@ -74,7 +84,7 @@ Parameter slice:
 
 Next likely slice:
 
-- Refine operator graphs with parameter bindings inside graph fields, then
-  decide how much DX7 rate/level envelope shape belongs in the shared model.
+- Refine operator graphs with parameter bindings inside graph fields and decide
+  whether ADSR level semantics should stop borrowing `Envelope.Punch`.
 - Keep tests focused on structure first, then add rendered audio comparison once
   the render path is explicit.

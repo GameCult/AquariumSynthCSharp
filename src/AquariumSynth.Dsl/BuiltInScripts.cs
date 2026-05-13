@@ -685,9 +685,44 @@ public static class BuiltInScripts
             name=dx7_algo8_core
             freq=330
             gain=0.18
-            carriers=1,3
-            ops=6:4:0.9:0:0.035:0.18,5:3:0.82:0:0.04:0.2,4:2:0.7:0.18:0.05:0.24,3:2:0.6:0:0.06:0.3,2:1:0.75:0:0.045:0.2,1:1:0.82:0:0.08:0.34
-            edges=6>5:1.1,5>3:0.9,4>3:0.75,2>1:0.85
+
+        operator name=op6
+            ratio=4
+            level=0.9
+            env=ad:0.035:0.18
+
+        operator name=op5
+            ratio=3
+            level=0.82
+            env=ad:0.04:0.2
+
+        operator name=op4
+            ratio=2
+            level=0.7
+            feedback=0.18
+            env=ad:0.05:0.24
+
+        operator name=op3
+            ratio=2
+            level=0.6
+            env=ad:0.06:0.3
+
+        operator name=op2
+            ratio=1
+            level=0.75
+            env=ad:0.045:0.2
+
+        operator name=op1
+            ratio=1
+            level=0.82
+            env=adsr:0.005:0.08:0.68:0.34
+
+        route from=op6 to=op5 index=1.1
+        route from=op5 to=op3 index=0.9
+        route from=op4 to=op3 index=0.75
+        route from=op2 to=op1 index=0.85
+        carrier name=op1
+        carrier name=op3
 
         voice
             freq=330

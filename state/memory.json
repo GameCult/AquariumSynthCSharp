@@ -49,8 +49,8 @@
   },
   "dx7_reference_path": {
     "status": "DX7 SysEx parser extracts voice edit buffers, packed voices, packed 32-voice banks, six operators, envelopes, algorithm, feedback, oscillator sync, LFO, transpose, voice name, checksum validation, ReferencePatch features, algorithm topology from the reverse-engineered OPS algorithm ROM table, two Aquarium DSL rebuild attempts, and first-class OperatorGraph support.",
-    "lesson": "Algorithm 32's additive six-carrier shape maps cleanly to six Aquarium voices. Algorithm 8 justified OperatorGraph: operators, modulation edges, carriers, and feedback belong to a graph authority, not Voice fields.",
-    "next": "Refine operator graph parameter binding and envelope shape; exact DX7 feedback-register timing remains separate pressure."
+    "lesson": "Algorithm 32's additive six-carrier shape maps cleanly to six Aquarium voices. Algorithm 8 justified OperatorGraph: operators, modulation edges, carriers, and feedback belong to a graph authority, not Voice fields. Readable authoring uses operator/route/carrier declarations; compact ops/edges tuples are scaffolding only.",
+    "next": "Refine operator graph parameter binding and envelope internals; exact DX7 feedback-register timing remains separate pressure."
   },
   "runtime_parameters": {
     "rule": "Patch parameters are runtime controls, not compile-time constants.",
@@ -60,7 +60,7 @@
   },
   "last_verified": {
     "command": "dotnet test AquariumSynthCSharp.slnx --no-restore",
-    "result": "35 passed",
-    "commit": "pending operator graph model commit"
+    "result": "36 passed",
+    "commit": "pending readable operator graph syntax commit"
   }
 }

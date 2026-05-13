@@ -280,6 +280,32 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
+    public void ReadableOperatorGraphSyntaxParsesRoutesCarriersAndEnvelopes()
+    {
+        var patch = PatchScript.Parse("""
+            opgraph name=pair freq=220 gain=.2
+            operator name=op2 ratio=2 level=.8 env=ad:.01:.2
+            operator name=op1 ratio=1 level=1 env=adsr:.02:.1:.65:.3
+            route from=op2 to=op1 index=1.4
+            carrier name=op1
+            """);
+
+        var graph = Assert.Single(patch.OperatorGraphs);
+        var op2 = graph.Operators.Single(op => op.Id == 2);
+        var op1 = graph.Operators.Single(op => op.Id == 1);
+
+        Assert.Equal("pair", graph.Name);
+        Assert.Equal([1], graph.Carriers);
+        Assert.Single(graph.Edges);
+        Assert.Equal(.01f, op2.Envelope.AttackSeconds, 5);
+        Assert.Equal(.2f, op2.Envelope.DecaySeconds, 5);
+        Assert.Equal(.02f, op1.Envelope.AttackSeconds, 5);
+        Assert.Equal(.1f, op1.Envelope.SustainSeconds, 5);
+        Assert.Equal(.65f, op1.Envelope.Punch, 5);
+        Assert.Equal(.3f, op1.Envelope.DecaySeconds, 5);
+    }
+
+    [Fact]
     public void FaustEmitterProducesWobbleSource()
     {
         var export = FaustEmitter.EmitScript(WobbleTalker, new FaustExportOptions("wobble_talker", Stereo: true));
