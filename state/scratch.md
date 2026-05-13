@@ -15,6 +15,21 @@ Doctrine update:
 
 Completed this slice:
 
+- Added a public-domain DX7 SysEx fixture from Musical Artifacts artifact 152:
+  `tests/AquariumSynth.Dsl.Tests/Fixtures/Dx7/PublicDomain/analog1.syx`, with
+  provenance and SHA-256 recorded beside it.
+- Added a test-only `dexed-py` reference renderer. It uses
+  `AQUARIUM_DX7_PYTHON` when set, otherwise probes `py`, `python`, and
+  `python3`; if `dexed-py` is absent, the render test returns without turning
+  optional tooling into a hard dependency.
+- Added a `.nupkg` boundary test that packs `AquariumSynth.Dsl` and asserts
+  test fixtures, SysEx banks, and Python helpers are not shipped.
+- Verified with bundled Python plus `dexed-py`: the DX7 fixture renders through
+  Dexed successfully.
+- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 47 passed.
+
+Previous slice:
+
 - Added `FaustCompiler.RenderAsync`, which compiles Aquarium Faust output to
   Faust-generated C#, runs it in a temp .NET project, and returns a mono float
   sample buffer for analysis.

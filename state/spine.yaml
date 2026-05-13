@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-13T13:40:00+01:00
+updated: 2026-05-13T14:05:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -20,6 +20,8 @@ current_mechanism:
   analysis: src/AquariumSynth.Dsl/AudioAnalysis.cs
   built_ins: src/AquariumSynth.Dsl/BuiltInScripts.cs
   dx7_references: src/AquariumSynth.Dsl/Dx7SysEx.cs
+  dx7_reference_fixtures: tests/AquariumSynth.Dsl.Tests/Fixtures/Dx7/PublicDomain
+  dx7_reference_renderer_tests: tests/AquariumSynth.Dsl.Tests/Dx7ReferenceParityTests.cs
   reference_rebuilds: src/AquariumSynth.Dsl/ReferenceRebuilds.cs
   tests: tests/AquariumSynth.Dsl.Tests/PatchScriptTests.cs
   doctrine: docs/audio-doctrine.md
@@ -42,6 +44,7 @@ live_invariants:
   - DX7 rate/level envelopes may lower to labeled ADSR approximations, but exact DX7 EG execution remains missing pressure.
   - Recompile only for graph shape changes; vary declared parameters through the hosted DSP control API.
   - Reference fixtures must preserve provenance, license status, source hash, and feature pressure.
+  - Public-domain reference fixtures and dexed-py helpers are test/development material only; the NuGet package must ship only AquariumSynth.Dsl.
   - Do not consume external synth targets that cannot be backed by parity tests. Parsing is inventory; reproducing behavior through terse, readable Aquarium DSL is the proof.
   - Audio metrics are evidence, not final judgment.
   - Do not add a generic graph escape hatch until specific references force it.
@@ -52,9 +55,9 @@ reference_targets:
     priority: 1
     purpose: "Structured FM/operator graph pressure test."
     source: "https://github.com/asb2m10/dexed"
-    status: "DX7 SysEx parser, algorithm topology extraction, envelope-to-ADSR approximation, two Aquarium DSL rebuild attempts, first-class operator graph support, and Aquarium candidate rendering through Faust-generated C# exist."
+    status: "DX7 SysEx parser, public-domain SysEx fixture, dexed-py reference rendering, algorithm topology extraction, envelope-to-ADSR approximation, two Aquarium DSL rebuild attempts, first-class operator graph support, and Aquarium candidate rendering through Faust-generated C# exist."
     first_slice:
-      - "Choose Dexed/reference audio fixtures and add rendered DX7 parity comparisons."
+      - "Map selected public-domain DX7 patches to Aquarium DSL candidates and add explicit parity thresholds."
   zynaddsubfx:
     priority: 2
     purpose: "Additive, subtractive, PAD, formant, kit, and layered-instrument pressure test."
@@ -88,8 +91,9 @@ reference_targets:
 
 next_agent_start_here:
   recommended_first_task: >
-    Choose a lawful DX7 reference render source, then compare captured/reference
-    audio against Aquarium candidate renders produced through Faust-generated C#.
+    Map one selected public-domain DX7 fixture voice to a readable Aquarium
+    operator graph and compare dexed-py reference audio against Faust-rendered
+    Aquarium candidate audio with explicit parity thresholds.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -101,6 +105,14 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-13
+    summary: >
+      Added a public-domain DX7 SysEx fixture from Musical Artifacts artifact
+      152, provenance metadata, and a test-only dexed-py renderer. The render
+      test uses `AQUARIUM_DX7_PYTHON` when set and otherwise stays optional.
+      Added a package-boundary test that packs `AquariumSynth.Dsl` and asserts
+      fixtures, SysEx banks, and Python helpers do not ship in the NuGet package.
+    verification: "dotnet test AquariumSynthCSharp.slnx --no-restore: 47 passed; dexed-py render test passed with bundled Python"
   - date: 2026-05-13
     summary: >
       Added `FaustCompiler.RenderAsync`, which compiles Aquarium Faust source to

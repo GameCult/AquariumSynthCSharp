@@ -14,6 +14,11 @@ the Rust crate into the room by the ankle.
 dotnet test
 ```
 
+DX7 reference-render tests use `dexed-py` when a Python with `dexed` and
+`numpy` is available. Set `AQUARIUM_DX7_PYTHON` to that interpreter to force a
+specific runtime; otherwise the tests skip the render path and still parse the
+vendored public-domain fixture.
+
 ## Package Boundary
 
 Aquarium consumes this library as a pinned `AquariumSynth.Dsl` NuGet package,
@@ -24,6 +29,9 @@ version is packed and tested.
 ```powershell
 dotnet pack src\AquariumSynth.Dsl\AquariumSynth.Dsl.csproj -c Release
 ```
+
+The test suite verifies that development fixtures, Python render helpers, and
+SysEx banks do not ship in `AquariumSynth.Dsl.nupkg`.
 
 ## Shape
 

@@ -38,6 +38,9 @@ credible parity test path should not be consumed.
 - Aquarium Faust output can be rendered through Faust-generated C# for candidate
   audio comparison. Reference audio still needs a real source fixture or renderer;
   do not compare a rebuild only against itself and call that parity.
+- DX7 reference audio uses `dexed-py` when available, with public-domain SysEx
+  fixtures stored under the test project. These are development references, not
+  package content.
 - Do not add a generic graph escape hatch until a specific family of references
 forces it.
 - When a reference target exceeds the current voice-centric DSL, document the
@@ -71,9 +74,10 @@ First deliverable:
 - Convert one or two public-domain or project-authored DX7-style voices into
   `ReferencePatch` records.
 - Build an Aquarium DSL approximation using explicit FM templates.
-- Add mel/envelope/spectral comparison against rendered Dexed output or a
-  captured, licensed reference fixture. Aquarium candidate rendering exists;
-  the missing DX7 parity surface is the reference side.
+- Add mel/envelope/spectral comparison against rendered Dexed output from the
+  public-domain fixture. Aquarium candidate rendering and `dexed-py` reference
+  rendering exist; the remaining work is mapping selected patches to Aquarium
+  DSL candidates with explicit parity thresholds.
 
 Source: [Dexed](https://github.com/asb2m10/dexed)
 

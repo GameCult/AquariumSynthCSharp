@@ -14,12 +14,15 @@ surfaces:
   library: src/AquariumSynth.Dsl
   tests: tests/AquariumSynth.Dsl.Tests
   reference_roadmap: docs/reference-synth-roadmap.md
+  dx7_public_domain_fixtures: tests/AquariumSynth.Dsl.Tests/Fixtures/Dx7/PublicDomain
   package: AquariumSynth.Dsl 0.1.0-aquarium.1
 modules:
   model: src/AquariumSynth.Dsl/Model.cs
   parser: src/AquariumSynth.Dsl/PatchScript.cs
   faust: src/AquariumSynth.Dsl/FaustExport.cs
   faust_rendering: src/AquariumSynth.Dsl/FaustExport.cs
+  dx7_reference_render_tests: tests/AquariumSynth.Dsl.Tests/Dx7ReferenceParityTests.cs
+  package_boundary_tests: tests/AquariumSynth.Dsl.Tests/PackageBoundaryTests.cs
   sfxr: src/AquariumSynth.Dsl/SfxrParams.cs
   analysis: src/AquariumSynth.Dsl/AudioAnalysis.cs
   scoring: src/AquariumSynth.Dsl/ScriptMetrics.cs
@@ -38,7 +41,11 @@ boundaries:
     - analysis and comparison tools
     - script scoring
     - Faust source generation, target-code generation, and candidate rendering
+  dev_only:
+    - public-domain DX7 SysEx fixtures
+    - dexed-py reference renderer
 checks:
   default: dotnet test
   package: dotnet pack src/AquariumSynth.Dsl/AquariumSynth.Dsl.csproj -c Release
   faust_validation: automatic in tests when Faust is installed
+  dexed_py_reference: optional in tests when AQUARIUM_DX7_PYTHON or a Python with dexed-py is available
