@@ -76,8 +76,9 @@ First deliverable:
 - Build an Aquarium DSL approximation using explicit FM templates.
 - Add mel/envelope/spectral comparison against rendered Dexed output from the
   public-domain fixture. Aquarium candidate rendering and `dexed-py` reference
-  rendering exist; the remaining work is mapping selected patches to Aquarium
-  DSL candidates with explicit parity thresholds.
+  rendering exist, and `analog1.syx` voice 13 has the first thresholded parity
+  rebuild. The next pressure is a harder voice that actually needs audible
+  operator routing rather than a sine-like behavioral match.
 
 Source: [Dexed](https://github.com/asb2m10/dexed)
 

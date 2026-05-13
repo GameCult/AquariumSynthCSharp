@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-13T14:05:00+01:00
+updated: 2026-05-13T14:37:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -55,9 +55,9 @@ reference_targets:
     priority: 1
     purpose: "Structured FM/operator graph pressure test."
     source: "https://github.com/asb2m10/dexed"
-    status: "DX7 SysEx parser, public-domain SysEx fixture, dexed-py reference rendering, algorithm topology extraction, envelope-to-ADSR approximation, two Aquarium DSL rebuild attempts, first-class operator graph support, and Aquarium candidate rendering through Faust-generated C# exist."
+    status: "DX7 SysEx parser, public-domain SysEx fixture, dexed-py reference rendering, first thresholded rendered parity test for analog1.syx voice 13, algorithm topology extraction, envelope-to-ADSR approximation, two Aquarium DSL rebuild attempts, first-class operator graph support, and Aquarium candidate rendering through Faust-generated C# exist."
     first_slice:
-      - "Map selected public-domain DX7 patches to Aquarium DSL candidates and add explicit parity thresholds."
+      - "Add a harder public-domain DX7 parity target that audibly needs operator routing."
   zynaddsubfx:
     priority: 2
     purpose: "Additive, subtractive, PAD, formant, kit, and layered-instrument pressure test."
@@ -91,9 +91,10 @@ reference_targets:
 
 next_agent_start_here:
   recommended_first_task: >
-    Map one selected public-domain DX7 fixture voice to a readable Aquarium
-    operator graph and compare dexed-py reference audio against Faust-rendered
-    Aquarium candidate audio with explicit parity thresholds.
+    Choose a harder public-domain DX7 fixture voice whose rendered audio needs
+    audible operator routing, rebuild it with a readable Aquarium operator
+    graph, and compare dexed-py reference audio against Faust-rendered Aquarium
+    candidate audio with explicit parity thresholds.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -105,6 +106,15 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-13
+    summary: >
+      Added the first thresholded rendered DX7 parity rebuild for
+      `analog1.syx` voice 13, `MC-MM 5-3`. The candidate is a terse Aquarium
+      sine-like behavioral match and the test compares dexed-py reference audio
+      against Faust-rendered Aquarium audio using score, log-mel, envelope,
+      duration, RMS, zero-crossing, and centroid thresholds. It does not claim
+      exact DX7 operator execution.
+    verification: "dotnet test AquariumSynthCSharp.slnx --no-restore: 48 passed; focused dexed-py parity test passed with bundled Python"
   - date: 2026-05-13
     summary: >
       Added a public-domain DX7 SysEx fixture from Musical Artifacts artifact

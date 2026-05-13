@@ -48,7 +48,24 @@ public static class ReferenceRebuildCatalog
                 new("dx7_feedback_register", "one-sample feedback register", "Aquarium operator feedback currently uses a smoothed self-reference approximation, not exact DX7 feedback register timing."),
                 new("operator_envelope_exactness", "independent DX7 rate/level envelopes", "Aquarium has per-operator ADSR approximation, not exact DX7 EG execution.")
             ],
-            "This patch is deliberately a pressure test. The new operator graph owns the topology; exact DX7 envelope and feedback-register behavior remain pressure for later refinement.")
+            "This patch is deliberately a pressure test. The new operator graph owns the topology; exact DX7 envelope and feedback-register behavior remain pressure for later refinement."),
+        new(
+            "dx7/public-domain-mc-mm-5-3/aquarium",
+            "dx7",
+            "Public-domain MC-MM 5-3",
+            "dx7/public-domain/analog1/13",
+            BuiltInScripts.Dx7StylePublicDomainMcMm53,
+            [
+                new("reference_fixture", "analog1.syx#13", "Public-domain DX7 SysEx fixture from Musical Artifacts artifact 152."),
+                new("audio_parity", "score>=0.75 log_mel<0.12 envelope<0.10", "First rendered DX7 parity target using dexed-py reference audio and Faust-rendered Aquarium audio."),
+                new("dominant_pitch", "654.0639Hz", "The rendered reference behaves as a short C3-derived 5x-ratio sine-like tone."),
+                new("operator_envelope_approximation", "DX7 EG -> ADSR", "ADSR timing is fitted to the rendered reference envelope.")
+            ],
+            [
+                new("operator_topology_exactness", "2->1 FM pair", "The first parity candidate matches the rendered behavior as a sine-like tone; it does not claim exact DX7 operator-level execution."),
+                new("operator_envelope_exactness", "DX7 rate/level EG", "The candidate uses Aquarium ADSR timing matched to rendered audio.")
+            ],
+            "This is the first thresholded audio parity rung. It proves the render/compare loop on a lawful fixture without pretending the DX7 internals are solved.")
     ];
 
     public static IEnumerable<ReferenceRebuild> All()

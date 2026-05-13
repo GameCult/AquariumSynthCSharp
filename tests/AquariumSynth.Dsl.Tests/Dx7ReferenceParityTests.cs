@@ -34,8 +34,64 @@ public sealed class Dx7ReferenceParityTests
         Assert.True(analysis.Features.Rms > 0.0001f);
     }
 
+    [Fact]
+    public async Task PublicDomainDx7McMm53MeetsFirstRenderedParityThresholdWhenInstalled()
+    {
+        var bankPath = FixturePath("Dx7", "PublicDomain", "analog1.syx");
+        var reference = await DexedPyRenderer.RenderAsync(
+            bankPath,
+            patchIndex: 13,
+            noteDurationSeconds: 0.08f,
+            renderDurationSeconds: 0.25f);
+
+        if (reference is null)
+        {
+            return;
+        }
+
+        var bank = Dx7SysEx.ParseBank(File.ReadAllBytes(bankPath));
+        Assert.Equal("MC-MM  5-3", bank.Voices[13].Name);
+
+        var candidateSource = FaustEmitter.EmitScript(BuiltInScripts.Dx7StylePublicDomainMcMm53);
+        var candidate = await FaustCompiler.RenderAsync(
+            candidateSource.Source,
+            new FaustRenderOptions(DurationSeconds: 0.25f));
+
+        if (candidate is null)
+        {
+            return;
+        }
+
+        Assert.NotEmpty(reference.Samples);
+        Assert.NotEmpty(candidate.Samples);
+
+        var comparison = new AudioAnalyzer(new AudioAnalysisConfig(SampleRate: reference.SampleRate))
+            .Compare(reference.Samples, candidate.Samples);
+
+        Assert.True(comparison.Score >= 0.75f, ParityReport(comparison));
+        Assert.True(comparison.LogMelDistance < 0.12f, ParityReport(comparison));
+        Assert.True(comparison.EnvelopeDistance < 0.10f, ParityReport(comparison));
+        Assert.InRange(comparison.DurationRatio, 0.90f, 1.10f);
+        Assert.InRange(comparison.RmsRatio, 0.75f, 1.10f);
+        Assert.InRange(comparison.ZeroCrossingRatio, 0.95f, 1.05f);
+        Assert.InRange(comparison.CentroidRatio, 0.90f, 1.05f);
+    }
+
     private static string FixturePath(params string[] parts) =>
         Path.Combine([AppContext.BaseDirectory, "Fixtures", .. parts]);
+
+    private static string ParityReport(AudioComparison comparison) =>
+        string.Join(
+            Environment.NewLine,
+            $"score: {comparison.Score}",
+            $"log-mel distance: {comparison.LogMelDistance}",
+            $"envelope distance: {comparison.EnvelopeDistance}",
+            $"duration ratio: {comparison.DurationRatio}",
+            $"rms ratio: {comparison.RmsRatio}",
+            $"zero-crossing ratio: {comparison.ZeroCrossingRatio}",
+            $"centroid ratio: {comparison.CentroidRatio}",
+            $"reference peak/rms: {comparison.Reference.Features.Peak}/{comparison.Reference.Features.Rms}",
+            $"candidate peak/rms: {comparison.Candidate.Features.Peak}/{comparison.Candidate.Features.Rms}");
 }
 
 internal sealed record DexedPyRender(float[] Samples, int SampleRate, string Stdout, string Stderr);

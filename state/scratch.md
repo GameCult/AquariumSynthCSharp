@@ -15,6 +15,22 @@ Doctrine update:
 
 Completed this slice:
 
+- Added the first thresholded DX7 rendered-audio parity rebuild:
+  `BuiltInScripts.Dx7StylePublicDomainMcMm53` maps public-domain
+  `analog1.syx` voice 13, `MC-MM 5-3`, to a terse Aquarium sine patch.
+- Added `PublicDomainDx7McMm53MeetsFirstRenderedParityThresholdWhenInstalled`,
+  which renders the DX7 reference through `dexed-py`, renders the Aquarium
+  candidate through Faust-generated C#, and asserts score, log-mel distance,
+  envelope distance, duration/RMS ratios, zero-crossing ratio, and centroid
+  ratio.
+- This is behavioral parity for a simple sine-like rendered voice, not exact
+  DX7 operator execution. The next DX7 pressure should be a harder voice that
+  audibly needs the operator graph.
+- Verified with bundled Python plus `dexed-py`: parity test passed.
+- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 48 passed.
+
+Previous slice:
+
 - Added a public-domain DX7 SysEx fixture from Musical Artifacts artifact 152:
   `tests/AquariumSynth.Dsl.Tests/Fixtures/Dx7/PublicDomain/analog1.syx`, with
   provenance and SHA-256 recorded beside it.

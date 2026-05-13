@@ -604,7 +604,7 @@ public static class BuiltInScripts
 
     public static readonly IReadOnlyList<string> AdvancedNames = ["aurora-pad", "machine-breath", "glass-creature", "ritual-sequence"];
 
-    public static readonly IReadOnlyList<string> Dx7StyleNames = ["algo32-additive-organ", "algo8-bright-pair"];
+    public static readonly IReadOnlyList<string> Dx7StyleNames = ["algo32-additive-organ", "algo8-bright-pair", "public-domain-mc-mm-5-3"];
 
     public const string Dx7StyleAlgorithm32AdditiveOrgan = """
         patch
@@ -738,6 +738,21 @@ public static class BuiltInScripts
             gain=0.025
             drive=0.08
             fold=0.05
+        """;
+
+    public const string Dx7StylePublicDomainMcMm53 = """
+        patch
+            gain=0.82
+            soft_clip=true
+
+        voice
+            wave=sine
+            freq=654.0639
+            gain=1
+            attack=0.004
+            sustain=0.08
+            env_decay=0.008
+            release=0.004
         """;
 
     public static readonly IReadOnlyList<(string Name, string Script)> AdvancedReferenceScripts =
