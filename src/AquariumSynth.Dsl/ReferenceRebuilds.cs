@@ -45,7 +45,7 @@ public static class ReferenceRebuildCatalog
                 new("operator_envelope_approximation", "DX7 EG -> ADSR", "DX7 four-rate/four-level envelopes can now be lowered to labeled ADSR approximations.")
             ],
             [
-                new("dx7_feedback_register", "one-sample feedback register", "Aquarium operator feedback currently uses a smoothed self-reference approximation, not exact DX7 feedback register timing."),
+                new("dx7_feedback_register", "DX7 feedback scaling/register details", "Aquarium operator feedback is now renderable as a one-sample delayed self-reference, but not calibrated to exact DX7 feedback scaling."),
                 new("operator_envelope_exactness", "independent DX7 rate/level envelopes", "Aquarium has per-operator ADSR approximation, not exact DX7 EG execution.")
             ],
             "This patch is deliberately a pressure test. The new operator graph owns the topology; exact DX7 envelope and feedback-register behavior remain pressure for later refinement."),

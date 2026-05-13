@@ -509,4 +509,23 @@ public sealed class PatchScriptTests
             .Compare(render.Samples, render.Samples);
         Assert.True(comparison.Score > 0.99f);
     }
+
+    [Fact]
+    public async Task FaustCompilerRendersOperatorFeedbackWhenInstalled()
+    {
+        var export = FaustEmitter.EmitScript("""
+            opgraph name=fb freq=220 gain=.2
+            operator name=op1 ratio=1 level=1 feedback=.2 env=ad:.01:.1
+            carrier name=op1
+            """);
+        var render = await FaustCompiler.RenderAsync(export.Source, new FaustRenderOptions(DurationSeconds: .1f));
+
+        if (render is null)
+        {
+            return;
+        }
+
+        Assert.True(render.Samples.Length > 1000, render.Stderr);
+        Assert.True(render.Samples.Max(MathF.Abs) > 0.001f, render.Stderr);
+    }
 }

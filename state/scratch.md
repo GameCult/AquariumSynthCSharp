@@ -15,6 +15,18 @@ Doctrine update:
 
 Completed this slice:
 
+- Tried the harder `analog1.syx` voice 17, `PRC SYNTH1` (algorithm 8). The
+  initial routed Aquarium candidate scored badly (~0.23), which exposed a real
+  missing invariant rather than a threshold-tuning problem.
+- Reworked operator feedback emission from a cyclic smoothed self-reference to
+  a renderable Faust feedback expression using delayed recursion. Added
+  `FaustCompilerRendersOperatorFeedbackWhenInstalled`.
+- Exact DX7 feedback scaling and EG behavior are still not solved, but feedback
+  no longer makes the Faust render path fall over.
+- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 49 passed.
+
+Previous slice:
+
 - Added the first thresholded DX7 rendered-audio parity rebuild:
   `BuiltInScripts.Dx7StylePublicDomainMcMm53` maps public-domain
   `analog1.syx` voice 13, `MC-MM 5-3`, to a terse Aquarium sine patch.

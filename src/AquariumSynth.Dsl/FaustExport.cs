@@ -345,13 +345,7 @@ public static class FaustEmitter
                 .Where(edge => edge.TargetId == op.Id && operatorIds.Contains(edge.SourceId))
                 .Select(edge => $"{name}_op_{edge.SourceId} * {parameters.Expression($"{graphPath}/routes/{edge.SourceId}>{edge.TargetId}/index", edge.Index)}")
                 .ToList();
-            if (op.Feedback != 0)
-            {
-                incoming.Add($"{opName} * {parameters.Expression($"{operatorPath}/feedback", op.Feedback)} : si.smoo");
-                warnings.Add($"{name}: operator {op.Id} feedback is approximated with smoothed self-reference");
-            }
-
-            var phaseMod = incoming.Count == 0 ? "0.0" : string.Join(" + ", incoming);
+            var externalPhaseMod = incoming.Count == 0 ? "0.0" : string.Join(" + ", incoming);
             var envelope = EnvelopeExpression(
                 op.Envelope,
                 UsesHostPlayback(playback) || op.Note.Source == NoteSource.Host ? graphNoteGate : F(op.Note.GateSeconds),
@@ -364,7 +358,15 @@ public static class FaustEmitter
                     "env/release" => parameters.Expression($"{operatorPath}/env/release", op.Envelope.ReleaseSeconds),
                     _ => throw new ArgumentOutOfRangeException(nameof(field), field, null)
                 });
-            source.AppendLine($"{opName} = sin(2.0 * ma.PI * (os.phasor(1.0, {name}_freq * max(0.0, {parameters.Expression($"{operatorPath}/ratio", op.Ratio)})) + ({phaseMod}) / ma.PI)) * {envelope} * {parameters.Expression($"{operatorPath}/level", op.Level)};");
+            if (op.Feedback != 0)
+            {
+                var feedback = parameters.Expression($"{operatorPath}/feedback", op.Feedback);
+                source.AppendLine($"{opName} = ((_ * {feedback} + ({externalPhaseMod})) : \\(pm).(sin(2.0 * ma.PI * (os.phasor(1.0, {name}_freq * max(0.0, {parameters.Expression($"{operatorPath}/ratio", op.Ratio)})) + pm / ma.PI)) * {envelope} * {parameters.Expression($"{operatorPath}/level", op.Level)})) ~ _;");
+            }
+            else
+            {
+                source.AppendLine($"{opName} = sin(2.0 * ma.PI * (os.phasor(1.0, {name}_freq * max(0.0, {parameters.Expression($"{operatorPath}/ratio", op.Ratio)})) + ({externalPhaseMod}) / ma.PI)) * {envelope} * {parameters.Expression($"{operatorPath}/level", op.Level)};");
+            }
         }
 
         source.AppendLine($"{name} = ({string.Join(" + ", carrierIds.Select(id => $"{name}_op_{id}"))}) * {parameters.Expression($"{graphPath}/gain", graph.Gain)};");
