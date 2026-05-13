@@ -20,6 +20,10 @@ public sealed record FaustCompileOptions(FaustTargetLanguage Language, string Ou
 
 public sealed record FaustValidation(string Command, bool Success, int? StatusCode, string Stdout, string Stderr);
 
+public sealed record FaustRenderOptions(int SampleRate = 44100, float DurationSeconds = 1);
+
+public sealed record FaustRender(float[] Samples, int SampleRate, string Command, string Stdout, string Stderr);
+
 public static class FaustEmitter
 {
     public static FaustExport EmitScript(string script, FaustExportOptions? options = null) =>
@@ -591,6 +595,66 @@ public static class FaustCompiler
         return await CompileAsync(source, new FaustCompileOptions(FaustTargetLanguage.Cpp, output), faustPath, cancellationToken);
     }
 
+    public static async Task<FaustRender?> RenderAsync(
+        string source,
+        FaustRenderOptions? options = null,
+        string? faustPath = null,
+        CancellationToken cancellationToken = default)
+    {
+        options ??= new FaustRenderOptions();
+        faustPath ??= FindFaust();
+        if (faustPath is null) return null;
+
+        var frames = Math.Max(1, (int)MathF.Round(options.SampleRate * Math.Max(options.DurationSeconds, 1f / options.SampleRate)));
+        var tempDir = Path.Combine(Path.GetTempPath(), $"aquarium-synth-render-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var sourcePath = Path.Combine(tempDir, "render.dsp");
+            var generatedPath = Path.Combine(tempDir, "RenderDsp.cs");
+            var outputPath = Path.Combine(tempDir, "render.f32");
+            await File.WriteAllTextAsync(sourcePath, source, cancellationToken);
+
+            var faust = await RunAsync(
+                faustPath,
+                ["-lang", "csharp", "-double", "-cn", "RenderDsp", "-o", generatedPath, sourcePath],
+                cancellationToken);
+            if (faust.ExitCode != 0)
+            {
+                return new FaustRender([], options.SampleRate, faustPath, faust.Stdout, faust.Stderr);
+            }
+
+            var archDir = await FaustArchDirAsync(faustPath, cancellationToken);
+            var basePath = archDir is null ? null : Path.Combine(archDir, "CSharpFaustBase.cs");
+            if (basePath is null || !File.Exists(basePath))
+            {
+                return new FaustRender([], options.SampleRate, faustPath, faust.Stdout, $"could not find CSharpFaustBase.cs under Faust archdir `{archDir}`");
+            }
+
+            File.Copy(basePath, Path.Combine(tempDir, "CSharpFaustBase.cs"));
+            await File.WriteAllTextAsync(Path.Combine(tempDir, "Render.csproj"), RenderProjectSource(), cancellationToken);
+            await File.WriteAllTextAsync(Path.Combine(tempDir, "Program.cs"), RenderProgramSource(), cancellationToken);
+
+            var dotnet = await RunAsync(
+                "dotnet",
+                ["run", "--project", Path.Combine(tempDir, "Render.csproj"), "--", outputPath, options.SampleRate.ToString(CultureInfo.InvariantCulture), frames.ToString(CultureInfo.InvariantCulture)],
+                cancellationToken);
+            if (dotnet.ExitCode != 0 || !File.Exists(outputPath))
+            {
+                return new FaustRender([], options.SampleRate, "dotnet", dotnet.Stdout, dotnet.Stderr);
+            }
+
+            var bytes = await File.ReadAllBytesAsync(outputPath, cancellationToken);
+            var samples = new float[bytes.Length / sizeof(float)];
+            Buffer.BlockCopy(bytes, 0, samples, 0, samples.Length * sizeof(float));
+            return new FaustRender(samples, options.SampleRate, "dotnet", dotnet.Stdout, dotnet.Stderr);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
     private static string Language(FaustTargetLanguage language) => language switch
     {
         FaustTargetLanguage.C => "c",
@@ -599,6 +663,48 @@ public static class FaustCompiler
         FaustTargetLanguage.Rust => "rust",
         _ => throw new ArgumentOutOfRangeException(nameof(language), language, null)
     };
+
+    private static async Task<string?> FaustArchDirAsync(string faustPath, CancellationToken cancellationToken)
+    {
+        var result = await RunAsync(faustPath, ["-archdir"], cancellationToken);
+        return result.ExitCode == 0 ? result.Stdout.Trim() : null;
+    }
+
+    private static string RenderProjectSource() =>
+        """
+        <Project Sdk="Microsoft.NET.Sdk">
+          <PropertyGroup>
+            <OutputType>Exe</OutputType>
+            <TargetFramework>net10.0</TargetFramework>
+            <ImplicitUsings>enable</ImplicitUsings>
+            <Nullable>enable</Nullable>
+          </PropertyGroup>
+        </Project>
+        """;
+
+    private static string RenderProgramSource() =>
+        """
+        using System.Globalization;
+
+        var outputPath = args[0];
+        var sampleRate = int.Parse(args[1], CultureInfo.InvariantCulture);
+        var frames = int.Parse(args[2], CultureInfo.InvariantCulture);
+        var dsp = new RenderDsp();
+        dsp.Init(sampleRate);
+
+        var inputs = new double[dsp.GetNumInputs()][];
+        for (var i = 0; i < inputs.Length; i++) inputs[i] = new double[frames];
+
+        var outputs = new double[dsp.GetNumOutputs()][];
+        for (var i = 0; i < outputs.Length; i++) outputs[i] = new double[frames];
+
+        dsp.Compute(frames, inputs, outputs);
+
+        await using var stream = File.Create(outputPath);
+        await using var writer = new BinaryWriter(stream);
+        var output = outputs.Length == 0 ? Array.Empty<double>() : outputs[0];
+        for (var i = 0; i < frames; i++) writer.Write((float)output[i]);
+        """;
 
     private static async Task<(int ExitCode, string Stdout, string Stderr)> RunAsync(
         string fileName,

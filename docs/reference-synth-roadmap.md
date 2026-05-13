@@ -35,6 +35,9 @@ source format hash.
 known structural expectations that prove Aquarium can express the same behavior.
 Weak "it parsed" tests do not prove expressivity, and references without a
 credible parity test path should not be consumed.
+- Aquarium Faust output can be rendered through Faust-generated C# for candidate
+  audio comparison. Reference audio still needs a real source fixture or renderer;
+  do not compare a rebuild only against itself and call that parity.
 - Do not add a generic graph escape hatch until a specific family of references
 forces it.
 - When a reference target exceeds the current voice-centric DSL, document the
@@ -68,8 +71,9 @@ First deliverable:
 - Convert one or two public-domain or project-authored DX7-style voices into
   `ReferencePatch` records.
 - Build an Aquarium DSL approximation using explicit FM templates.
-- Add mel/envelope/spectral comparison against rendered Dexed or internal
-  reference output once the render path is chosen.
+- Add mel/envelope/spectral comparison against rendered Dexed output or a
+  captured, licensed reference fixture. Aquarium candidate rendering exists;
+  the missing DX7 parity surface is the reference side.
 
 Source: [Dexed](https://github.com/asb2m10/dexed)
 

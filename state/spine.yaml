@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-13T13:18:00+01:00
+updated: 2026-05-13T13:40:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -15,6 +15,7 @@ current_mechanism:
   parser: src/AquariumSynth.Dsl/PatchScript.cs
   model: src/AquariumSynth.Dsl/Model.cs
   faust_emitter: src/AquariumSynth.Dsl/FaustExport.cs
+  faust_renderer: src/AquariumSynth.Dsl/FaustExport.cs
   operator_graph_model: src/AquariumSynth.Dsl/Model.cs
   analysis: src/AquariumSynth.Dsl/AudioAnalysis.cs
   built_ins: src/AquariumSynth.Dsl/BuiltInScripts.cs
@@ -33,6 +34,7 @@ live_invariants:
   - Notes own frequency, gate duration, and host/MIDI source; envelopes own ADSR level shape. Do not put note duration or SFXR punch back into the general envelope model.
   - Faust-managed MIDI polyphony is preferred: emit one voice graph with standard `freq`, `gain`, and `gate` controls plus `[midi:on][nvoices:n]` instead of inflating Aquarium graphs for local allocation.
   - Generated Faust should remain inspectable and deterministic.
+  - Aquarium Faust output may be rendered through Faust-generated C# for candidate audio comparison; reference parity still needs a real external render or captured licensed fixture.
   - Reference-patch correctness and synth parity tests live in AquariumSynthCSharp, not Aquarium.
   - Exposed patch parameters are runtime controls, not compile-time constants.
   - Parameter binding uses field-site references like `lpf=@/macro/brightness`; do not add target-routing semantics unless a later map proves a new authority is needed.
@@ -50,9 +52,9 @@ reference_targets:
     priority: 1
     purpose: "Structured FM/operator graph pressure test."
     source: "https://github.com/asb2m10/dexed"
-    status: "DX7 SysEx parser, algorithm topology extraction, envelope-to-ADSR approximation, two Aquarium DSL rebuild attempts, and first-class operator graph support exist."
+    status: "DX7 SysEx parser, algorithm topology extraction, envelope-to-ADSR approximation, two Aquarium DSL rebuild attempts, first-class operator graph support, and Aquarium candidate rendering through Faust-generated C# exist."
     first_slice:
-      - "Add rendered/audio comparison once a render path is explicit."
+      - "Choose Dexed/reference audio fixtures and add rendered DX7 parity comparisons."
   zynaddsubfx:
     priority: 2
     purpose: "Additive, subtractive, PAD, formant, kit, and layered-instrument pressure test."
@@ -86,9 +88,8 @@ reference_targets:
 
 next_agent_start_here:
   recommended_first_task: >
-    Add rendered/audio comparison once a render path is explicit, keeping
-    readable operator graph authoring syntax as operator/route/carrier
-    declarations.
+    Choose a lawful DX7 reference render source, then compare captured/reference
+    audio against Aquarium candidate renders produced through Faust-generated C#.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -100,6 +101,14 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-13
+    summary: >
+      Added `FaustCompiler.RenderAsync`, which compiles Aquarium Faust source to
+      Faust-generated C#, runs it in a temp .NET project, and returns mono float
+      samples. The first render test checks non-silent generated audio and feeds
+      the buffer through `AudioAnalyzer`; DX7 audio parity remains blocked on a
+      chosen reference renderer or captured fixture.
+    verification: "dotnet test AquariumSynthCSharp.slnx --no-restore: 44 passed"
   - date: 2026-05-13
     summary: >
       Added `Dx7EnvelopeApproximation`, a labeled helper that lowers DX7

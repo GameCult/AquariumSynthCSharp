@@ -19,6 +19,7 @@ modules:
   model: src/AquariumSynth.Dsl/Model.cs
   parser: src/AquariumSynth.Dsl/PatchScript.cs
   faust: src/AquariumSynth.Dsl/FaustExport.cs
+  faust_rendering: src/AquariumSynth.Dsl/FaustExport.cs
   sfxr: src/AquariumSynth.Dsl/SfxrParams.cs
   analysis: src/AquariumSynth.Dsl/AudioAnalysis.cs
   scoring: src/AquariumSynth.Dsl/ScriptMetrics.cs
@@ -36,7 +37,7 @@ boundaries:
     - SFXR parameter mapping and atoms
     - analysis and comparison tools
     - script scoring
-    - Faust source and target-code generation
+    - Faust source generation, target-code generation, and candidate rendering
 checks:
   default: dotnet test
   package: dotnet pack src/AquariumSynth.Dsl/AquariumSynth.Dsl.csproj -c Release

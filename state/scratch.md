@@ -15,6 +15,17 @@ Doctrine update:
 
 Completed this slice:
 
+- Added `FaustCompiler.RenderAsync`, which compiles Aquarium Faust output to
+  Faust-generated C#, runs it in a temp .NET project, and returns a mono float
+  sample buffer for analysis.
+- Added a render test that proves a generated Aquarium patch produces non-silent
+  audio and can be compared through `AudioAnalyzer`.
+- DX7 audio parity is still not claimed: the candidate renderer exists, but the
+  reference side needs Dexed output or a captured licensed fixture.
+- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 44 passed.
+
+Previous slice:
+
 - Added `Dx7EnvelopeApproximation`, which lowers a DX7 four-rate/four-level EG
   to a labeled Aquarium ADSR approximation plus gate duration.
 - Reference rebuilds now record `operator_envelope_approximation` as matched

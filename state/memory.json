@@ -23,6 +23,7 @@
       "patch script parser",
       "SFXR atoms and parameter mapping",
       "analysis/comparison metrics",
+      "Faust-generated C# candidate rendering",
       "script scoring",
       "preset catalogs",
       "Faust emission and compiler wrapper"
@@ -52,9 +53,9 @@
     "rule": "Add DSL abstractions only when reference rebuilds prove the missing invariant. Do not consume references that cannot be backed by parity tests; parsing alone is inventory, not evidence of expressivity."
   },
   "dx7_reference_path": {
-    "status": "DX7 SysEx parser extracts voice edit buffers, packed voices, packed 32-voice banks, six operators, envelopes, algorithm, feedback, oscillator sync, LFO, transpose, voice name, checksum validation, ReferencePatch features, algorithm topology from the reverse-engineered OPS algorithm ROM table, envelope-to-ADSR approximations, two Aquarium DSL rebuild attempts, and first-class OperatorGraph support.",
+    "status": "DX7 SysEx parser extracts voice edit buffers, packed voices, packed 32-voice banks, six operators, envelopes, algorithm, feedback, oscillator sync, LFO, transpose, voice name, checksum validation, ReferencePatch features, algorithm topology from the reverse-engineered OPS algorithm ROM table, envelope-to-ADSR approximations, two Aquarium DSL rebuild attempts, first-class OperatorGraph support, and Aquarium candidate rendering through Faust-generated C#.",
     "lesson": "Algorithm 32's additive six-carrier shape maps cleanly to six Aquarium voices. Algorithm 8 justified OperatorGraph: operators, modulation edges, carriers, and feedback belong to a graph authority, not Voice fields. Readable authoring uses operator/route/carrier declarations; compact ops/edges tuples are scaffolding only.",
-    "next": "Add rendered/audio comparison once a render path is explicit; exact DX7 feedback-register timing and exact DX7 EG execution remain separate pressure."
+    "next": "Choose Dexed/reference audio fixtures and add rendered DX7 parity comparisons; exact DX7 feedback-register timing and exact DX7 EG execution remain separate pressure."
   },
   "note_and_envelope_model": {
     "rule": "Notes own frequency, gate duration, and host/MIDI source. Envelopes own ADSR level shape.",
@@ -69,7 +70,7 @@
   },
   "last_verified": {
     "command": "dotnet test AquariumSynthCSharp.slnx --no-restore",
-    "result": "43 passed",
-    "commit": "pending reference parity doctrine update"
+    "result": "44 passed",
+    "commit": "pending Faust render parity harness"
   }
 }

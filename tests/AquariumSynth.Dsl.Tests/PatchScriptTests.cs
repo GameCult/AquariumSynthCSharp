@@ -490,4 +490,23 @@ public sealed class PatchScriptTests
             if (File.Exists(output)) File.Delete(output);
         }
     }
+
+    [Fact]
+    public async Task FaustCompilerRendersGeneratedSourceWhenInstalled()
+    {
+        var export = FaustEmitter.EmitScript("v w=sin f=440 gain=.2 sustain=.08 decay=.04");
+        var render = await FaustCompiler.RenderAsync(export.Source, new FaustRenderOptions(DurationSeconds: .12f));
+
+        if (render is null)
+        {
+            return;
+        }
+
+        Assert.True(render.Samples.Length > 1000, render.Stderr);
+        Assert.True(render.Samples.Max(MathF.Abs) > 0.001f, render.Stderr);
+
+        var comparison = new AudioAnalyzer(new AudioAnalysisConfig(SampleRate: render.SampleRate))
+            .Compare(render.Samples, render.Samples);
+        Assert.True(comparison.Score > 0.99f);
+    }
 }

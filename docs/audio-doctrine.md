@@ -122,6 +122,11 @@ authorities.
 ## Metrics
 
 Analysis exists to catch regressions and support search, not to crown winners.
+Aquarium Faust output can be rendered through Faust-generated C# in authoring
+tests, which gives us candidate audio buffers without depending on the old Rust
+renderer. That is only half of parity: reference targets still need a real
+external render or a captured, lawful fixture before the comparison means
+anything.
 
 Useful metrics:
 
