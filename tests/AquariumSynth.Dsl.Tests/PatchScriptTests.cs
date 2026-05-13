@@ -220,6 +220,8 @@ public sealed class PatchScriptTests
             Assert.Contains("process =", export.Source);
             Assert.NotEmpty(rebuild.MatchedFeatures);
             Assert.NotEmpty(rebuild.MissingFeatures);
+            Assert.Contains(rebuild.MatchedFeatures, feature => feature.Name == "operator_envelope_approximation");
+            Assert.Contains(rebuild.MissingFeatures, feature => feature.Name == "operator_envelope_exactness");
             Assert.All(rebuild.MissingFeatures, feature => Assert.False(string.IsNullOrWhiteSpace(feature.Notes)));
         }
     }

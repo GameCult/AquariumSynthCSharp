@@ -23,10 +23,11 @@ public static class ReferenceRebuildCatalog
             [
                 new("carrier_operators", "1,2,3,4,5,6", "Six independent carriers map cleanly to six Aquarium voices."),
                 new("modulation_edge_count", "0", "No operator-to-operator modulation is needed for the additive shape."),
-                new("self_feedback_operators", "6", "Approximated with fold/drive on the highest partial.")
+                new("self_feedback_operators", "6", "Approximated with fold/drive on the highest partial."),
+                new("operator_envelope_approximation", "DX7 EG -> ADSR", "DX7 four-rate/four-level envelopes can now be lowered to labeled ADSR approximations.")
             ],
             [
-                new("operator_envelopes", "per-operator four-stage DX7 EG", "Aquarium now has ADSR envelopes, but not DX7 rate/level envelopes."),
+                new("operator_envelope_exactness", "per-operator four-stage DX7 EG", "Aquarium has an ADSR approximation helper, not exact DX7 rate/level envelope execution."),
                 new("output_compensation", "algorithm ROM COM", "Aquarium voice gains are explicit and not derived from DX7 COM scaling.")
             ],
             "This is the honest easy case: DX7 algorithm 32 is mostly additive synthesis, so the current voice DSL can represent the carrier layout without pretending to own a full operator graph."),
@@ -40,11 +41,12 @@ public static class ReferenceRebuildCatalog
                 new("carrier_operators", "1,3", "Represented as carriers in a first-class Aquarium operator graph."),
                 new("modulation_edges", "6->5,4+5->3,2->1", "Represented as explicit operator edges in the graph."),
                 new("feedback_sources", "4", "Represented as operator-local feedback approximation on operator 4."),
-                new("runtime_macros", "brightness,strike", "Field-site parameters expose useful sound controls without recompilation.")
+                new("runtime_macros", "brightness,strike", "Field-site parameters expose useful sound controls without recompilation."),
+                new("operator_envelope_approximation", "DX7 EG -> ADSR", "DX7 four-rate/four-level envelopes can now be lowered to labeled ADSR approximations.")
             ],
             [
                 new("dx7_feedback_register", "one-sample feedback register", "Aquarium operator feedback currently uses a smoothed self-reference approximation, not exact DX7 feedback register timing."),
-                new("operator_envelopes", "independent DX7 rate/level envelopes", "Aquarium has simpler per-voice envelopes, not per-operator EGs.")
+                new("operator_envelope_exactness", "independent DX7 rate/level envelopes", "Aquarium has per-operator ADSR approximation, not exact DX7 EG execution.")
             ],
             "This patch is deliberately a pressure test. The new operator graph owns the topology; exact DX7 envelope and feedback-register behavior remain pressure for later refinement.")
     ];

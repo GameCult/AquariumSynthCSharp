@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-13T12:55:00+01:00
+updated: 2026-05-13T13:11:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -37,6 +37,7 @@ live_invariants:
   - Exposed patch parameters are runtime controls, not compile-time constants.
   - Parameter binding uses field-site references like `lpf=@/macro/brightness`; do not add target-routing semantics unless a later map proves a new authority is needed.
   - Operator graph parameter binding also uses exact field-site paths under `/opgraphs/...`; do not add graph-wide macro routing.
+  - DX7 rate/level envelopes may lower to labeled ADSR approximations, but exact DX7 EG execution remains missing pressure.
   - Recompile only for graph shape changes; vary declared parameters through the hosted DSP control API.
   - Reference fixtures must preserve provenance, license status, source hash, and feature pressure.
   - Audio metrics are evidence, not final judgment.
@@ -48,9 +49,8 @@ reference_targets:
     priority: 1
     purpose: "Structured FM/operator graph pressure test."
     source: "https://github.com/asb2m10/dexed"
-    status: "DX7 SysEx parser, algorithm topology extraction, two Aquarium DSL rebuild attempts, and first-class operator graph support exist."
+    status: "DX7 SysEx parser, algorithm topology extraction, envelope-to-ADSR approximation, two Aquarium DSL rebuild attempts, and first-class operator graph support exist."
     first_slice:
-      - "Add a neutral DX7 envelope approximation path."
       - "Add rendered/audio comparison once a render path is explicit."
   zynaddsubfx:
     priority: 2
@@ -85,8 +85,9 @@ reference_targets:
 
 next_agent_start_here:
   recommended_first_task: >
-    Add a neutral DX7 envelope approximation path, keeping readable operator
-    graph authoring syntax as operator/route/carrier declarations.
+    Add rendered/audio comparison once a render path is explicit, keeping
+    readable operator graph authoring syntax as operator/route/carrier
+    declarations.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -98,6 +99,13 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-13
+    summary: >
+      Added `Dx7EnvelopeApproximation`, a labeled helper that lowers DX7
+      four-rate/four-level envelopes to Aquarium ADSR plus gate duration.
+      Reference rebuilds now distinguish approximated envelope lowering from
+      still-missing exact DX7 EG execution.
+    verification: "dotnet test AquariumSynthCSharp.slnx --no-restore: 43 passed"
   - date: 2026-05-13
     summary: >
       Added field-site parameter binding for readable operator graphs. Graph

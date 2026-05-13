@@ -28,6 +28,17 @@ public sealed record Dx7Envelope(
     int Level3,
     int Level4);
 
+public sealed record Dx7EnvelopeApproximation(
+    Envelope Envelope,
+    float GateSeconds,
+    string Notes)
+{
+    public string ToScriptSpec() =>
+        $"env=adsr:{F(Envelope.AttackSeconds)}:{F(Envelope.DecaySeconds)}:{F(Envelope.SustainLevel)}:{F(Envelope.ReleaseSeconds)} gate={F(GateSeconds)}";
+
+    private static string F(float value) => value.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture);
+}
+
 public sealed record Dx7Operator(
     int Number,
     Dx7Envelope Envelope,
@@ -134,6 +145,26 @@ public static class Dx7SysEx
     {
         var data = VoiceEditBuffer(bytes);
         return ParseVoiceEditBuffer(data);
+    }
+
+    public static Dx7EnvelopeApproximation ApproximateEnvelope(Dx7Envelope envelope)
+    {
+        var l1 = Level(envelope.Level1);
+        var l2 = Level(envelope.Level2);
+        var l3 = Level(envelope.Level3);
+        var l4 = Level(envelope.Level4);
+        var peak = Math.Max(0.0001f, l1);
+        var attack = SegmentSeconds(envelope.Rate1, Math.Abs(l1 - l4));
+        var decay = SegmentSeconds(envelope.Rate2, Math.Abs(l1 - l2)) +
+                    SegmentSeconds(envelope.Rate3, Math.Abs(l2 - l3));
+        var release = SegmentSeconds(envelope.Rate4, Math.Abs(l3 - l4));
+        var sustain = Math.Clamp(l3 / peak, 0, 1);
+        var gate = Math.Max(attack + decay, 0.02f);
+
+        return new Dx7EnvelopeApproximation(
+            new Envelope(attack, decay, sustain, release),
+            gate,
+            "Approximation: DX7 EG uses four rate/level segments; ADSR keeps one sustain level and a key-off release.");
     }
 
     public static Dx7VoiceBank ParseBank(ReadOnlySpan<byte> bytes)
@@ -348,6 +379,15 @@ public static class Dx7SysEx
                 ParseLfoWaveform(Value(data, 142)),
                 Value(data, 143)),
             Value(data, 144));
+    }
+
+    private static float Level(int value) => Math.Clamp(value, 0, 99) / 99f;
+
+    private static float SegmentSeconds(int rate, float distance)
+    {
+        var normalizedRate = Math.Clamp(rate, 0, 99) / 99f;
+        var scaledDistance = Math.Clamp(distance, 0, 1);
+        return 0.004f + 12f * scaledDistance * MathF.Pow(1 - normalizedRate, 2.2f);
     }
 
     private static byte[] VoiceEditBuffer(ReadOnlySpan<byte> bytes)

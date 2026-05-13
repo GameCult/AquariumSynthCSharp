@@ -115,6 +115,9 @@ authorities.
   controls with `[midi:on][nvoices:n]` options, leaving MIDI decoding and voice
   allocation to Faust architectures unless a concrete target proves that
   boundary insufficient.
+- DX7 rate/level envelopes may be lowered to labeled ADSR approximations for
+  rebuild work, but that is not exact DX7 envelope execution. Keep exactness
+  pressure visible in reference features instead of smuggling it into ADSR.
 
 ## Metrics
 

@@ -16,6 +16,7 @@
       "reference rebuild catalog",
       "DX7 SysEx structural parsing",
       "DX7 algorithm topology metadata",
+      "DX7 envelope-to-ADSR approximation",
       "standard ADSR envelope model",
       "note frequency/gate model",
       "Faust-managed playback/polyphony contract",
@@ -51,9 +52,9 @@
     "rule": "Add DSL abstractions only when reference rebuilds prove the missing invariant."
   },
   "dx7_reference_path": {
-    "status": "DX7 SysEx parser extracts voice edit buffers, packed voices, packed 32-voice banks, six operators, envelopes, algorithm, feedback, oscillator sync, LFO, transpose, voice name, checksum validation, ReferencePatch features, algorithm topology from the reverse-engineered OPS algorithm ROM table, two Aquarium DSL rebuild attempts, and first-class OperatorGraph support.",
+    "status": "DX7 SysEx parser extracts voice edit buffers, packed voices, packed 32-voice banks, six operators, envelopes, algorithm, feedback, oscillator sync, LFO, transpose, voice name, checksum validation, ReferencePatch features, algorithm topology from the reverse-engineered OPS algorithm ROM table, envelope-to-ADSR approximations, two Aquarium DSL rebuild attempts, and first-class OperatorGraph support.",
     "lesson": "Algorithm 32's additive six-carrier shape maps cleanly to six Aquarium voices. Algorithm 8 justified OperatorGraph: operators, modulation edges, carriers, and feedback belong to a graph authority, not Voice fields. Readable authoring uses operator/route/carrier declarations; compact ops/edges tuples are scaffolding only.",
-    "next": "Add a neutral DX7 envelope approximation path and refine Faust MIDI integration details; exact DX7 feedback-register timing remains separate pressure."
+    "next": "Add rendered/audio comparison once a render path is explicit; exact DX7 feedback-register timing and exact DX7 EG execution remain separate pressure."
   },
   "note_and_envelope_model": {
     "rule": "Notes own frequency, gate duration, and host/MIDI source. Envelopes own ADSR level shape.",
@@ -68,7 +69,7 @@
   },
   "last_verified": {
     "command": "dotnet test AquariumSynthCSharp.slnx --no-restore",
-    "result": "42 passed",
-    "commit": "pending operator graph parameter binding commit"
+    "result": "43 passed",
+    "commit": "pending DX7 envelope approximation commit"
   }
 }

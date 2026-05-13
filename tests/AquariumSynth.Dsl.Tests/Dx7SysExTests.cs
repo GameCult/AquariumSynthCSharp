@@ -150,6 +150,28 @@ public sealed class Dx7SysExTests
         Assert.Equal([6], topology.SelfFeedbackOperators);
     }
 
+    [Fact]
+    public void ApproximatesDx7RateLevelEnvelopeAsAdsr()
+    {
+        var approximation = Dx7SysEx.ApproximateEnvelope(new Dx7Envelope(
+            Rate1: 99,
+            Rate2: 70,
+            Rate3: 55,
+            Rate4: 40,
+            Level1: 99,
+            Level2: 80,
+            Level3: 50,
+            Level4: 0));
+
+        Assert.InRange(approximation.Envelope.AttackSeconds, 0.003f, 0.006f);
+        Assert.InRange(approximation.Envelope.DecaySeconds, 0.2f, 2.5f);
+        Assert.Equal(50 / 99f, approximation.Envelope.SustainLevel, 5);
+        Assert.InRange(approximation.Envelope.ReleaseSeconds, 1f, 5f);
+        Assert.True(approximation.GateSeconds >= approximation.Envelope.AttackSeconds + approximation.Envelope.DecaySeconds);
+        Assert.Contains("Approximation", approximation.Notes);
+        Assert.StartsWith("env=adsr:", approximation.ToScriptSpec());
+    }
+
     private static byte[] InitVoice(string name, int algorithm, int feedback)
     {
         var data = new byte[Dx7SysEx.VoiceEditBufferLength];

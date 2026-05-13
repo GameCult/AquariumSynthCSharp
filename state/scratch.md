@@ -7,6 +7,16 @@ the synth library while Aquarium work continues elsewhere.
 
 Completed this slice:
 
+- Added `Dx7EnvelopeApproximation`, which lowers a DX7 four-rate/four-level EG
+  to a labeled Aquarium ADSR approximation plus gate duration.
+- Reference rebuilds now record `operator_envelope_approximation` as matched
+  pressure and `operator_envelope_exactness` as still missing.
+- Doctrine now states that DX7 EG approximation is not exact DX7 envelope
+  execution.
+- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 43 passed.
+
+Previous slice:
+
 - Added field-site parameter binding for readable operator graph authoring:
   graph gain/note fields, operator ratio/level/feedback/envelope fields, and
   route index fields now accept `@/param`.
