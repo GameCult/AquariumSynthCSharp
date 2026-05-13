@@ -89,6 +89,26 @@ public sealed record Modulator(
 
 public sealed record ControlLane(string Name, Modulator Modulator);
 
+public sealed record OperatorNode(
+    int Id,
+    float Ratio = 1,
+    float Level = 1,
+    float Feedback = 0,
+    Envelope Envelope = null!)
+{
+    public Envelope Envelope { get; init; } = Envelope ?? new();
+}
+
+public sealed record OperatorEdge(int SourceId, int TargetId, float Index = 1);
+
+public sealed record OperatorGraph(
+    string Name,
+    float FrequencyHz,
+    IReadOnlyList<OperatorNode> Operators,
+    IReadOnlyList<OperatorEdge> Edges,
+    IReadOnlyList<int> Carriers,
+    float Gain = 0.2f);
+
 public sealed record PatchParameter(
     string Path,
     string Label,
@@ -141,6 +161,7 @@ public sealed record Voice
 public sealed record SynthPatch
 {
     public IReadOnlyList<Voice> Voices { get; init; } = Array.Empty<Voice>();
+    public IReadOnlyList<OperatorGraph> OperatorGraphs { get; init; } = Array.Empty<OperatorGraph>();
     public IReadOnlyList<ControlLane> Controls { get; init; } = Array.Empty<ControlLane>();
     public IReadOnlyList<PatchParameter> Parameters { get; init; } = Array.Empty<PatchParameter>();
     public IReadOnlyList<ParameterBinding> ParameterBindings { get; init; } = Array.Empty<ParameterBinding>();

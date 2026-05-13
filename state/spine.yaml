@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-13T00:54:02+01:00
+updated: 2026-05-13T01:24:10+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -15,6 +15,7 @@ current_mechanism:
   parser: src/AquariumSynth.Dsl/PatchScript.cs
   model: src/AquariumSynth.Dsl/Model.cs
   faust_emitter: src/AquariumSynth.Dsl/FaustExport.cs
+  operator_graph_model: src/AquariumSynth.Dsl/Model.cs
   analysis: src/AquariumSynth.Dsl/AudioAnalysis.cs
   built_ins: src/AquariumSynth.Dsl/BuiltInScripts.cs
   dx7_references: src/AquariumSynth.Dsl/Dx7SysEx.cs
@@ -27,6 +28,7 @@ current_mechanism:
 live_invariants:
   - Aquarium owns its patch graph; external synths are references, not runtime dependencies.
   - Patch scripts lower into explicit graph records before Faust emission.
+  - Operator graphs own FM topology: operators, modulation edges, carriers, and feedback. Do not hide this authority inside Voice fields.
   - Generated Faust should remain inspectable and deterministic.
   - Reference-patch correctness and synth parity tests live in AquariumSynthCSharp, not Aquarium.
   - Exposed patch parameters are runtime controls, not compile-time constants.
@@ -42,10 +44,10 @@ reference_targets:
     priority: 1
     purpose: "Structured FM/operator graph pressure test."
     source: "https://github.com/asb2m10/dexed"
-    status: "DX7 SysEx parser, algorithm topology extraction, and two Aquarium DSL rebuild attempts exist; operator-graph decision is next."
+    status: "DX7 SysEx parser, algorithm topology extraction, two Aquarium DSL rebuild attempts, and first-class operator graph support exist."
     first_slice:
-      - "Decide whether DX7 algorithm-8-style mismatches justify a first-class operator graph model."
-      - "If yes, map ownership before implementing it."
+      - "Refine operator graph parameter binding and envelope shape."
+      - "Add rendered/audio comparison once a render path is explicit."
   zynaddsubfx:
     priority: 2
     purpose: "Additive, subtractive, PAD, formant, kit, and layered-instrument pressure test."
@@ -79,9 +81,8 @@ reference_targets:
 
 next_agent_start_here:
   recommended_first_task: >
-    Decide whether the DX7 algorithm-8 rebuild mismatch justifies a first-class
-    operator graph model. Map ownership first; do not smuggle it into Voice
-    fields.
+    Refine operator graph parameter binding and envelope shape. Keep operator
+    topology in OperatorGraph, not Voice fields.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -93,6 +94,14 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-13
+    summary: >
+      Added first-class OperatorGraph support with operators, modulation edges,
+      carriers, operator feedback, parser syntax, and Faust emission mixed with
+      normal voices. Updated the DX7 algorithm-8 rebuild to use the operator
+      graph; remaining pressure is exact DX7 feedback-register timing and
+      rate/level envelopes.
+    verification: "dotnet test AquariumSynthCSharp.slnx --no-restore: 35 passed"
   - date: 2026-05-13
     summary: >
       Added ReferenceRebuild catalog entries and two DX7-style Aquarium DSL

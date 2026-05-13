@@ -681,30 +681,26 @@ public static class BuiltInScripts
             hpf=0.02
             lpf=0.9
 
+        opgraph
+            name=dx7_algo8_core
+            freq=330
+            gain=0.18
+            carriers=1,3
+            ops=6:4:0.9:0:0.035:0.18,5:3:0.82:0:0.04:0.2,4:2:0.7:0.18:0.05:0.24,3:2:0.6:0:0.06:0.3,2:1:0.75:0:0.045:0.2,1:1:0.82:0:0.08:0.34
+            edges=6>5:1.1,5>3:0.9,4>3:0.75,2>1:0.85
+
         voice
             freq=330
-            gain=0.16
+            gain=0.04
             fm=2
             fm_index=@/macro/brightness
             fm_decay=0.22
 
         voice
             freq=660
-            gain=0.1
-            fm=3
-            fm_index=1.4
-            fm_decay=0.16
+            gain=0.025
             drive=0.08
             fold=0.05
-
-        voice
-            freq=990
-            gain=0.045
-            sustain=0.025
-            decay=0.34
-            fm=1
-            fm_index=0.55
-            fm_decay=0.12
         """;
 
     public static readonly IReadOnlyList<(string Name, string Script)> AdvancedReferenceScripts =

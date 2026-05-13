@@ -19,9 +19,9 @@ public static class PatchScript
             line = statement.Line;
         }
 
-        if (compiler.Voices.Count == 0)
+        if (compiler.Voices.Count == 0 && compiler.OperatorGraphs.Count == 0)
         {
-            throw new PatchScriptException(line, "patch script produced no voices");
+            throw new PatchScriptException(line, "patch script produced no voices or operator graphs");
         }
 
         return compiler.Build();
@@ -31,11 +31,13 @@ public static class PatchScript
     {
         private readonly Dictionary<string, Dictionary<string, string>> _templates = new(StringComparer.OrdinalIgnoreCase);
         private readonly List<ControlLane> _controls = [];
+        private readonly List<OperatorGraph> _operatorGraphs = [];
         private readonly List<PatchParameter> _parameters = [];
         private readonly List<ParameterBinding> _parameterBindings = [];
         private readonly Dictionary<string, string> _defaults = new(StringComparer.OrdinalIgnoreCase);
 
         public List<Voice> Voices { get; } = [];
+        public List<OperatorGraph> OperatorGraphs => _operatorGraphs;
         private Repeat? Repeat { get; set; }
         private float Gain { get; set; } = 1;
         private bool SoftClip { get; set; } = true;
@@ -43,6 +45,7 @@ public static class PatchScript
         public SynthPatch Build() => new()
         {
             Voices = Voices,
+            OperatorGraphs = _operatorGraphs,
             Controls = _controls,
             Parameters = _parameters,
             ParameterBindings = _parameterBindings,
@@ -77,6 +80,9 @@ public static class PatchScript
                     break;
                 case "voice":
                     Voices.Add(ParseVoice(ExpandVoiceFields(fields, line), Voices.Count, line));
+                    break;
+                case "opgraph":
+                    AddOperatorGraph(fields, line);
                     break;
                 case "mod":
                     AddModBus(fields, line);
@@ -242,6 +248,43 @@ public static class PatchScript
                     GetFloat(fields, line, 0, "bias", "b"))));
         }
 
+        private void AddOperatorGraph(IReadOnlyDictionary<string, string> fields, int line)
+        {
+            var graphIndex = _operatorGraphs.Count;
+            var graphPath = $"/opgraphs/{graphIndex}";
+            var operators = ParseOperatorNodes(Required(fields, "ops", line), line);
+            var edges = TryGetAny(fields, ["edges", "e"], out var edgeSpec)
+                ? ParseOperatorEdges(edgeSpec, line)
+                : [];
+            var carriers = TryGetAny(fields, ["carriers", "c"], out var carrierSpec)
+                ? ParseOperatorIds(carrierSpec, line)
+                : operators.Select(op => op.Id).ToList();
+
+            var operatorIds = operators.Select(op => op.Id).ToHashSet();
+            foreach (var edge in edges)
+            {
+                if (!operatorIds.Contains(edge.SourceId) || !operatorIds.Contains(edge.TargetId))
+                {
+                    throw new PatchScriptException(line, $"operator edge `{edge.SourceId}>{edge.TargetId}` references an unknown operator");
+                }
+            }
+            foreach (var carrier in carriers)
+            {
+                if (!operatorIds.Contains(carrier))
+                {
+                    throw new PatchScriptException(line, $"carrier `{carrier}` references an unknown operator");
+                }
+            }
+
+            _operatorGraphs.Add(new OperatorGraph(
+                GetAny(fields, ["name", "n"], $"opgraph{graphIndex}"),
+                GetBoundFloat(fields, line, 440, $"{graphPath}/freq", "freq", "frequency", "f"),
+                operators,
+                edges,
+                carriers,
+                GetBoundFloat(fields, line, 0.2f, $"{graphPath}/gain", "gain", "g")));
+        }
+
         private void AddParameter(IReadOnlyDictionary<string, string> fields, int line)
         {
             var path = Required(fields, "path", line);
@@ -322,6 +365,53 @@ public static class PatchScript
         }
 
         private static string VoiceField(int voiceIndex, string field) => $"/voices/{voiceIndex}/{field}";
+
+        private static List<OperatorNode> ParseOperatorNodes(string value, int line) =>
+            value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(part =>
+                {
+                    var pieces = part.Split(':');
+                    if (pieces.Length is < 3 or > 6)
+                    {
+                        throw new PatchScriptException(line, $"bad operator `{part}`");
+                    }
+
+                    return new OperatorNode(
+                        ParseInt(pieces[0], line),
+                        ParseFloat(pieces[1], line),
+                        ParseFloat(pieces[2], line),
+                        pieces.Length >= 4 ? ParseFloat(pieces[3], line) : 0,
+                        pieces.Length >= 6 ? new Envelope(0, ParseFloat(pieces[4], line), ParseFloat(pieces[5], line)) : new Envelope());
+                })
+                .ToList();
+
+        private static List<OperatorEdge> ParseOperatorEdges(string value, int line) =>
+            value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(part =>
+                {
+                    var pieces = part.Split(':');
+                    if (pieces.Length is < 1 or > 2)
+                    {
+                        throw new PatchScriptException(line, $"bad operator edge `{part}`");
+                    }
+
+                    var nodes = pieces[0].Split('>');
+                    if (nodes.Length != 2)
+                    {
+                        throw new PatchScriptException(line, $"bad operator edge `{part}`");
+                    }
+
+                    return new OperatorEdge(
+                        ParseInt(nodes[0], line),
+                        ParseInt(nodes[1], line),
+                        pieces.Length == 2 ? ParseFloat(pieces[1], line) : 1);
+                })
+                .ToList();
+
+        private static List<int> ParseOperatorIds(string value, int line) =>
+            value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(part => ParseInt(part, line))
+                .ToList();
 
         private void AddSfxrPatch(SfxrParams parameters)
         {
@@ -448,6 +538,7 @@ public static class PatchScript
         "d" or "default" or "defaults" => "defaults",
         "def" or "t" or "template" => "template",
         "v" or "voice" => "voice",
+        "opgraph" or "ops" or "operators" => "opgraph",
         "mod" or "wob" or "wobble" or "bus" => "mod",
         "lfo" or "control" => "control",
         "param" or "parameter" => "param",
@@ -539,6 +630,11 @@ public static class PatchScript
         float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
             ? parsed
             : throw new PatchScriptException(line, $"bad number `{value}`");
+
+    private static int ParseInt(string value, int line) =>
+        int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : throw new PatchScriptException(line, $"bad integer `{value}`");
 
     private static bool ParseBool(string value, int line) => value.ToLowerInvariant() switch
     {

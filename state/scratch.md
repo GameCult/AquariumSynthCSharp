@@ -7,6 +7,18 @@ the synth library while Aquarium work continues elsewhere.
 
 Completed this slice:
 
+- Added a first-class `OperatorGraph` model with operators, modulation edges,
+  carriers, graph gain, and operator feedback.
+- Added `opgraph` patch-script syntax. Example:
+  `opgraph name=core freq=330 carriers=1,3 ops=6:4:.9,5:3:.8,4:2:.7:.18,3:2:.6,2:1:.75,1:1:.82 edges=6>5:1.1,5>3:.9,4>3:.75,2>1:.85`
+- Faust emission now mixes operator graphs alongside normal voices.
+- Updated the DX7 algorithm-8 rebuild to use a real operator graph for the
+  topology. The remaining missing feature is exact DX7 feedback-register timing
+  and DX7 rate/level envelopes, not graph ownership.
+- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 35 passed.
+
+Previous slice:
+
 - Added `ReferenceRebuild` and `ReferenceRebuildCatalog` for explicit
   reference-target rebuild attempts.
 - Added two DX7-style Aquarium DSL rebuilds:
@@ -19,7 +31,7 @@ Completed this slice:
   instead of being hidden inside prose.
 - Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 34 passed.
 
-Previous slice:
+Earlier topology slice:
 
 - Added DX7 algorithm topology metadata for algorithms 1-32 using Ken
   Shirriff's reverse-engineered OPS algorithm ROM table.
@@ -62,7 +74,7 @@ Parameter slice:
 
 Next likely slice:
 
-- Decide whether the repeated DX7 algorithm-8 mismatch justifies a first-class
-  operator graph model. Map ownership before implementing it.
+- Refine operator graphs with parameter bindings inside graph fields, then
+  decide how much DX7 rate/level envelope shape belongs in the shared model.
 - Keep tests focused on structure first, then add rendered audio comparison once
   the render path is explicit.

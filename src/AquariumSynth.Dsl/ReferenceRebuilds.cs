@@ -37,16 +37,16 @@ public static class ReferenceRebuildCatalog
             "dx7/algo8-bright-pair",
             BuiltInScripts.Dx7StyleAlgorithm8BrightPair,
             [
-                new("carrier_operators", "1,3", "Approximated as two audible Aquarium voices."),
-                new("feedback_sources", "4", "Approximated with drive/fold and FM index decay on the brighter voice."),
+                new("carrier_operators", "1,3", "Represented as carriers in a first-class Aquarium operator graph."),
+                new("modulation_edges", "6->5,4+5->3,2->1", "Represented as explicit operator edges in the graph."),
+                new("feedback_sources", "4", "Represented as operator-local feedback approximation on operator 4."),
                 new("runtime_macros", "brightness,strike", "Field-site parameters expose useful sound controls without recompilation.")
             ],
             [
-                new("modulation_edges", "6->5,4+5->3,2->1", "The current voice DSL cannot express separate six-operator routing."),
-                new("self_feedback_operators", "4", "There is no operator-local feedback edge; fold/drive is only a timbral approximation."),
+                new("dx7_feedback_register", "one-sample feedback register", "Aquarium operator feedback currently uses a smoothed self-reference approximation, not exact DX7 feedback register timing."),
                 new("operator_envelopes", "independent DX7 rate/level envelopes", "Aquarium has simpler per-voice envelopes, not per-operator EGs.")
             ],
-            "This patch is deliberately a pressure test. It sounds in the family, but the missing edges are real and should become evidence for an operator graph layer if more DX7 targets need the same shape.")
+            "This patch is deliberately a pressure test. The new operator graph owns the topology; exact DX7 envelope and feedback-register behavior remain pressure for later refinement.")
     ];
 
     public static IEnumerable<ReferenceRebuild> All()

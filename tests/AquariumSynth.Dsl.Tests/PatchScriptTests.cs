@@ -246,14 +246,37 @@ public sealed class PatchScriptTests
         var topology = Dx7SysEx.AlgorithmTopology(8);
 
         Assert.Equal(2, topology.CarrierOperators.Count);
-        Assert.True(patch.Voices.Count > topology.CarrierOperators.Count, "Approximation adds a shimmer layer beyond the two DX7 carriers.");
-        Assert.Contains(rebuild.MissingFeatures, feature => feature.Name == "modulation_edges");
-        Assert.Contains(rebuild.MissingFeatures, feature => feature.Name == "self_feedback_operators");
+        var graph = Assert.Single(patch.OperatorGraphs);
+        Assert.Equal([1, 3], graph.Carriers);
+        Assert.Equal(6, graph.Operators.Count);
+        Assert.Contains(graph.Edges, edge => edge.SourceId == 6 && edge.TargetId == 5);
+        Assert.Contains(graph.Edges, edge => edge.SourceId == 5 && edge.TargetId == 3);
+        Assert.Contains(graph.Edges, edge => edge.SourceId == 4 && edge.TargetId == 3);
+        Assert.Contains(graph.Edges, edge => edge.SourceId == 2 && edge.TargetId == 1);
+        Assert.Contains(graph.Operators, op => op.Id == 4 && op.Feedback > 0);
+        Assert.Contains(rebuild.MatchedFeatures, feature => feature.Name == "modulation_edges");
+        Assert.Contains(rebuild.MissingFeatures, feature => feature.Name == "dx7_feedback_register");
         Assert.Equal(2, patch.Parameters.Count);
         Assert.Equal(3, patch.ParameterBindings.Count);
         Assert.Contains(patch.ParameterBindings, binding => binding.FieldPath == "/voices/0/fm/index");
         Assert.Contains(patch.ParameterBindings, binding => binding.FieldPath == "/voices/0/env/decay");
         Assert.Contains(patch.ParameterBindings, binding => binding.FieldPath == "/voices/1/env/decay");
+    }
+
+    [Fact]
+    public void OperatorGraphScriptParsesAndExportsFaust()
+    {
+        var patch = PatchScript.Parse("opgraph name=pair freq=220 gain=.2 carriers=1 ops=2:2:.8,1:1:1 edges=2>1:1.4");
+        var graph = Assert.Single(patch.OperatorGraphs);
+        var export = FaustEmitter.Emit(patch);
+
+        Assert.Equal("pair", graph.Name);
+        Assert.Equal(2, graph.Operators.Count);
+        Assert.Single(graph.Edges);
+        Assert.Empty(patch.Voices);
+        Assert.Contains("opgraph_0_op_2", export.Source);
+        Assert.Contains("opgraph_0_op_1", export.Source);
+        Assert.Contains("opgraph_0 = (opgraph_0_op_1) * 0.2;", export.Source);
     }
 
     [Fact]

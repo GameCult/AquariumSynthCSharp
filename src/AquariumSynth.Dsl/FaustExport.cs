@@ -28,7 +28,7 @@ public static class FaustEmitter
     public static FaustExport Emit(SynthPatch patch, FaustExportOptions? options = null)
     {
         options ??= new FaustExportOptions();
-        if (patch.Voices.Count == 0) throw new ArgumentException("cannot export an empty patch", nameof(patch));
+        if (patch.Voices.Count == 0 && patch.OperatorGraphs.Count == 0) throw new ArgumentException("cannot export an empty patch", nameof(patch));
 
         var warnings = new List<string>();
         var parameters = new ParameterMap(patch, warnings);
@@ -77,8 +77,15 @@ public static class FaustEmitter
             EmitVoice(source, patch, patch.Voices[i], i, name, parameters, warnings);
             voices.Add(name);
         }
+        for (var i = 0; i < patch.OperatorGraphs.Count; i++)
+        {
+            var name = $"opgraph_{i}";
+            EmitOperatorGraph(source, patch.OperatorGraphs[i], name, warnings);
+            voices.Add(name);
+        }
 
-        var final = $"({string.Join(" + ", voices)}) * {parameters.Expression("/patch/gain", patch.Gain)}";
+        var mix = voices.Count == 0 ? "0.0" : string.Join(" + ", voices);
+        var final = $"({mix}) * {parameters.Expression("/patch/gain", patch.Gain)}";
         if (patch.SoftClip) final = $"softclip({final})";
         var unbound = parameters.UnboundParameterIds().ToList();
         if (unbound.Count > 0)
@@ -206,6 +213,79 @@ public static class FaustEmitter
             Waveform.Noise => "no.noise",
             _ => throw new ArgumentOutOfRangeException()
         };
+    }
+
+    private static void EmitOperatorGraph(StringBuilder source, OperatorGraph graph, string name, List<string> warnings)
+    {
+        if (graph.Operators.Count == 0)
+        {
+            warnings.Add($"{name}: empty operator graph was ignored");
+            source.AppendLine($"{name} = 0.0;");
+            return;
+        }
+
+        var ordered = TopologicalOperators(graph, warnings, name);
+        var operatorIds = graph.Operators.Select(op => op.Id).ToHashSet();
+        var carrierIds = graph.Carriers.Where(operatorIds.Contains).ToList();
+        if (carrierIds.Count == 0)
+        {
+            warnings.Add($"{name}: operator graph has no valid carriers");
+            source.AppendLine($"{name} = 0.0;");
+            return;
+        }
+
+        source.AppendLine($"{name}_freq = {F(graph.FrequencyHz)};");
+        foreach (var op in ordered)
+        {
+            var opName = $"{name}_op_{op.Id}";
+            var incoming = graph.Edges
+                .Where(edge => edge.TargetId == op.Id && operatorIds.Contains(edge.SourceId))
+                .Select(edge => $"{name}_op_{edge.SourceId} * {F(edge.Index)}")
+                .ToList();
+            if (op.Feedback != 0)
+            {
+                incoming.Add($"{opName} * {F(op.Feedback)} : si.smoo");
+                warnings.Add($"{name}: operator {op.Id} feedback is approximated with smoothed self-reference");
+            }
+
+            var phaseMod = incoming.Count == 0 ? "0.0" : string.Join(" + ", incoming);
+            var envelope = $"env({F(op.Envelope.AttackSeconds)}, {F(op.Envelope.SustainSeconds)}, {F(op.Envelope.DecaySeconds)}, {F(op.Envelope.Punch)})";
+            source.AppendLine($"{opName} = sin(2.0 * ma.PI * (os.phasor(1.0, {name}_freq * {F(Math.Max(op.Ratio, 0))}) + ({phaseMod}) / ma.PI)) * {envelope} * {F(op.Level)};");
+        }
+
+        source.AppendLine($"{name} = ({string.Join(" + ", carrierIds.Select(id => $"{name}_op_{id}"))}) * {F(graph.Gain)};");
+        source.AppendLine();
+    }
+
+    private static IReadOnlyList<OperatorNode> TopologicalOperators(OperatorGraph graph, List<string> warnings, string name)
+    {
+        var byId = graph.Operators.ToDictionary(op => op.Id);
+        var emitted = new HashSet<int>();
+        var ordered = new List<OperatorNode>();
+        while (ordered.Count < graph.Operators.Count)
+        {
+            var ready = graph.Operators
+                .Where(op => !emitted.Contains(op.Id))
+                .Where(op => graph.Edges
+                    .Where(edge => edge.TargetId == op.Id && byId.ContainsKey(edge.SourceId))
+                    .All(edge => emitted.Contains(edge.SourceId)))
+                .OrderByDescending(op => op.Id)
+                .ToList();
+            if (ready.Count == 0)
+            {
+                warnings.Add($"{name}: operator graph has a cycle; remaining operators use declaration order");
+                ordered.AddRange(graph.Operators.Where(op => !emitted.Contains(op.Id)));
+                break;
+            }
+
+            foreach (var op in ready)
+            {
+                ordered.Add(op);
+                emitted.Add(op.Id);
+            }
+        }
+
+        return ordered;
     }
 
     private static string FormantExpression(string name, Voice voice)
