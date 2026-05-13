@@ -7,6 +7,17 @@ the synth library while Aquarium work continues elsewhere.
 
 Completed this slice:
 
+- Added field-site parameter binding for readable operator graph authoring:
+  graph gain/note fields, operator ratio/level/feedback/envelope fields, and
+  route index fields now accept `@/param`.
+- Operator graph Faust emission now substitutes bound parameter expressions at
+  the exact `/opgraphs/...` field paths.
+- Fixed AD operator envelope binding to use `/env/decay` for the second AD
+  value, matching the ADSR model instead of calling it release by accident.
+- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 42 passed.
+
+Previous slice:
+
 - Added a patch-level `Playback` contract for `OneShot`, `Mono`, and `Poly`
   playback with Faust MIDI polyphony settings.
 - `instrument midi=true polyphony=8` now lowers to Faust's standard

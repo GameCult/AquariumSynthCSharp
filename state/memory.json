@@ -53,7 +53,7 @@
   "dx7_reference_path": {
     "status": "DX7 SysEx parser extracts voice edit buffers, packed voices, packed 32-voice banks, six operators, envelopes, algorithm, feedback, oscillator sync, LFO, transpose, voice name, checksum validation, ReferencePatch features, algorithm topology from the reverse-engineered OPS algorithm ROM table, two Aquarium DSL rebuild attempts, and first-class OperatorGraph support.",
     "lesson": "Algorithm 32's additive six-carrier shape maps cleanly to six Aquarium voices. Algorithm 8 justified OperatorGraph: operators, modulation edges, carriers, and feedback belong to a graph authority, not Voice fields. Readable authoring uses operator/route/carrier declarations; compact ops/edges tuples are scaffolding only.",
-    "next": "Refine operator graph parameter binding and Faust MIDI integration details; exact DX7 feedback-register timing remains separate pressure."
+    "next": "Add a neutral DX7 envelope approximation path and refine Faust MIDI integration details; exact DX7 feedback-register timing remains separate pressure."
   },
   "note_and_envelope_model": {
     "rule": "Notes own frequency, gate duration, and host/MIDI source. Envelopes own ADSR level shape.",
@@ -64,11 +64,11 @@
     "rule": "Patch parameters are runtime controls, not compile-time constants.",
     "faust_surface": "Faust UI controls expose parameter zones that hosts can update with setParamValue/getParamValue-style APIs.",
     "aquarium_requirement": "Aquarium DSL patches declare stable exposed parameters with path/default/min/max/step metadata so callers can vary sound without recompiling.",
-    "binding_rule": "Parameter binding uses field-site references such as `lpf=@/macro/brightness`; the field owns meaning and the parameter owns the runtime value. Avoid target-routing semantics unless a new graph authority is deliberately mapped."
+    "binding_rule": "Parameter binding uses field-site references such as `lpf=@/macro/brightness` and `/opgraphs/0/operators/2/level`; the field owns meaning and the parameter owns the runtime value. Avoid target-routing semantics unless a new graph authority is deliberately mapped."
   },
   "last_verified": {
     "command": "dotnet test AquariumSynthCSharp.slnx --no-restore",
-    "result": "41 passed",
-    "commit": "pending Faust polyphony playback commit"
+    "result": "42 passed",
+    "commit": "pending operator graph parameter binding commit"
   }
 }

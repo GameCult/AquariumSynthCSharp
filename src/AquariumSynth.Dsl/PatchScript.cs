@@ -364,6 +364,7 @@ public static class PatchScript
             var graphPath = $"/opgraphs/{graphIndex}";
             _pendingOperatorGraph = new PendingOperatorGraph(
                 line,
+                graphPath,
                 GetAny(fields, ["name", "n"], $"opgraph{graphIndex}"),
                 GetBoundFloat(fields, line, 440, $"{graphPath}/freq", "freq", "frequency", "f"),
                 new Note(
@@ -377,21 +378,22 @@ public static class PatchScript
         {
             var graph = RequiredPendingOperatorGraph(line);
             var id = ParseOperatorId(Required(fields, "name", line), line);
+            var operatorPath = $"{graph.Path}/operators/{id}";
             var envelopeSpec = TryGetAny(fields, ["env", "envelope"], out var envSpec)
-                ? ParseEnvelopeSpec(envSpec, line)
+                ? ParseEnvelopeSpec(envSpec, line, operatorPath)
                 : new ParsedEnvelope(
                     new Envelope(
-                        GetFloat(fields, line, 0, "attack", "a"),
-                        GetFloat(fields, line, 0, "env_decay", "ed"),
-                        GetFloat(fields, line, 1, "sustain_level", "sl"),
-                        GetFloat(fields, line, 0.1f, "release", "rel", "decay", "d")),
-                    GetFloat(fields, line, graph.Note.GateSeconds, "gate", "hold", "duration"));
+                        GetBoundFloat(fields, line, 0, $"{operatorPath}/env/attack", "attack", "a"),
+                        GetBoundFloat(fields, line, 0, $"{operatorPath}/env/decay", "env_decay", "ed"),
+                        GetBoundFloat(fields, line, 1, $"{operatorPath}/env/sustain_level", "sustain_level", "sl"),
+                        GetBoundFloat(fields, line, 0.1f, $"{operatorPath}/env/release", "release", "rel", "decay", "d")),
+                    GetBoundFloat(fields, line, graph.Note.GateSeconds, $"{operatorPath}/note/gate", "gate", "hold", "duration"));
 
             graph.Operators.Add(new OperatorNode(
                 id,
-                GetFloat(fields, line, 1, "ratio", "r"),
-                GetFloat(fields, line, 1, "level", "l"),
-                GetFloat(fields, line, 0, "feedback", "fb"),
+                GetBoundFloat(fields, line, 1, $"{operatorPath}/ratio", "ratio", "r"),
+                GetBoundFloat(fields, line, 1, $"{operatorPath}/level", "level", "l"),
+                GetBoundFloat(fields, line, 0, $"{operatorPath}/feedback", "feedback", "fb"),
                 graph.Note with { GateSeconds = envelopeSpec.GateSeconds },
                 envelopeSpec.Envelope));
         }
@@ -401,7 +403,7 @@ public static class PatchScript
             var graph = RequiredPendingOperatorGraph(line);
             var source = ParseOperatorId(Required(fields, "from", line), line);
             var target = ParseOperatorId(Required(fields, "to", line), line);
-            graph.Edges.Add(new OperatorEdge(source, target, GetFloat(fields, line, 1, "index", "amount", "depth")));
+            graph.Edges.Add(new OperatorEdge(source, target, GetBoundFloat(fields, line, 1, $"{graph.Path}/routes/{source}>{target}/index", "index", "amount", "depth")));
         }
 
         private void AddOperatorCarrier(IReadOnlyDictionary<string, string> fields, int line)
@@ -583,20 +585,20 @@ public static class PatchScript
                 .Select(part => ParseInt(part, line))
                 .ToList();
 
-        private static ParsedEnvelope ParseEnvelopeSpec(string value, int line)
+        private ParsedEnvelope ParseEnvelopeSpec(string value, int line, string fieldPath)
         {
             var pieces = value.Split(':');
             return pieces[0].ToLowerInvariant() switch
             {
                 "ad" when pieces.Length == 3 => AdEnvelope(
-                    ParseFloat(pieces[1], line),
-                    ParseFloat(pieces[2], line)),
+                    ParseBoundFloat(pieces[1], line, 0, $"{fieldPath}/env/attack"),
+                    ParseBoundFloat(pieces[2], line, 0.1f, $"{fieldPath}/env/decay")),
                 "adsr" when pieces.Length == 5 => new ParsedEnvelope(
                     new Envelope(
-                        ParseFloat(pieces[1], line),
-                        ParseFloat(pieces[2], line),
-                        ParseFloat(pieces[3], line),
-                        ParseFloat(pieces[4], line)),
+                        ParseBoundFloat(pieces[1], line, 0, $"{fieldPath}/env/attack"),
+                        ParseBoundFloat(pieces[2], line, 0, $"{fieldPath}/env/decay"),
+                        ParseBoundFloat(pieces[3], line, 1, $"{fieldPath}/env/sustain_level"),
+                        ParseBoundFloat(pieces[4], line, 0.1f, $"{fieldPath}/env/release")),
                     0.1f),
                 _ => throw new PatchScriptException(line, $"bad envelope `{value}`")
             };
@@ -671,6 +673,7 @@ public static class PatchScript
 
         private sealed record PendingOperatorGraph(
             int Line,
+            string Path,
             string Name,
             float FrequencyHz,
             Note Note,

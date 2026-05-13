@@ -307,6 +307,31 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
+    public void ReadableOperatorGraphSyntaxBindsParametersAtFieldSites()
+    {
+        var patch = PatchScript.Parse("""
+            param path=/macro/brightness default=.6 min=0 max=1 step=.001
+            param path=/macro/strike default=.08 min=.01 max=.5 step=.001
+            opgraph name=pair freq=220 gain=@/macro/brightness
+            operator name=op2 ratio=2 level=@/macro/brightness env=ad:.01:@/macro/strike
+            operator name=op1 ratio=1 level=1 env=adsr:.02:.1:.65:.3
+            route from=op2 to=op1 index=@/macro/brightness
+            carrier name=op1
+            """);
+        var export = FaustEmitter.Emit(patch);
+
+        Assert.Equal(4, patch.ParameterBindings.Count);
+        Assert.Contains(patch.ParameterBindings, binding => binding.FieldPath == "/opgraphs/0/gain" && binding.ParameterPath == "/macro/brightness");
+        Assert.Contains(patch.ParameterBindings, binding => binding.FieldPath == "/opgraphs/0/operators/2/level" && binding.ParameterPath == "/macro/brightness");
+        Assert.Contains(patch.ParameterBindings, binding => binding.FieldPath == "/opgraphs/0/operators/2/env/decay" && binding.ParameterPath == "/macro/strike");
+        Assert.Contains(patch.ParameterBindings, binding => binding.FieldPath == "/opgraphs/0/routes/2>1/index" && binding.ParameterPath == "/macro/brightness");
+        Assert.Contains("opgraph_0_op_2 * patch_param_0", export.Source);
+        Assert.Contains("oneshot_adsr(0.01, patch_param_1, 0, 0", export.Source);
+        Assert.Contains("opgraph_0 = (opgraph_0_op_1) * patch_param_0;", export.Source);
+        Assert.Empty(export.Warnings);
+    }
+
+    [Fact]
     public void FaustEmitterProducesWobbleSource()
     {
         var export = FaustEmitter.EmitScript(WobbleTalker, new FaustExportOptions("wobble_talker", Stereo: true));

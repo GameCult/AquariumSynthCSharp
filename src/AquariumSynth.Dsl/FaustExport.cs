@@ -88,7 +88,7 @@ public static class FaustEmitter
         for (var i = 0; i < patch.OperatorGraphs.Count; i++)
         {
             var name = $"opgraph_{i}";
-            EmitOperatorGraph(source, patch.Playback, patch.OperatorGraphs[i], name, warnings);
+            EmitOperatorGraph(source, patch.Playback, patch.OperatorGraphs[i], name, parameters, warnings);
             voices.Add(name);
         }
 
@@ -296,7 +296,7 @@ public static class FaustEmitter
         };
     }
 
-    private static void EmitOperatorGraph(StringBuilder source, Playback playback, OperatorGraph graph, string name, List<string> warnings)
+    private static void EmitOperatorGraph(StringBuilder source, Playback playback, OperatorGraph graph, string name, ParameterMap parameters, List<string> warnings)
     {
         if (graph.Operators.Count == 0)
         {
@@ -315,16 +315,18 @@ public static class FaustEmitter
             return;
         }
 
+        var graphIndex = GraphIndex(name);
+        var graphPath = $"/opgraphs/{graphIndex}";
         var graphNoteFreq = UsesHostPlayback(playback)
             ? "freq"
             : graph.Note.Source == NoteSource.Host
             ? $"{name}_note_freq"
-            : F(graph.Note.FrequencyHz);
+            : parameters.Expression($"{graphPath}/note/frequency", graph.Note.FrequencyHz);
         var graphNoteGate = UsesHostPlayback(playback)
             ? "gate"
             : graph.Note.Source == NoteSource.Host
             ? $"{name}_note_gate"
-            : F(graph.Note.GateSeconds);
+            : parameters.Expression($"{graphPath}/note/gate", graph.Note.GateSeconds);
         if (!UsesHostPlayback(playback) && graph.Note.Source == NoteSource.Host)
         {
             source.AppendLine($"{name}_note_freq = hslider(\"/{name}/note/frequency\", {F(graph.Note.FrequencyHz)}, 20, 20000, 0.01) : si.smoo;");
@@ -334,13 +336,14 @@ public static class FaustEmitter
         foreach (var op in ordered)
         {
             var opName = $"{name}_op_{op.Id}";
+            var operatorPath = $"{graphPath}/operators/{op.Id}";
             var incoming = graph.Edges
                 .Where(edge => edge.TargetId == op.Id && operatorIds.Contains(edge.SourceId))
-                .Select(edge => $"{name}_op_{edge.SourceId} * {F(edge.Index)}")
+                .Select(edge => $"{name}_op_{edge.SourceId} * {parameters.Expression($"{graphPath}/routes/{edge.SourceId}>{edge.TargetId}/index", edge.Index)}")
                 .ToList();
             if (op.Feedback != 0)
             {
-                incoming.Add($"{opName} * {F(op.Feedback)} : si.smoo");
+                incoming.Add($"{opName} * {parameters.Expression($"{operatorPath}/feedback", op.Feedback)} : si.smoo");
                 warnings.Add($"{name}: operator {op.Id} feedback is approximated with smoothed self-reference");
             }
 
@@ -351,16 +354,16 @@ public static class FaustEmitter
                 UsesHostPlayback(playback) || op.Note.Source == NoteSource.Host,
                 field => field switch
                 {
-                    "env/attack" => F(op.Envelope.AttackSeconds),
-                    "env/decay" => F(op.Envelope.DecaySeconds),
-                    "env/sustain_level" => F(op.Envelope.SustainLevel),
-                    "env/release" => F(op.Envelope.ReleaseSeconds),
+                    "env/attack" => parameters.Expression($"{operatorPath}/env/attack", op.Envelope.AttackSeconds),
+                    "env/decay" => parameters.Expression($"{operatorPath}/env/decay", op.Envelope.DecaySeconds),
+                    "env/sustain_level" => parameters.Expression($"{operatorPath}/env/sustain_level", op.Envelope.SustainLevel),
+                    "env/release" => parameters.Expression($"{operatorPath}/env/release", op.Envelope.ReleaseSeconds),
                     _ => throw new ArgumentOutOfRangeException(nameof(field), field, null)
                 });
-            source.AppendLine($"{opName} = sin(2.0 * ma.PI * (os.phasor(1.0, {name}_freq * {F(Math.Max(op.Ratio, 0))}) + ({phaseMod}) / ma.PI)) * {envelope} * {F(op.Level)};");
+            source.AppendLine($"{opName} = sin(2.0 * ma.PI * (os.phasor(1.0, {name}_freq * max(0.0, {parameters.Expression($"{operatorPath}/ratio", op.Ratio)})) + ({phaseMod}) / ma.PI)) * {envelope} * {parameters.Expression($"{operatorPath}/level", op.Level)};");
         }
 
-        source.AppendLine($"{name} = ({string.Join(" + ", carrierIds.Select(id => $"{name}_op_{id}"))}) * {F(graph.Gain)};");
+        source.AppendLine($"{name} = ({string.Join(" + ", carrierIds.Select(id => $"{name}_op_{id}"))}) * {parameters.Expression($"{graphPath}/gain", graph.Gain)};");
         source.AppendLine();
     }
 
@@ -464,6 +467,15 @@ public static class FaustEmitter
     private static string ParameterIdentifier(int index) => $"patch_param_{index}";
 
     private static string VoiceField(int voiceIndex, string field) => $"/voices/{voiceIndex}/{field}";
+
+    private static int GraphIndex(string name)
+    {
+        const string prefix = "opgraph_";
+        return name.StartsWith(prefix, StringComparison.Ordinal) &&
+               int.TryParse(name[prefix.Length..], NumberStyles.None, CultureInfo.InvariantCulture, out var index)
+            ? index
+            : 0;
+    }
 
     private static string Escape(string value) => value.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
