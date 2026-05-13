@@ -39,6 +39,13 @@ public sealed record Dx7EnvelopeApproximation(
     private static string F(float value) => value.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture);
 }
 
+public sealed record Dx7OperatorLevelApproximation(
+    float LinearLevel,
+    int ScaledOutputLevel,
+    int KeyScalingOffset,
+    int VelocityOffset,
+    string Notes);
+
 public sealed record Dx7Operator(
     int Number,
     Dx7Envelope Envelope,
@@ -165,6 +172,31 @@ public static class Dx7SysEx
             new Envelope(attack, decay, sustain, release),
             gate,
             "Approximation: DX7 EG uses four rate/level segments; ADSR keeps one sustain level and a key-off release.");
+    }
+
+    public static Dx7OperatorLevelApproximation ApproximateOperatorLevel(
+        Dx7Operator op,
+        int midiNote = 60,
+        int velocity = 100)
+    {
+        var scaled = ScaleOutLevel(op.OutputLevel);
+        var keyScaling = ScaleLevel(
+            midiNote,
+            op.BreakPoint,
+            op.LeftDepth,
+            op.RightDepth,
+            op.LeftCurve,
+            op.RightCurve);
+        var velocityOffset = ScaleVelocity(velocity, op.KeyVelocitySensitivity);
+        var internalLevel = Math.Max(0, (Math.Min(127, scaled + keyScaling) << 5) + velocityOffset);
+        var normalized = Math.Clamp(internalLevel / 4096f, 0, 1.5f);
+
+        return new Dx7OperatorLevelApproximation(
+            normalized,
+            scaled,
+            keyScaling,
+            velocityOffset,
+            "Approximation: DX7 output level uses nonlinear scaling plus key/velocity offsets before envelope gain.");
     }
 
     public static Dx7VoiceBank ParseBank(ReadOnlySpan<byte> bytes)
@@ -383,6 +415,37 @@ public static class Dx7SysEx
 
     private static float Level(int value) => Math.Clamp(value, 0, 99) / 99f;
 
+    private static int ScaleOutLevel(int outLevel)
+    {
+        var value = Math.Clamp(outLevel, 0, 99);
+        return value >= 20 ? 28 + value : LevelLookup[value];
+    }
+
+    private static int ScaleVelocity(int velocity, int sensitivity)
+    {
+        var clampedVelocity = Math.Clamp(velocity, 0, 127);
+        var velValue = VelocityData[clampedVelocity >> 1] - 239;
+        return (((Math.Clamp(sensitivity, 0, 7) * velValue + 7) >> 3) << 4);
+    }
+
+    private static int ScaleLevel(int midiNote, int breakPoint, int leftDepth, int rightDepth, int leftCurve, int rightCurve)
+    {
+        var offset = Math.Clamp(midiNote, 0, 127) - Math.Clamp(breakPoint, 0, 99) - 17;
+        return offset >= 0
+            ? ScaleCurve((offset + 1) / 3, rightDepth, rightCurve)
+            : ScaleCurve(-(offset - 1) / 3, leftDepth, leftCurve);
+    }
+
+    private static int ScaleCurve(int group, int depth, int curve)
+    {
+        var clampedGroup = Math.Clamp(group, 0, ExpScaleData.Length - 1);
+        var clampedDepth = Math.Clamp(depth, 0, 99);
+        var scale = curve is 0 or 3
+            ? (clampedGroup * clampedDepth * 329) >> 12
+            : (ExpScaleData[clampedGroup] * clampedDepth * 329) >> 15;
+        return curve < 2 ? -scale : scale;
+    }
+
     private static float SegmentSeconds(int rate, float distance)
     {
         var normalizedRate = Math.Clamp(rate, 0, 99) / 99f;
@@ -466,6 +529,26 @@ public static class Dx7SysEx
     private static int Value(ReadOnlySpan<byte> data, int index) => SevenBit(data[index]);
 
     private static byte SevenBit(byte value) => (byte)(value & 0x7F);
+
+    private static readonly int[] LevelLookup =
+    [
+        0, 1, 3, 5, 6, 8, 10, 11, 13, 14, 16, 17, 19, 20, 21, 23, 24, 25, 27, 28
+    ];
+
+    private static readonly int[] VelocityData =
+    [
+        0, 70, 86, 97, 106, 114, 121, 126, 132, 138, 142, 148, 152, 156, 160, 163,
+        166, 170, 173, 174, 178, 181, 184, 186, 189, 190, 194, 196, 198, 200, 202, 205,
+        206, 209, 211, 213, 215, 217, 218, 220, 222, 224, 225, 227, 229, 230, 232, 233,
+        235, 237, 238, 240, 241, 242, 243, 244, 246, 246, 248, 249, 250, 251, 252, 253,
+        254
+    ];
+
+    private static readonly int[] ExpScaleData =
+    [
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 14, 16, 19, 23, 27, 33, 39, 47, 56, 66,
+        80, 94, 110, 126, 142, 158, 174, 190, 206, 222, 238, 250
+    ];
 
     private static Dx7AlgorithmRomStep ParseAlgorithmStep(int operatorNumber, string entry)
     {

@@ -15,6 +15,17 @@ Doctrine update:
 
 Completed this slice:
 
+- Added `Dx7OperatorLevelApproximation`, which distills DX7 operator output
+  level plus key/velocity scaling into a normal Aquarium `level=`-style value.
+  This remains DX7 reference-import knowledge, not a generic DSL feature.
+- Retried `PRC SYNTH1` with effective levels and envelope tweaks. Static level
+  mapping alone did not rescue the hard target: quick probes moved from ~0.24
+  to ~0.34, and envelope tweaks reached ~0.42. The next missing pressure is
+  DX7-style operator envelope/gain evolution, not just static operator levels.
+- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 50 passed.
+
+Previous slice:
+
 - Tried the harder `analog1.syx` voice 17, `PRC SYNTH1` (algorithm 8). The
   initial routed Aquarium candidate scored badly (~0.23), which exposed a real
   missing invariant rather than a threshold-tuning problem.

@@ -172,6 +172,33 @@ public sealed class Dx7SysExTests
         Assert.StartsWith("env=adsr:", approximation.ToScriptSpec());
     }
 
+    [Fact]
+    public void ApproximatesDx7OperatorLevelWithVelocityAndKeyScaling()
+    {
+        var operatorLevel = Dx7SysEx.ApproximateOperatorLevel(new Dx7Operator(
+            Number: 5,
+            Envelope: new Dx7Envelope(85, 16, 75, 61, 88, 44, 25, 0),
+            BreakPoint: 15,
+            LeftDepth: 0,
+            RightDepth: 62,
+            LeftCurve: 0,
+            RightCurve: 1,
+            RateScaling: 2,
+            AmplitudeModulationSensitivity: 0,
+            KeyVelocitySensitivity: 6,
+            OutputLevel: 80,
+            FrequencyMode: Dx7FrequencyMode.Ratio,
+            FrequencyCoarse: 8,
+            FrequencyFine: 0,
+            Detune: 4));
+
+        Assert.Equal(108, operatorLevel.ScaledOutputLevel);
+        Assert.Equal(-5, operatorLevel.KeyScalingOffset);
+        Assert.Equal(0, operatorLevel.VelocityOffset);
+        Assert.InRange(operatorLevel.LinearLevel, 0.80f, 0.81f);
+        Assert.Contains("nonlinear", operatorLevel.Notes);
+    }
+
     private static byte[] InitVoice(string name, int algorithm, int feedback)
     {
         var data = new byte[Dx7SysEx.VoiceEditBufferLength];
