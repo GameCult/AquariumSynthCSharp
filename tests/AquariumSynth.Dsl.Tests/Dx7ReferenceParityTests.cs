@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 
 namespace AquariumSynth.Dsl.Tests;
 
@@ -77,8 +78,200 @@ public sealed class Dx7ReferenceParityTests
         Assert.InRange(comparison.CentroidRatio, 0.90f, 1.05f);
     }
 
+    [Fact]
+    public async Task PublicDomainDx7PrcSynth1WritesListeningWavsWhenInstalled()
+    {
+        var bankPath = FixturePath("Dx7", "PublicDomain", "analog1.syx");
+        var reference = await DexedPyRenderer.RenderAsync(
+            bankPath,
+            patchIndex: 17,
+            noteDurationSeconds: 0.85f,
+            renderDurationSeconds: 1.4f);
+
+        if (reference is null)
+        {
+            return;
+        }
+
+        var bank = Dx7SysEx.ParseBank(File.ReadAllBytes(bankPath));
+        var voice = bank.Voices[17];
+        Assert.Equal("PRC SYNTH1", voice.Name);
+
+        var script = PrcSynth1ProbeScript(voice);
+        var candidateSource = FaustEmitter.EmitScript(script);
+        var candidate = await FaustCompiler.RenderAsync(
+            candidateSource.Source,
+            new FaustRenderOptions(DurationSeconds: 1.4f));
+
+        if (candidate is null)
+        {
+            return;
+        }
+
+        Assert.NotEmpty(reference.Samples);
+        Assert.NotEmpty(candidate.Samples);
+
+        var comparison = new AudioAnalyzer(new AudioAnalysisConfig(SampleRate: reference.SampleRate))
+            .Compare(reference.Samples, candidate.Samples);
+        var artifactDir = ArtifactPath("parity", "dx7-prc-synth1");
+        WriteListeningArtifacts(
+            artifactDir,
+            reference.Samples,
+            candidate.Samples,
+            reference.SampleRate,
+            script,
+            comparison);
+
+        Assert.True(comparison.Score >= 0.40f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
+    }
+
     private static string FixturePath(params string[] parts) =>
         Path.Combine([AppContext.BaseDirectory, "Fixtures", .. parts]);
+
+    private static string ArtifactPath(params string[] parts)
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (current is not null && !File.Exists(Path.Combine(current.FullName, "AquariumSynthCSharp.slnx")))
+        {
+            current = current.Parent;
+        }
+
+        var root = current?.FullName ?? AppContext.BaseDirectory;
+        return Path.Combine([root, "artifacts", .. parts]);
+    }
+
+    private static string PrcSynth1ProbeScript(Dx7Voice voice)
+    {
+        var topology = Dx7SysEx.AlgorithmTopology(voice.Algorithm);
+        var builder = new StringBuilder();
+        builder.AppendLine("patch");
+        builder.AppendLine("    gain=2.0");
+        builder.AppendLine("    soft_clip=true");
+        builder.AppendLine();
+        builder.AppendLine("opgraph");
+        builder.AppendLine("    name=dx7_prc_synth1_probe");
+        builder.AppendLine("    freq=440");
+        builder.AppendLine("    gain=0.55");
+        builder.AppendLine();
+
+        foreach (var op in voice.Operators.OrderByDescending(op => op.Number))
+        {
+            var level = Dx7SysEx.ApproximateOperatorLevel(op).LinearLevel;
+            var envelope = ScaledEnvelope(Dx7SysEx.ApproximateRateLevelEnvelope(op.Envelope), 0.62f);
+            builder.AppendLine($"operator name=op{op.Number}");
+            builder.AppendLine($"    ratio={F(Dx7Ratio(op))}");
+            builder.AppendLine($"    level={F(level)}");
+            if (topology.SelfFeedbackOperators.Contains(op.Number))
+            {
+                builder.AppendLine($"    feedback={F(voice.Feedback * 0.08f)}");
+            }
+            builder.AppendLine($"    {envelope.ToScriptSpec()}");
+            builder.AppendLine();
+        }
+
+        foreach (var edge in topology.ModulationEdges.Where(edge => edge.Kind != "self-feedback"))
+        {
+            foreach (var source in edge.SourceOperators)
+            {
+                builder.AppendLine($"route from=op{source} to=op{edge.TargetOperator} index=0.7");
+            }
+        }
+
+        foreach (var carrier in topology.CarrierOperators)
+        {
+            builder.AppendLine($"carrier name=op{carrier}");
+        }
+
+        return builder.ToString();
+    }
+
+    private static float Dx7Ratio(Dx7Operator op)
+    {
+        if (op.FrequencyMode == Dx7FrequencyMode.Fixed)
+        {
+            return Math.Max(0.5f, op.FrequencyCoarse);
+        }
+
+        var coarse = op.FrequencyCoarse == 0 ? 0.5f : op.FrequencyCoarse;
+        return coarse * (1 + op.FrequencyFine / 100f);
+    }
+
+    private static Dx7RateLevelEnvelopeApproximation ScaledEnvelope(Dx7RateLevelEnvelopeApproximation approximation, float scale)
+    {
+        var envelope = approximation.Envelope;
+        var scaled = new RateLevelEnvelope(
+            envelope.Rate1Seconds * scale,
+            envelope.Level1,
+            envelope.Rate2Seconds * scale,
+            envelope.Level2,
+            envelope.Rate3Seconds * scale,
+            envelope.Level3,
+            envelope.Rate4Seconds * scale,
+            envelope.Level4);
+        return approximation with
+        {
+            Envelope = scaled,
+            GateSeconds = Math.Max((scaled.Rate1Seconds + scaled.Rate2Seconds + scaled.Rate3Seconds) * 0.68f, 0.02f)
+        };
+    }
+
+    private static void WriteListeningArtifacts(
+        string directory,
+        IReadOnlyList<float> reference,
+        IReadOnlyList<float> candidate,
+        int sampleRate,
+        string script,
+        AudioComparison comparison)
+    {
+        Directory.CreateDirectory(directory);
+        var peak = Math.Max(Peak(reference), Peak(candidate));
+        var scale = peak <= 0 ? 1 : 0.98f / peak;
+        WriteWav(Path.Combine(directory, "reference-dexed.wav"), reference, sampleRate, scale);
+        WriteWav(Path.Combine(directory, "candidate-aquarium.wav"), candidate, sampleRate, scale);
+        File.WriteAllText(Path.Combine(directory, "candidate.aqua"), script);
+        File.WriteAllText(
+            Path.Combine(directory, "report.txt"),
+            string.Join(
+                Environment.NewLine,
+                ParityReport(comparison),
+                $"wav normalization scale: {scale}",
+                $"reference: {Path.Combine(directory, "reference-dexed.wav")}",
+                $"candidate: {Path.Combine(directory, "candidate-aquarium.wav")}"));
+    }
+
+    private static void WriteWav(string path, IReadOnlyList<float> samples, int sampleRate, float scale)
+    {
+        using var stream = File.Create(path);
+        using var writer = new BinaryWriter(stream);
+        var dataBytes = samples.Count * sizeof(short);
+        writer.Write("RIFF"u8);
+        writer.Write(36 + dataBytes);
+        writer.Write("WAVE"u8);
+        writer.Write("fmt "u8);
+        writer.Write(16);
+        writer.Write((short)1);
+        writer.Write((short)1);
+        writer.Write(sampleRate);
+        writer.Write(sampleRate * sizeof(short));
+        writer.Write((short)sizeof(short));
+        writer.Write((short)16);
+        writer.Write("data"u8);
+        writer.Write(dataBytes);
+        foreach (var sample in samples)
+        {
+            writer.Write((short)MathF.Round(Math.Clamp(sample * scale, -1, 1) * short.MaxValue));
+        }
+    }
+
+    private static float Peak(IReadOnlyList<float> samples)
+    {
+        var peak = 0f;
+        foreach (var sample in samples) peak = Math.Max(peak, Math.Abs(sample));
+        return peak;
+    }
+
+    private static string F(float value) =>
+        value.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture);
 
     private static string ParityReport(AudioComparison comparison) =>
         string.Join(

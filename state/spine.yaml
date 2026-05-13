@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-13T16:28:00+01:00
+updated: 2026-05-13T19:38:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -48,6 +48,7 @@ live_invariants:
   - Recompile only for graph shape changes; vary declared parameters through the hosted DSP control API.
   - Reference fixtures must preserve provenance, license status, source hash, and feature pressure.
   - Public-domain reference fixtures and dexed-py helpers are test/development material only; the NuGet package must ship only AquariumSynth.Dsl.
+  - Listening WAV artifacts belong under ignored `artifacts/`; keep them out of NuGet and commits unless explicitly promoted as fixtures.
   - Do not consume external synth targets that cannot be backed by parity tests. Parsing is inventory; reproducing behavior through terse, readable Aquarium DSL is the proof.
   - Audio metrics are evidence, not final judgment.
   - Do not add a generic graph escape hatch until specific references force it.
@@ -58,7 +59,7 @@ reference_targets:
     priority: 1
     purpose: "Structured FM/operator graph pressure test."
     source: "https://github.com/asb2m10/dexed"
-    status: "DX7 SysEx parser, public-domain SysEx fixture, dexed-py reference rendering, first thresholded rendered parity test for analog1.syx voice 13, renderable delayed operator feedback, DX7 effective operator-level approximation, staged operator envelopes, algorithm topology extraction, envelope-to-ADSR approximation, two Aquarium DSL rebuild attempts, first-class operator graph support, and Aquarium candidate rendering through Faust-generated C# exist."
+    status: "DX7 SysEx parser, public-domain SysEx fixture, dexed-py reference rendering, first thresholded rendered parity test for analog1.syx voice 13, hard PRC SYNTH1 probe with listening WAV artifacts, renderable delayed operator feedback, DX7 effective operator-level approximation, staged operator envelopes, algorithm topology extraction, envelope-to-ADSR approximation, two Aquarium DSL rebuild attempts, first-class operator graph support, and Aquarium candidate rendering through Faust-generated C# exist."
     first_slice:
       - "Add a harder public-domain DX7 parity target that audibly needs operator routing."
   zynaddsubfx:
@@ -94,10 +95,10 @@ reference_targets:
 
 next_agent_start_here:
   recommended_first_task: >
-    Calibrate DX7 EG timing/gain approximation against the harder public-domain
-    `PRC SYNTH1` target before trying to bless another hard threshold. The DSL
-    now has staged operator envelopes; the missing work is making the DX7
-    lowering land close enough to prove the emulation path.
+    Listen to the generated PRC SYNTH1 WAVs under
+    `artifacts/parity/dx7-prc-synth1`, then use the audible mismatch plus the
+    score report to decide whether the next calibration pass should target
+    output gain/index scaling, frequency ratio/detune, or EG curve shape.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -109,6 +110,15 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-13
+    summary: >
+      Added a hard DX7 `PRC SYNTH1` rendered parity probe that emits listening
+      WAV artifacts under ignored `artifacts/parity/dx7-prc-synth1` when
+      dexed-py and Faust are available. The Aquarium candidate uses readable
+      operator graph syntax and staged `env=rl` envelopes, asserts a modest
+      hard-target score floor, and currently scores 0.4581856 with duration
+      close to the Dexed reference but remaining gain/timbre mismatch.
+    verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore --filter PublicDomainDx7PrcSynth1WritesListeningWavsWhenInstalled: passed"
   - date: 2026-05-13
     summary: >
       Added staged operator envelopes for operator graphs through

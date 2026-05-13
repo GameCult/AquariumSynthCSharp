@@ -15,6 +15,23 @@ Doctrine update:
 
 Completed this slice:
 
+- Added a hard DX7 `PRC SYNTH1` rendered parity probe that writes listening
+  artifacts when `dexed-py` and Faust are available:
+  `artifacts/parity/dx7-prc-synth1/reference-dexed.wav`,
+  `candidate-aquarium.wav`, `candidate.aqua`, and `report.txt`.
+- The probe rebuilds `analog1.syx` voice 17 with readable operator graph syntax
+  and staged `env=rl` operator envelopes. It asserts a modest hard-target score
+  floor instead of pretending exact DX7 parity is solved.
+- Current run with bundled Python and Faust: score `0.4581856`,
+  log-mel distance `0.26397973`, envelope distance `0.4109424`,
+  duration ratio `1.0173812`, RMS ratio `0.61393267`, zero-crossing ratio
+  `1.1713804`, centroid ratio `1.0978767`.
+- Calibration lesson: shortening the naive DX7 EG timing and lowering the graph
+  base frequency made the candidate much closer. The remaining mismatch is
+  still gain/timbre calibration, not missing `env=rl` syntax.
+
+Previous slice:
+
 - Added staged operator envelopes for operator graphs:
   `env=rl rates=.004,.12,.2,.4 levels=1,.7,.25,0`. This gives the DSL a
   readable four-stage rate/level contour without infecting the general ADSR
