@@ -33,12 +33,23 @@ public enum ModTarget
 
 public sealed record Envelope(
     float AttackSeconds = 0,
-    float SustainSeconds = 0.1f,
-    float DecaySeconds = 0.1f,
-    float Punch = 0)
+    float DecaySeconds = 0.01f,
+    float SustainLevel = 1,
+    float ReleaseSeconds = 0.1f)
 {
-    public float DurationSeconds => AttackSeconds + SustainSeconds + DecaySeconds;
+    public float DurationSeconds => AttackSeconds + DecaySeconds + ReleaseSeconds;
 }
+
+public enum NoteSource
+{
+    OneShot,
+    Host
+}
+
+public sealed record Note(
+    float FrequencyHz = 440,
+    float GateSeconds = 0.1f,
+    NoteSource Source = NoteSource.OneShot);
 
 public sealed record Oscillator(
     Waveform Waveform = Waveform.Sine,
@@ -94,10 +105,10 @@ public sealed record OperatorNode(
     float Ratio = 1,
     float Level = 1,
     float Feedback = 0,
-    float AttackSeconds = 0,
-    float ReleaseSeconds = 0,
+    Note Note = null!,
     Envelope Envelope = null!)
 {
+    public Note Note { get; init; } = Note ?? new();
     public Envelope Envelope { get; init; } = Envelope ?? new();
 }
 
@@ -109,7 +120,11 @@ public sealed record OperatorGraph(
     IReadOnlyList<OperatorNode> Operators,
     IReadOnlyList<OperatorEdge> Edges,
     IReadOnlyList<int> Carriers,
-    float Gain = 0.2f);
+    Note Note = null!,
+    float Gain = 0.2f)
+{
+    public Note Note { get; init; } = Note ?? new();
+}
 
 public sealed record PatchParameter(
     string Path,
@@ -147,6 +162,7 @@ public sealed record Repeat(float IntervalSeconds);
 public sealed record Voice
 {
     public Oscillator Oscillator { get; init; } = new();
+    public Note Note { get; init; } = new();
     public Envelope Envelope { get; init; } = new();
     public PitchMotion Pitch { get; init; } = new();
     public DutyMotion Duty { get; init; } = new();

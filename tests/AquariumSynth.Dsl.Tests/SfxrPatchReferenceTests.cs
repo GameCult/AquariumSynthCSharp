@@ -34,6 +34,7 @@ public sealed class SfxrPatchReferenceTests
     private static void AssertVoiceClose(Voice expected, Voice actual, string context)
     {
         AssertOscillatorClose(expected.Oscillator, actual.Oscillator, context);
+        AssertNoteClose(expected.Note, actual.Note, context);
         AssertEnvelopeClose(expected.Envelope, actual.Envelope, context);
         AssertPitchClose(expected.Pitch, actual.Pitch, context);
         AssertClose(expected.Duty.RampPerSecond, actual.Duty.RampPerSecond, context, "duty.ramp");
@@ -59,9 +60,16 @@ public sealed class SfxrPatchReferenceTests
     private static void AssertEnvelopeClose(Envelope expected, Envelope actual, string context)
     {
         AssertClose(expected.AttackSeconds, actual.AttackSeconds, context, "env.attack");
-        AssertClose(expected.SustainSeconds, actual.SustainSeconds, context, "env.sustain");
         AssertClose(expected.DecaySeconds, actual.DecaySeconds, context, "env.decay");
-        AssertClose(expected.Punch, actual.Punch, context, "env.punch");
+        AssertClose(expected.SustainLevel, actual.SustainLevel, context, "env.sustain_level");
+        AssertClose(expected.ReleaseSeconds, actual.ReleaseSeconds, context, "env.release");
+    }
+
+    private static void AssertNoteClose(Note expected, Note actual, string context)
+    {
+        AssertClose(expected.FrequencyHz, actual.FrequencyHz, context, "note.frequency");
+        AssertClose(expected.GateSeconds, actual.GateSeconds, context, "note.gate");
+        Assert.Equal(expected.Source, actual.Source);
     }
 
     private static void AssertPitchClose(PitchMotion expected, PitchMotion actual, string context)

@@ -157,6 +157,18 @@ public static class PatchScript
         private Voice ParseVoice(IReadOnlyDictionary<string, string> fields, int voiceIndex, int line)
         {
             var waveform = TryGetAny(fields, ["wave", "w"], out var wave) ? ParseWaveform(wave, line) : Waveform.Sine;
+            var frequency = GetBoundFloat(fields, line, 440, VoiceField(voiceIndex, "note/frequency"), "freq", "frequency", "f");
+            var gateSeconds = GetBoundFloat(fields, line, 0.1f, VoiceField(voiceIndex, "note/gate"), "gate", "hold", "duration", "sustain", "s");
+            var sustainLevel = GetBoundFloat(fields, line, 1, VoiceField(voiceIndex, "env/sustain_level"), "sustain_level", "sl");
+            if (TryGetAny(fields, ["punch", "pu"], out var punch))
+            {
+                sustainLevel = 1 + ParseBoundFloat(punch, line, 0, VoiceField(voiceIndex, "env/sustain_level"));
+            }
+            var noteSource = ParseNoteSource(GetAny(fields, ["note_source", "source"], "oneshot"), line);
+            if (TryGetAny(fields, ["midi"], out var midi) && ParseBool(midi, line))
+            {
+                noteSource = NoteSource.Host;
+            }
             var formants = TryGetAny(fields, ["formants", "fs"], out var formantSpec)
                 ? ParseFormants(formantSpec, line)
                 : [];
@@ -179,14 +191,15 @@ public static class PatchScript
             {
                 Oscillator = new Oscillator(
                     waveform,
-                    GetBoundFloat(fields, line, 440, VoiceField(voiceIndex, "osc/freq"), "freq", "frequency", "f"),
+                    frequency,
                     GetBoundFloat(fields, line, 0.5f, VoiceField(voiceIndex, "osc/duty"), "duty", "du"),
                     GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "osc/phase"), "phase", "pa")),
+                Note = new Note(frequency, gateSeconds, noteSource),
                 Envelope = new Envelope(
                     GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "env/attack"), "attack", "a"),
-                    GetBoundFloat(fields, line, 0.1f, VoiceField(voiceIndex, "env/sustain"), "sustain", "s"),
-                    GetBoundFloat(fields, line, 0.1f, VoiceField(voiceIndex, "env/decay"), "decay", "d"),
-                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "env/punch"), "punch", "pu")),
+                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "env/decay"), "env_decay", "ed"),
+                    sustainLevel,
+                    GetBoundFloat(fields, line, 0.1f, VoiceField(voiceIndex, "env/release"), "release", "rel", "decay", "d")),
                 Pitch = new PitchMotion(
                     GetBoundFloat(fields, line, 20, VoiceField(voiceIndex, "pitch/min_freq"), "min_freq", "min"),
                     GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "pitch/ramp"), "pitch_ramp", "pr"),
@@ -290,6 +303,10 @@ public static class PatchScript
                 operators,
                 edges,
                 carriers,
+                new Note(
+                    GetBoundFloat(fields, line, 440, $"{graphPath}/note/frequency", "freq", "frequency", "f"),
+                    GetBoundFloat(fields, line, 0.1f, $"{graphPath}/note/gate", "gate", "hold", "duration"),
+                    ParseNoteSource(GetAny(fields, ["note_source", "source"], "oneshot"), line)),
                 GetBoundFloat(fields, line, 0.2f, $"{graphPath}/gain", "gain", "g")));
         }
 
@@ -308,6 +325,10 @@ public static class PatchScript
                 line,
                 GetAny(fields, ["name", "n"], $"opgraph{graphIndex}"),
                 GetBoundFloat(fields, line, 440, $"{graphPath}/freq", "freq", "frequency", "f"),
+                new Note(
+                    GetBoundFloat(fields, line, 440, $"{graphPath}/note/frequency", "freq", "frequency", "f"),
+                    GetBoundFloat(fields, line, 0.1f, $"{graphPath}/note/gate", "gate", "hold", "duration"),
+                    ParseNoteSource(GetAny(fields, ["note_source", "source"], "oneshot"), line)),
                 GetBoundFloat(fields, line, 0.2f, $"{graphPath}/gain", "gain", "g"));
         }
 
@@ -315,22 +336,23 @@ public static class PatchScript
         {
             var graph = RequiredPendingOperatorGraph(line);
             var id = ParseOperatorId(Required(fields, "name", line), line);
-            var envelope = TryGetAny(fields, ["env", "envelope"], out var envSpec)
+            var envelopeSpec = TryGetAny(fields, ["env", "envelope"], out var envSpec)
                 ? ParseEnvelopeSpec(envSpec, line)
-                : new Envelope(
-                    GetFloat(fields, line, 0, "attack", "a"),
-                    GetFloat(fields, line, 0.1f, "sustain", "s"),
-                    GetFloat(fields, line, 0.1f, "decay", "d"),
-                    GetFloat(fields, line, 0, "punch", "pu"));
+                : new ParsedEnvelope(
+                    new Envelope(
+                        GetFloat(fields, line, 0, "attack", "a"),
+                        GetFloat(fields, line, 0, "env_decay", "ed"),
+                        GetFloat(fields, line, 1, "sustain_level", "sl"),
+                        GetFloat(fields, line, 0.1f, "release", "rel", "decay", "d")),
+                    GetFloat(fields, line, graph.Note.GateSeconds, "gate", "hold", "duration"));
 
             graph.Operators.Add(new OperatorNode(
                 id,
                 GetFloat(fields, line, 1, "ratio", "r"),
                 GetFloat(fields, line, 1, "level", "l"),
                 GetFloat(fields, line, 0, "feedback", "fb"),
-                0,
-                GetFloat(fields, line, 0, "release"),
-                envelope));
+                graph.Note with { GateSeconds = envelopeSpec.GateSeconds },
+                envelopeSpec.Envelope));
         }
 
         private void AddOperatorRoute(IReadOnlyDictionary<string, string> fields, int line)
@@ -361,6 +383,7 @@ public static class PatchScript
                 graph.Operators,
                 graph.Edges,
                 graph.Carriers.Count > 0 ? graph.Carriers : graph.Operators.Select(op => op.Id).ToList(),
+                graph.Note,
                 graph.Gain));
         }
 
@@ -486,9 +509,8 @@ public static class PatchScript
                         ParseFloat(pieces[1], line),
                         ParseFloat(pieces[2], line),
                         pieces.Length >= 4 ? ParseFloat(pieces[3], line) : 0,
-                        0,
-                        0,
-                        pieces.Length >= 6 ? new Envelope(0, ParseFloat(pieces[4], line), ParseFloat(pieces[5], line)) : new Envelope());
+                        pieces.Length >= 6 ? new Note(GateSeconds: ParseFloat(pieces[4], line)) : new Note(),
+                        pieces.Length >= 6 ? new Envelope(ReleaseSeconds: ParseFloat(pieces[5], line)) : new Envelope());
                 })
                 .ToList();
 
@@ -520,23 +542,27 @@ public static class PatchScript
                 .Select(part => ParseInt(part, line))
                 .ToList();
 
-        private static Envelope ParseEnvelopeSpec(string value, int line)
+        private static ParsedEnvelope ParseEnvelopeSpec(string value, int line)
         {
             var pieces = value.Split(':');
             return pieces[0].ToLowerInvariant() switch
             {
-                "ad" when pieces.Length == 3 => new Envelope(
+                "ad" when pieces.Length == 3 => AdEnvelope(
                     ParseFloat(pieces[1], line),
-                    0,
                     ParseFloat(pieces[2], line)),
-                "adsr" when pieces.Length == 5 => new Envelope(
-                    ParseFloat(pieces[1], line),
-                    ParseFloat(pieces[2], line),
-                    ParseFloat(pieces[4], line),
-                    ParseFloat(pieces[3], line)),
+                "adsr" when pieces.Length == 5 => new ParsedEnvelope(
+                    new Envelope(
+                        ParseFloat(pieces[1], line),
+                        ParseFloat(pieces[2], line),
+                        ParseFloat(pieces[3], line),
+                        ParseFloat(pieces[4], line)),
+                    0.1f),
                 _ => throw new PatchScriptException(line, $"bad envelope `{value}`")
             };
         }
+
+        private static ParsedEnvelope AdEnvelope(float attackSeconds, float decaySeconds) =>
+            new(new Envelope(attackSeconds, decaySeconds, 0, 0), attackSeconds + decaySeconds);
 
         private static int ParseOperatorId(string value, int line)
         {
@@ -606,12 +632,15 @@ public static class PatchScript
             int Line,
             string Name,
             float FrequencyHz,
+            Note Note,
             float Gain)
         {
             public List<OperatorNode> Operators { get; } = [];
             public List<OperatorEdge> Edges { get; } = [];
             public List<int> Carriers { get; } = [];
         }
+
+        private sealed record ParsedEnvelope(Envelope Envelope, float GateSeconds);
     }
 
     private static readonly (string[] Keys, ModTarget Target)[] ModTargets =
@@ -725,6 +754,13 @@ public static class PatchScript
         "sq" or "square" => ModWaveform.Square,
         "hold" or "sample_hold" => ModWaveform.SampleHold,
         _ => throw new PatchScriptException(line, $"unknown mod waveform `{value}`")
+    };
+
+    private static NoteSource ParseNoteSource(string value, int line) => value.ToLowerInvariant() switch
+    {
+        "oneshot" or "one_shot" or "trigger" or "fixed" => NoteSource.OneShot,
+        "host" or "midi" or "gate" => NoteSource.Host,
+        _ => throw new PatchScriptException(line, $"unknown note source `{value}`")
     };
 
     private static ModTarget ParseModTarget(string value, int line)

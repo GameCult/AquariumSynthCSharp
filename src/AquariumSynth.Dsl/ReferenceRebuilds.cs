@@ -26,7 +26,7 @@ public static class ReferenceRebuildCatalog
                 new("self_feedback_operators", "6", "Approximated with fold/drive on the highest partial.")
             ],
             [
-                new("operator_envelopes", "per-operator four-stage DX7 EG", "Aquarium currently has attack/sustain/decay/punch, not DX7 rate/level envelopes."),
+                new("operator_envelopes", "per-operator four-stage DX7 EG", "Aquarium now has ADSR envelopes, but not DX7 rate/level envelopes."),
                 new("output_compensation", "algorithm ROM COM", "Aquarium voice gains are explicit and not derived from DX7 COM scaling.")
             ],
             "This is the honest easy case: DX7 algorithm 32 is mostly additive synthesis, so the current voice DSL can represent the carrier layout without pretending to own a full operator graph."),

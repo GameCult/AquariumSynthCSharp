@@ -51,7 +51,8 @@ public static class FaustEmitter
         source.AppendLine("wrap01(x) = x - floor(x);");
         source.AppendLine("softclip(x) = ma.tanh(x * 1.35);");
         source.AppendLine("fold(x) = 2.0 * abs(2.0 * (x / 4.0 - floor(x / 4.0)) - 1.0) - 1.0;");
-        source.AppendLine("env(a,s,d,p) = select2(age < a, select2(age < a + s, select2(age < a + s + d, 0.0, 1.0 - (age - a - s) / max(0.0001, d)), 1.0 + (1.0 - (age - a) / max(0.0001, s)) * 2.0 * p), age / max(0.0001, a));");
+        source.AppendLine("release_start(a,d,g) = max(g, a + d);");
+        source.AppendLine("oneshot_adsr(a,d,s,r,g) = select2(age < a, select2(age < a + d, select2(age < release_start(a,d,g), select2(age < release_start(a,d,g) + r, 0.0, s * (1.0 - (age - release_start(a,d,g)) / max(0.0001, r))), s), 1.0 - (1.0 - s) * ((age - a) / max(0.0001, d))), age / max(0.0001, a));");
         source.AppendLine("lfo_sin(hz, phase) = sin(2.0 * ma.PI * (age * hz + phase));");
         source.AppendLine("lfo_tri(hz, phase) = 1.0 - 4.0 * abs((age * hz + phase - floor(age * hz + phase)) - 0.5);");
         source.AppendLine("lfo_sq(hz, phase) = select2((age * hz + phase - floor(age * hz + phase)) < 0.5, -1.0, 1.0);");
@@ -131,13 +132,14 @@ public static class FaustEmitter
         var hpfMod = ModExpressionForTarget(voice.Modulators, ModTarget.HighPass);
 
         var minFreq = parameters.Expression(VoiceField(voiceIndex, "pitch/min_freq"), voice.Pitch.MinFrequencyHz);
-        var oscFreq = parameters.Expression(VoiceField(voiceIndex, "osc/freq"), voice.Oscillator.FrequencyHz);
+        var noteFreq = NoteFrequencyExpression(source, voice.Note, name, VoiceField(voiceIndex, "note/frequency"), parameters);
+        var noteGate = NoteGateExpression(source, voice.Note, name, VoiceField(voiceIndex, "note/gate"), parameters);
         var pitchRamp = parameters.Expression(VoiceField(voiceIndex, "pitch/ramp"), voice.Pitch.RampPerSecond);
         var pitchDelta = parameters.Expression(VoiceField(voiceIndex, "pitch/delta"), voice.Pitch.DeltaRampPerSecond);
         var vibratoDepth = parameters.Expression(VoiceField(voiceIndex, "pitch/vibrato"), voice.Pitch.VibratoDepth);
         var vibratoHz = parameters.Expression(VoiceField(voiceIndex, "pitch/vibrato_hz"), voice.Pitch.VibratoHz);
         var vibratoDelay = parameters.Expression(VoiceField(voiceIndex, "pitch/vibrato_delay"), voice.Pitch.VibratoDelaySeconds);
-        var baseFreq = $"max({minFreq}, {oscFreq} * pow(2.0, {pitchRamp} * age + 0.5 * {pitchDelta} * age * age))";
+        var baseFreq = $"max({minFreq}, {noteFreq} * pow(2.0, {pitchRamp} * age + 0.5 * {pitchDelta} * age * age))";
         var hasVibrato = voice.Pitch.VibratoDepth != 0 && voice.Pitch.VibratoHz > 0 ||
                          parameters.IsBound(VoiceField(voiceIndex, "pitch/vibrato")) ||
                          parameters.IsBound(VoiceField(voiceIndex, "pitch/vibrato_hz"));
@@ -151,7 +153,18 @@ public static class FaustEmitter
         var dutyExpression = $"clip01({parameters.Expression(VoiceField(voiceIndex, "osc/duty"), voice.Oscillator.Duty)} + {parameters.Expression(VoiceField(voiceIndex, "duty/ramp"), voice.Duty.RampPerSecond)} * age + patch_mod_duty + {duty})";
         var fmIndex = $"max(0.0, {parameters.Expression(VoiceField(voiceIndex, "fm/index"), voice.Fm.Index)} + patch_mod_fm_index + {fmIndexMod}) * {FmDecay(parameters.Expression(VoiceField(voiceIndex, "fm/decay"), voice.Fm.IndexDecaySeconds), voice.Fm.IndexDecaySeconds, parameters.IsBound(VoiceField(voiceIndex, "fm/decay")))}";
         var oscillator = OscillatorExpression(patch, voice, voiceIndex, frequency, dutyExpression, fmIndex, parameters);
-        var envelope = $"env({parameters.Expression(VoiceField(voiceIndex, "env/attack"), voice.Envelope.AttackSeconds)}, {parameters.Expression(VoiceField(voiceIndex, "env/sustain"), voice.Envelope.SustainSeconds)}, {parameters.Expression(VoiceField(voiceIndex, "env/decay"), voice.Envelope.DecaySeconds)}, {parameters.Expression(VoiceField(voiceIndex, "env/punch"), voice.Envelope.Punch)})";
+        var envelope = EnvelopeExpression(
+            voice.Envelope,
+            noteGate,
+            voice.Note.Source == NoteSource.Host,
+            field => parameters.Expression(VoiceField(voiceIndex, field), field switch
+            {
+                "env/attack" => voice.Envelope.AttackSeconds,
+                "env/decay" => voice.Envelope.DecaySeconds,
+                "env/sustain_level" => voice.Envelope.SustainLevel,
+                "env/release" => voice.Envelope.ReleaseSeconds,
+                _ => throw new ArgumentOutOfRangeException(nameof(field), field, null)
+            }));
         var tremoloDepth = parameters.Expression(VoiceField(voiceIndex, "color/tremolo"), Math.Clamp(voice.Color.TremoloDepth, 0, 1));
         var tremoloHz = parameters.Expression(VoiceField(voiceIndex, "color/tremolo_hz"), voice.Color.TremoloHz);
         var hasTremolo = voice.Color.TremoloDepth > 0 && voice.Color.TremoloHz > 0 ||
@@ -194,6 +207,41 @@ public static class FaustEmitter
         source.AppendLine();
     }
 
+    private static string NoteFrequencyExpression(StringBuilder source, Note note, string name, string fieldPath, ParameterMap parameters)
+    {
+        if (note.Source != NoteSource.Host)
+        {
+            return parameters.Expression(fieldPath, note.FrequencyHz);
+        }
+
+        var control = $"{name}_note_freq";
+        source.AppendLine($"{control} = hslider(\"{Escape(fieldPath)}\", {F(note.FrequencyHz)}, 20, 20000, 0.01) : si.smoo;");
+        return control;
+    }
+
+    private static string NoteGateExpression(StringBuilder source, Note note, string name, string fieldPath, ParameterMap parameters)
+    {
+        if (note.Source != NoteSource.Host)
+        {
+            return parameters.Expression(fieldPath, note.GateSeconds);
+        }
+
+        var control = $"{name}_note_gate";
+        source.AppendLine($"{control} = button(\"{Escape(fieldPath)}\");");
+        return control;
+    }
+
+    private static string EnvelopeExpression(Envelope envelope, string gate, bool hostGate, Func<string, string> value)
+    {
+        var attack = value("env/attack");
+        var decay = value("env/decay");
+        var sustain = value("env/sustain_level");
+        var release = value("env/release");
+        return hostGate
+            ? $"en.adsr({attack}, {decay}, {sustain}, {release}, {gate})"
+            : $"oneshot_adsr({attack}, {decay}, {sustain}, {release}, {gate})";
+    }
+
     private static string OscillatorExpression(SynthPatch patch, Voice voice, int voiceIndex, string frequency, string duty, string fmIndex, ParameterMap parameters)
     {
         var hasFmMod = patch.Controls.Any(control => control.Modulator.Target == ModTarget.FmIndex) ||
@@ -234,7 +282,18 @@ public static class FaustEmitter
             return;
         }
 
-        source.AppendLine($"{name}_freq = {F(graph.FrequencyHz)};");
+        var graphNoteFreq = graph.Note.Source == NoteSource.Host
+            ? $"{name}_note_freq"
+            : F(graph.Note.FrequencyHz);
+        var graphNoteGate = graph.Note.Source == NoteSource.Host
+            ? $"{name}_note_gate"
+            : F(graph.Note.GateSeconds);
+        if (graph.Note.Source == NoteSource.Host)
+        {
+            source.AppendLine($"{name}_note_freq = hslider(\"/{name}/note/frequency\", {F(graph.Note.FrequencyHz)}, 20, 20000, 0.01) : si.smoo;");
+            source.AppendLine($"{name}_note_gate = button(\"/{name}/note/gate\");");
+        }
+        source.AppendLine($"{name}_freq = {graphNoteFreq};");
         foreach (var op in ordered)
         {
             var opName = $"{name}_op_{op.Id}";
@@ -249,7 +308,18 @@ public static class FaustEmitter
             }
 
             var phaseMod = incoming.Count == 0 ? "0.0" : string.Join(" + ", incoming);
-            var envelope = $"env({F(op.Envelope.AttackSeconds)}, {F(op.Envelope.SustainSeconds)}, {F(op.Envelope.DecaySeconds)}, {F(op.Envelope.Punch)})";
+            var envelope = EnvelopeExpression(
+                op.Envelope,
+                op.Note.Source == NoteSource.Host ? graphNoteGate : F(op.Note.GateSeconds),
+                op.Note.Source == NoteSource.Host,
+                field => field switch
+                {
+                    "env/attack" => F(op.Envelope.AttackSeconds),
+                    "env/decay" => F(op.Envelope.DecaySeconds),
+                    "env/sustain_level" => F(op.Envelope.SustainLevel),
+                    "env/release" => F(op.Envelope.ReleaseSeconds),
+                    _ => throw new ArgumentOutOfRangeException(nameof(field), field, null)
+                });
             source.AppendLine($"{opName} = sin(2.0 * ma.PI * (os.phasor(1.0, {name}_freq * {F(Math.Max(op.Ratio, 0))}) + ({phaseMod}) / ma.PI)) * {envelope} * {F(op.Level)};");
         }
 

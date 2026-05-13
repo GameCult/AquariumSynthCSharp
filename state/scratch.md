@@ -7,9 +7,21 @@ the synth library while Aquarium work continues elsewhere.
 
 Completed this slice:
 
+- Split note timing from envelope shape. `Note` now owns frequency, one-shot
+  gate duration, and host/MIDI source; `Envelope` now owns ADSR shape:
+  attack, decay, sustain level, and release.
+- SFXR sustain duration now maps to `Note.GateSeconds`; SFXR punch maps to a
+  non-unit ADSR sustain level during import/legacy parsing.
+- Added host note mode for MIDI-oriented patches through stable note frequency
+  and note gate controls in generated Faust.
+- Moved built-in authoring examples off `punch=` and onto `sustain_level=`.
+- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 39 passed.
+
+Previous slice:
+
 - Replaced the DX7 algorithm-8 authoring surface with readable operator graph
   syntax: `operator`, `route`, and `carrier` declarations.
-- Added `env=ad:attack:decay` and `env=adsr:attack:sustain:level:release`
+- Added `env=ad:attack:decay` and `env=adsr:attack:decay:sustain:release`
   envelope forms for operator declarations.
 - Kept compact `ops=`/`edges=` syntax as parser/interchange scaffolding, but it
   is no longer the built-in authoring example.
@@ -85,6 +97,7 @@ Parameter slice:
 Next likely slice:
 
 - Refine operator graphs with parameter bindings inside graph fields and decide
-  whether ADSR level semantics should stop borrowing `Envelope.Punch`.
+  how host MIDI note age/retrigger semantics should be represented beyond the
+  current frequency/gate controls.
 - Keep tests focused on structure first, then add rendered audio comparison once
   the render path is explicit.

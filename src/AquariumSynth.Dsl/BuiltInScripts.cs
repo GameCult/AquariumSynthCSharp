@@ -68,7 +68,7 @@ public static class BuiltInScripts
                 gain=0.22
                 sustain=0.01451247166
                 decay=0.1306122449
-                punch=0.45
+                sustain_level=1.45
                 drive=0.201
                 arp_delay=0.081844
                 arp_mult=1.116121255
@@ -96,7 +96,7 @@ public static class BuiltInScripts
                 gain=0.22
                 sustain=0.1907029478
                 decay=0.293877551
-                punch=0.52
+                sustain_level=1.52
                 pitch_ramp=0.0320625
                 phaser=-0.0008712
                 phaser_ramp=-0.00035
@@ -170,7 +170,7 @@ public static class BuiltInScripts
             freq=148.7934
             sustain=0.01451247166
             decay=0.1306122449
-            punch=0.45
+            sustain_level=1.45
             drive=0.201
             arp_delay=0.081844
             arp_mult=1.116121255
@@ -193,7 +193,7 @@ public static class BuiltInScripts
             freq=20
             sustain=0.1907029478
             decay=0.293877551
-            punch=0.52
+            sustain_level=1.52
             pitch_ramp=0.0320625
             phaser=-0.0008712
             phaser_ramp=-0.00035
@@ -274,7 +274,7 @@ public static class BuiltInScripts
                 gain=0.2
                 sustain=0.04
                 decay=0.36
-                punch=0.32
+                sustain_level=1.32
                 lpf=0.68
                 hpf=0.03
                 drive=0.12
@@ -301,7 +301,7 @@ public static class BuiltInScripts
                 gain=0.12
                 sustain=0.05
                 decay=0.5
-                punch=0.22
+                sustain_level=1.22
                 lpf=0.78
                 drive=0.06
 
@@ -354,7 +354,7 @@ public static class BuiltInScripts
                 freq=58
                 sustain=0.045
                 decay=0.42
-                punch=0.65
+                sustain_level=1.65
                 pitch_ramp=-3.8
                 min_freq=32
                 lpf=0.85
@@ -419,7 +419,7 @@ public static class BuiltInScripts
                 freq=115
                 sustain=0.055
                 decay=0.34
-                punch=0.28
+                sustain_level=1.28
                 pitch_ramp=-1.45
                 min_freq=62
                 lpf=0.78
@@ -878,7 +878,7 @@ public static class BuiltInScripts
                 gain=0.18
                 fm_index=0.8
 
-            voice use=Ping freq=523.25 gain=0.12 punch=0.12
+            voice use=Ping freq=523.25 gain=0.12 sustain_level=1.12
             voice use=Ping freq=659.25 gain=0.08 sustain=0.11 decay=0.84 fm=4.2
             voice use=Ping freq=783.99 gain=0.07 sustain=0.08 decay=0.72 fm_index=1.9
             voice wave=sine freq=261.63 gain=0.045 sustain=0.7 decay=1.3 fm=1.5 fm_index=0.65 fm_decay=1.2
@@ -896,7 +896,7 @@ public static class BuiltInScripts
                 attack=0.001
                 sustain=0.045
                 decay=0.5
-                punch=0.18
+                sustain_level=1.18
                 lpf=0.82
                 hpf=0.035
                 drive=0.1

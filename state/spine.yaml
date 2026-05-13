@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-13T11:46:38+01:00
+updated: 2026-05-13T12:20:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -30,6 +30,7 @@ live_invariants:
   - Patch scripts lower into explicit graph records before Faust emission.
   - Operator graphs own FM topology: operators, modulation edges, carriers, and feedback. Do not hide this authority inside Voice fields.
   - Readable operator graph authoring uses `operator`, `route`, and `carrier` declarations; compact `ops=`/`edges=` is only scaffolding/interchange.
+  - Notes own frequency, gate duration, and host/MIDI source; envelopes own ADSR level shape. Do not put note duration or SFXR punch back into the general envelope model.
   - Generated Faust should remain inspectable and deterministic.
   - Reference-patch correctness and synth parity tests live in AquariumSynthCSharp, not Aquarium.
   - Exposed patch parameters are runtime controls, not compile-time constants.
@@ -47,7 +48,7 @@ reference_targets:
     source: "https://github.com/asb2m10/dexed"
     status: "DX7 SysEx parser, algorithm topology extraction, two Aquarium DSL rebuild attempts, and first-class operator graph support exist."
     first_slice:
-      - "Refine operator graph parameter binding and envelope internals."
+      - "Refine operator graph parameter binding and host MIDI note retrigger semantics."
       - "Add rendered/audio comparison once a render path is explicit."
   zynaddsubfx:
     priority: 2
@@ -82,8 +83,9 @@ reference_targets:
 
 next_agent_start_here:
   recommended_first_task: >
-    Refine operator graph parameter binding and envelope internals. Keep
-    readable authoring syntax as operator/route/carrier declarations.
+    Refine operator graph parameter binding and host MIDI note retrigger
+    semantics. Keep readable authoring syntax as operator/route/carrier
+    declarations.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -97,9 +99,17 @@ next_agent_start_here:
 completed_slices:
   - date: 2026-05-13
     summary: >
+      Standardized the live envelope model as ADSR and added explicit Note
+      records for frequency, one-shot gate duration, and host/MIDI source.
+      SFXR sustain now maps to note gate duration; SFXR punch maps to non-unit
+      sustain level only as compatibility import behavior. Generated Faust can
+      emit one-shot ADSR envelopes or host gate/frequency controls.
+    verification: "dotnet test AquariumSynthCSharp.slnx --no-restore: 39 passed"
+  - date: 2026-05-13
+    summary: >
       Added readable operator graph authoring syntax with `operator`, `route`,
       and `carrier` declarations, plus `env=ad:attack:decay` and
-      `env=adsr:attack:sustain:level:release` forms. Converted the DX7
+      `env=adsr:attack:decay:sustain:release` forms. Converted the DX7
       algorithm-8 rebuild away from compact number soup.
     verification: "dotnet test AquariumSynthCSharp.slnx --no-restore: 36 passed"
   - date: 2026-05-13

@@ -259,8 +259,8 @@ public sealed class PatchScriptTests
         Assert.Equal(2, patch.Parameters.Count);
         Assert.Equal(3, patch.ParameterBindings.Count);
         Assert.Contains(patch.ParameterBindings, binding => binding.FieldPath == "/voices/0/fm/index");
-        Assert.Contains(patch.ParameterBindings, binding => binding.FieldPath == "/voices/0/env/decay");
-        Assert.Contains(patch.ParameterBindings, binding => binding.FieldPath == "/voices/1/env/decay");
+        Assert.Contains(patch.ParameterBindings, binding => binding.FieldPath == "/voices/0/env/release");
+        Assert.Contains(patch.ParameterBindings, binding => binding.FieldPath == "/voices/1/env/release");
     }
 
     [Fact]
@@ -300,9 +300,10 @@ public sealed class PatchScriptTests
         Assert.Equal(.01f, op2.Envelope.AttackSeconds, 5);
         Assert.Equal(.2f, op2.Envelope.DecaySeconds, 5);
         Assert.Equal(.02f, op1.Envelope.AttackSeconds, 5);
-        Assert.Equal(.1f, op1.Envelope.SustainSeconds, 5);
-        Assert.Equal(.65f, op1.Envelope.Punch, 5);
-        Assert.Equal(.3f, op1.Envelope.DecaySeconds, 5);
+        Assert.Equal(.1f, op1.Envelope.DecaySeconds, 5);
+        Assert.Equal(.65f, op1.Envelope.SustainLevel, 5);
+        Assert.Equal(.3f, op1.Envelope.ReleaseSeconds, 5);
+        Assert.Equal(.21f, op2.Note.GateSeconds, 5);
     }
 
     [Fact]
@@ -338,6 +339,34 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
+    public void VoiceEnvelopeUsesStandardAdsrAndNoteGate()
+    {
+        var patch = PatchScript.Parse("v w=saw f=220 gate=.4 attack=.01 env_decay=.08 sustain_level=.6 release=.3");
+        var voice = Assert.Single(patch.Voices);
+        var export = FaustEmitter.Emit(patch);
+
+        Assert.Equal(220, voice.Note.FrequencyHz);
+        Assert.Equal(.4f, voice.Note.GateSeconds, 5);
+        Assert.Equal(.01f, voice.Envelope.AttackSeconds, 5);
+        Assert.Equal(.08f, voice.Envelope.DecaySeconds, 5);
+        Assert.Equal(.6f, voice.Envelope.SustainLevel, 5);
+        Assert.Equal(.3f, voice.Envelope.ReleaseSeconds, 5);
+        Assert.Contains("oneshot_adsr", export.Source);
+    }
+
+    [Fact]
+    public void MidiVoiceEmitsHostNoteControls()
+    {
+        var patch = PatchScript.Parse("v w=saw f=220 midi=true attack=.01 env_decay=.08 sustain_level=.6 release=.3");
+        var export = FaustEmitter.Emit(patch);
+
+        Assert.Equal(NoteSource.Host, patch.Voices[0].Note.Source);
+        Assert.Contains("hslider(\"/voices/0/note/frequency\", 220", export.Source);
+        Assert.Contains("button(\"/voices/0/note/gate\")", export.Source);
+        Assert.Contains("en.adsr", export.Source);
+    }
+
+    [Fact]
     public async Task FaustCompilerValidatesGeneratedSourceWhenInstalled()
     {
         var export = FaustEmitter.EmitScript(WobbleTalker);
@@ -355,6 +384,20 @@ public sealed class PatchScriptTests
     public async Task FaustCompilerValidatesParameterizedPatchWhenInstalled()
     {
         var export = FaustEmitter.EmitScript("param path=/macro/brightness default=.45 min=0 max=1 step=.001;v w=saw f=80 lpf=@/macro/brightness");
+        var validation = await FaustCompiler.ValidateAsync(export.Source);
+
+        if (validation is null)
+        {
+            return;
+        }
+
+        Assert.True(validation.Success, validation.Stderr);
+    }
+
+    [Fact]
+    public async Task FaustCompilerValidatesMidiGatePatchWhenInstalled()
+    {
+        var export = FaustEmitter.EmitScript("v w=saw f=220 midi=true attack=.01 env_decay=.08 sustain_level=.6 release=.3");
         var validation = await FaustCompiler.ValidateAsync(export.Source);
 
         if (validation is null)

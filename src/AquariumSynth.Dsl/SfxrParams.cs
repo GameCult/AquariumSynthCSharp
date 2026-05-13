@@ -168,11 +168,12 @@ public sealed record SfxrParams
         var voice = new Voice
         {
             Oscillator = new Oscillator(WaveType, baseFrequency, 0.5f - Math.Clamp(Duty, 0, 1) * 0.5f),
+            Note = new Note(baseFrequency, NormalizedEnvSeconds(EnvSustain)),
             Envelope = new Envelope(
                 NormalizedEnvSeconds(EnvAttack),
-                NormalizedEnvSeconds(EnvSustain),
-                NormalizedEnvSeconds(EnvDecay),
-                Math.Clamp(EnvPunch, -1, 1)),
+                0,
+                1 + Math.Clamp(EnvPunch, -1, 1),
+                NormalizedEnvSeconds(EnvDecay)),
             Pitch = new PitchMotion(
                 Math.Min(SfxrFrequencyHz(FreqLimit), baseFrequency),
                 -Cube(FreqRamp) * 9.5f,

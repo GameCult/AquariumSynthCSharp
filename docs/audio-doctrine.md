@@ -93,6 +93,22 @@ Rules:
 - Recompilation is for graph shape changes. Parameter changes must flow through
   the hosted DSP control API.
 
+## Notes And Envelopes
+
+Notes own pitch and gate. Envelopes own level shape. Do not mix those
+authorities.
+
+- `Note` carries note frequency, gate duration for one-shot patches, and source
+  selection for host/MIDI-driven patches.
+- `Envelope` is ADSR-shaped: attack time, decay time, sustain level, and release
+  time.
+- Legacy SFXR sustain maps to note gate duration, because it is how long the
+  generated sound is held before release.
+- Legacy SFXR punch maps to a non-unit sustain level when importing old SFXR
+  material. Keep that as compatibility mapping, not as a general envelope field.
+- Host/MIDI note mode should expose stable note frequency and note gate controls
+  that the engine can wire to MIDI note-on/note-off behavior.
+
 ## Metrics
 
 Analysis exists to catch regressions and support search, not to crown winners.

@@ -16,6 +16,8 @@
       "reference rebuild catalog",
       "DX7 SysEx structural parsing",
       "DX7 algorithm topology metadata",
+      "standard ADSR envelope model",
+      "note frequency/gate model",
       "patch script parser",
       "SFXR atoms and parameter mapping",
       "analysis/comparison metrics",
@@ -50,7 +52,12 @@
   "dx7_reference_path": {
     "status": "DX7 SysEx parser extracts voice edit buffers, packed voices, packed 32-voice banks, six operators, envelopes, algorithm, feedback, oscillator sync, LFO, transpose, voice name, checksum validation, ReferencePatch features, algorithm topology from the reverse-engineered OPS algorithm ROM table, two Aquarium DSL rebuild attempts, and first-class OperatorGraph support.",
     "lesson": "Algorithm 32's additive six-carrier shape maps cleanly to six Aquarium voices. Algorithm 8 justified OperatorGraph: operators, modulation edges, carriers, and feedback belong to a graph authority, not Voice fields. Readable authoring uses operator/route/carrier declarations; compact ops/edges tuples are scaffolding only.",
-    "next": "Refine operator graph parameter binding and envelope internals; exact DX7 feedback-register timing remains separate pressure."
+    "next": "Refine operator graph parameter binding and host MIDI note retrigger semantics; exact DX7 feedback-register timing remains separate pressure."
+  },
+  "note_and_envelope_model": {
+    "rule": "Notes own frequency, gate duration, and host/MIDI source. Envelopes own ADSR level shape.",
+    "sfxr_mapping": "SFXR sustain is note gate duration. SFXR punch maps to non-unit sustain level as compatibility import behavior, not as a general envelope field.",
+    "faust_surface": "One-shot patches use generated ADSR over patch age and note gate duration. Host/MIDI patches expose note frequency and note gate controls for the engine to wire."
   },
   "runtime_parameters": {
     "rule": "Patch parameters are runtime controls, not compile-time constants.",
@@ -60,7 +67,7 @@
   },
   "last_verified": {
     "command": "dotnet test AquariumSynthCSharp.slnx --no-restore",
-    "result": "36 passed",
-    "commit": "pending readable operator graph syntax commit"
+    "result": "39 passed",
+    "commit": "pending note/envelope standardization commit"
   }
 }
