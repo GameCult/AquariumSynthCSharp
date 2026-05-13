@@ -5,6 +5,14 @@ targets, not through speculative field sprawl. `state/spine.yaml` and
 `docs/reference-synth-roadmap.md` are the handoff surfaces for agents working on
 the synth library while Aquarium work continues elsewhere.
 
+Doctrine update:
+
+- External synths are parity pressure for Aquarium's DSL, not internals to
+  clone. Only consume targets that can be backed by parity tests proving
+  Aquarium can reproduce the behavior in terse, readable syntax.
+- Parsing a synth format is inventory. Rebuilding and testing behavior is the
+  proof.
+
 Completed this slice:
 
 - Added `Dx7EnvelopeApproximation`, which lowers a DX7 four-rate/four-level EG

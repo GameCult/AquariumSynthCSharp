@@ -41,7 +41,7 @@
     "state/spine.yaml"
   ],
   "reference_strategy": {
-    "purpose": "Use external synths and DSP corpora as pressure tests for Aquarium's patch DSL and Faust emitter.",
+    "purpose": "Use external synths and DSP corpora as parity pressure for Aquarium's patch DSL and Faust emitter: the DSL must reproduce behavior in terse, readable Aquarium syntax, not clone foreign internals.",
     "priority_order": [
       "DX7/Dexed SysEx for FM operator topology",
       "ZynAddSubFX instruments for additive, subtractive, PAD, formant, and layered patches",
@@ -49,7 +49,7 @@
       "Surge XT for modern hybrid synth modulation",
       "Cardinal/VCV-style patches for modular cable/rate semantics"
     ],
-    "rule": "Add DSL abstractions only when reference rebuilds prove the missing invariant."
+    "rule": "Add DSL abstractions only when reference rebuilds prove the missing invariant. Do not consume references that cannot be backed by parity tests; parsing alone is inventory, not evidence of expressivity."
   },
   "dx7_reference_path": {
     "status": "DX7 SysEx parser extracts voice edit buffers, packed voices, packed 32-voice banks, six operators, envelopes, algorithm, feedback, oscillator sync, LFO, transpose, voice name, checksum validation, ReferencePatch features, algorithm topology from the reverse-engineered OPS algorithm ROM table, envelope-to-ADSR approximations, two Aquarium DSL rebuild attempts, and first-class OperatorGraph support.",
@@ -70,6 +70,6 @@
   "last_verified": {
     "command": "dotnet test AquariumSynthCSharp.slnx --no-restore",
     "result": "43 passed",
-    "commit": "pending DX7 envelope approximation commit"
+    "commit": "pending reference parity doctrine update"
   }
 }

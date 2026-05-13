@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-13T13:11:00+01:00
+updated: 2026-05-13T13:18:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -40,6 +40,7 @@ live_invariants:
   - DX7 rate/level envelopes may lower to labeled ADSR approximations, but exact DX7 EG execution remains missing pressure.
   - Recompile only for graph shape changes; vary declared parameters through the hosted DSP control API.
   - Reference fixtures must preserve provenance, license status, source hash, and feature pressure.
+  - Do not consume external synth targets that cannot be backed by parity tests. Parsing is inventory; reproducing behavior through terse, readable Aquarium DSL is the proof.
   - Audio metrics are evidence, not final judgment.
   - Do not add a generic graph escape hatch until specific references force it.
   - Do not hide missing graph structure behind unrelated voice fields.

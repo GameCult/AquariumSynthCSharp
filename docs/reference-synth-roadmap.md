@@ -2,9 +2,10 @@
 
 AquariumSynthCSharp needs external synthesis references for the same reason the
 SFXR path was useful: a real target prevents the DSL from becoming a pile of
-locally plausible knobs. The goal is not to clone every synth. The goal is to
-use known engines and patch formats as pressure tests, then rebuild selected
-sounds through Aquarium's own graph until the missing abstractions are obvious.
+locally plausible knobs. The goal is not to clone every synth's internals. The
+goal is to use known engines and patch formats as pressure tests, then rebuild
+selected sounds through Aquarium's own graph until the missing abstractions are
+obvious.
 
 ## Objective
 
@@ -15,6 +16,8 @@ Build a reference-driven synth library workflow:
 - Rebuild selected references in Aquarium patch DSL.
 - Compare audio with analysis metrics and listening notes.
 - Promote only the abstractions that make repeated reference rebuilds simpler.
+- Reject reference targets we cannot turn into parity tests. Parsing a format is
+  inventory; proving Aquarium can reproduce the behavior is the point.
 
 The DSL should grow because a reference target demanded a missing invariant, not
 because a field name seemed maybe useful at 2 AM.
@@ -28,8 +31,10 @@ runtime dependencies.
   of recompiling the patch.
 - Reference importers must preserve source provenance, license status, and the
 source format hash.
-- Tests may compare against rendered fixtures, extracted parameter topology, or
-known structural expectations. Weak "it parsed" tests do not prove expressivity.
+- Tests must compare against rendered fixtures, extracted parameter topology, or
+known structural expectations that prove Aquarium can express the same behavior.
+Weak "it parsed" tests do not prove expressivity, and references without a
+credible parity test path should not be consumed.
 - Do not add a generic graph escape hatch until a specific family of references
 forces it.
 - When a reference target exceeds the current voice-centric DSL, document the
