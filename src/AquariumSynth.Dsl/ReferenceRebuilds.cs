@@ -42,17 +42,17 @@ public static class ReferenceRebuildCatalog
             [
                 new("engine_pad", "1", "Approximated as slow layered oscillators plus an air/noise layer."),
                 new("named_layers", "pad_low,pad_high,air", "Layer declarations separate PAD body from air/noise texture."),
-                new("pad_spectral_source", "2 spectral banks / 3 partials", "PAD layers declare spectral partial clouds that emit Faust wavetable sources before ordinary voice treatment."),
+                new("pad_spectral_source", "2 spectral banks / 3 partials", "PAD layers declare spectral partial clouds that emit PADsynth-style FFT wavetable sources before ordinary voice treatment."),
                 new("filter_count", "1", "Represented with low-pass/high-pass field sites."),
                 new("free_envelope_count", "1", "Approximated with staged voice rate/level envelopes and macro spread."),
                 new("voice_rate_level_envelope", "3", "PAD body and air layers use staged rate/level envelopes attached through layer defaults."),
                 new("slow_modulation", "patch_lfo", "The rebuild adds slow patch modulation because PAD texture wants motion even though the minimal fixture only marks PAD/filter/free-envelope pressure.")
             ],
             [
-                new("padsynth_wavetable_exactness", "PADsynth FFT/wavetable generation", "Aquarium has spectral-source wavetables, but not Zyn's exact PADsynth bandwidth and FFT table construction."),
+                new("padsynth_wavetable_exactness", "Full Zyn PAD engine behavior", "Aquarium now uses frequency-domain spreading, deterministic random phase, and one inverse FFT, but does not cover every Zyn harmonic profile, randomness control, or pitch-zone table behavior."),
                 new("free_envelope_shape", "arbitrary Zyn envelope points", "Aquarium has staged voice envelopes now, but not arbitrary point/free-mode Zyn envelope curves.")
             ],
-            "This is pressure, not a claim of PADsynth parity. Aquarium can now state a layered spectral cloud, while exact PAD wavetable generation remains separate pressure."),
+            "This is pressure, not a claim of full Zyn PAD parity. Aquarium can now state a layered FFT spectral cloud, while exact Zyn PAD profile coverage remains separate pressure."),
         new(
             "zyn/project-vocal-layer/aquarium",
             "zynaddsubfx",

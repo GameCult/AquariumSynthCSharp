@@ -259,11 +259,12 @@ public static class FaustEmitter
         ParameterMap parameters,
         List<string> warnings)
     {
-        const int tableSize = 1024;
-        var table = SpectralWaveform(bank, tableSize);
+        const int tableSize = 4096;
+        var table = PadSynthWaveform.Generate(bank, tableSize);
         var frequency = parameters.Expression(OwnerField(SpectralPath(bankIndex), "note/frequency"), bank.Treatment.Note.FrequencyHz);
+        var readFrequency = $"({F(PadSynthWaveform.SampleRate)} / {F(tableSize)} * ({frequency}) / {F(bank.RootFrequencyHz)})";
         source.AppendLine($"{name}_wave = waveform {{{string.Join(",", table.Select(F))}}};");
-        source.AppendLine($"{name}_read_index = int(os.phasor({tableSize}, {frequency}));");
+        source.AppendLine($"{name}_read_index = int(os.phasor({tableSize}, {readFrequency}));");
         source.AppendLine($"{name}_wavetable = {name}_wave, {name}_read_index : rdtable;");
         EmitVoice(source, patch, bank.Treatment, SpectralPath(bankIndex), name, parameters, warnings, $"{name}_wavetable");
     }
@@ -465,43 +466,6 @@ public static class FaustEmitter
             return $"({name}_phased : fi.resonbp({F(formant.FrequencyHz)}, {F(q)}, 1.0)) * {F(formant.Gain)}";
         });
         return $"({string.Join(" + ", parts)}) / {F(gainSum)}";
-    }
-
-    private static float[] SpectralWaveform(SpectralBank bank, int tableSize)
-    {
-        var samples = new float[tableSize];
-        var maxBin = tableSize / 2 - 1;
-        var amplitudes = new double[maxBin + 1];
-        foreach (var partial in bank.Partials)
-        {
-            var center = Math.Max(1, partial.Ratio);
-            var sigma = Math.Max(0.05, center * bank.SpreadRatio * 8);
-            var left = Math.Max(1, (int)Math.Floor(center - sigma * 4));
-            var right = Math.Min(maxBin, (int)Math.Ceiling(center + sigma * 4));
-            for (var bin = left; bin <= right; bin++)
-            {
-                var distance = (bin - center) / sigma;
-                amplitudes[bin] += partial.Gain * Math.Exp(-0.5 * distance * distance);
-            }
-        }
-
-        for (var i = 0; i < tableSize; i++)
-        {
-            var phase = i / (double)tableSize;
-            var value = 0.0;
-            for (var bin = 1; bin <= maxBin; bin++)
-            {
-                if (amplitudes[bin] == 0) continue;
-                value += amplitudes[bin] * Math.Sin(Math.Tau * bin * phase);
-            }
-
-            samples[i] = (float)value;
-        }
-
-        var peak = samples.Select(Math.Abs).DefaultIfEmpty(0).Max();
-        if (peak <= 0) return samples;
-        for (var i = 0; i < samples.Length; i++) samples[i] /= peak;
-        return samples;
     }
 
     private static string ModExpressionForTarget(IEnumerable<ControlLane> controls, ModTarget target)

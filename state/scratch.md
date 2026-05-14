@@ -17,19 +17,28 @@ Completed this slice:
 
 - Added PAD spectral-cloud syntax attached to named layers:
   `spectrum layer=pad_low root=130.8128 spread=.012 partials=1:.07,1.5:.052`.
-- The parser preserves each bank as `SpectralBank` model data. Faust export now
-  emits each bank as a static `waveform`/`rdtable` wavetable source before
-  applying the normal voice treatment path. `root`, `spread`, and `partials`
-  are authoring-time table shape, not runtime controls.
+- The parser preserves each bank as `SpectralBank` model data. `PadSynthWaveform`
+  now generates each bank as a PADsynth-style FFT table: frequency-domain
+  harmonic spreading, deterministic random phase, one inverse FFT, and
+  normalization. Faust export emits that static `waveform`/`rdtable` source
+  before applying the normal voice treatment path. `root`, `spread`, and
+  `partials` are authoring-time table shape, not runtime controls.
 - Converted the Zyn PAD texture rebuild from individual PAD body voices to two
   spectral banks under `pad_low` and `pad_high`; the air/noise layer remains a
   normal voice.
-- This is not exact PADsynth bandwidth/FFT table generation. It is a source-level
+- This is not full Zyn PAD engine parity across every harmonic profile,
+  randomness control, or pitch-zone behavior. It is a source-level FFT
   partial-cloud authority for readable PAD rebuilds.
 - Focused verification before wavetable replacement passed:
   `dotnet test tests\AquariumSynth.Dsl.Tests\AquariumSynth.Dsl.Tests.csproj --no-restore --filter "FullyQualifiedName~SpectralBank|FullyQualifiedName~ZynStyleReferenceRebuildsParseExportAndDeclarePressure|FullyQualifiedName~BuiltInReferenceScriptsParseAndExportFaust"`:
   4 passed.
 - Wavetable replacement verification:
+  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  94 passed.
+- FFT table generator focused verification:
+  `dotnet test tests\AquariumSynth.Dsl.Tests\AquariumSynth.Dsl.Tests.csproj --no-restore --filter "FullyQualifiedName~SpectralBank|FullyQualifiedName~FaustCompilerValidatesSpectralBank|FullyQualifiedName~ZynStyleReferenceRebuildsParseExportAndDeclarePressure"`:
+  4 passed.
+- Full verification after FFT table generator:
   `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
   94 passed.
 
