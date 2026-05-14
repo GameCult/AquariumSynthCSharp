@@ -799,27 +799,25 @@ public static class BuiltInScripts
 
     public const string ZynStylePadTexture = """
         patch
-            gain=0.56
-            soft_clip=true
+            gain=1.4
 
         param
             name=spread
             path=/macro/spread
-            default=0.018
+            default=0.006
             min=0
             max=0.04
             step=0.001
             unit=ratio
 
         defaults
-            wave=saw
-            attack=0.55
-            sustain=1.8
-            decay=1.4
-            sustain_level=0.78
-            lpf=0.42
-            hpf=0.025
-            drive=0.04
+            wave=sine
+            attack=0.28
+            sustain=1.4
+            decay=1.2
+            sustain_level=0.9
+            lpf=1
+            hpf=0
 
         mod
             name=slow_air
@@ -828,13 +826,11 @@ public static class BuiltInScripts
             lpf=0.18
             gain=0.05
 
-        layer name=pad_low engine=pad min_key=36 max_key=84 gain=0.07 vibrato=@/macro/spread vibrato_hz=0.09 env=rl rates=0.55,0.68,0.95,1.4 levels=1,0.86,0.78,0 curves=lin,exp,lin,lin gate=2.18
-        layer name=pad_high engine=pad min_key=48 max_key=108 gain=0.044 vibrato=0.009 vibrato_hz=0.11 env=rl rates=0.42,0.58,0.9,1.25 levels=1,0.84,0.72,0 curves=lin,exp,lin,lin gate=1.9
-        layer name=air engine=add min_key=0 max_key=127 gain=0.018 wave=noise noise=0.82 env=rl rates=0.8,0.6,1.1,1.1 levels=1,0.82,0.55,0 curves=lin,lin,exp,lin gate=2.5 lpf=0.36 hpf=0.22
+        layer name=pad_low engine=pad min_key=36 max_key=84 gain=0.14 vibrato=0.002 vibrato_hz=0.09 env=rl rates=0.28,0.42,0.7,1.2 levels=1,0.94,0.88,0 curves=lin,exp,lin,lin gate=2.18
+        layer name=pad_high engine=pad min_key=48 max_key=108 gain=0.04 vibrato=0.0015 vibrato_hz=0.11 env=rl rates=0.28,0.42,0.7,1.2 levels=1,0.94,0.88,0 curves=lin,exp,lin,lin gate=2.18
 
-        spectrum layer=pad_low root=130.8128 spread=0.012 partials=1:0.07,1.5:0.052
-        spectrum layer=pad_high root=261.6256 spread=0.009 partials=1:0.044 wave=triangle
-        voice layer=air freq=1800
+        spectrum layer=pad_low root=130.8128 spread=0.003 partials=1:0.14,1.5:0.032
+        spectrum layer=pad_high root=261.6256 spread=0.002 partials=1:0.04
         """;
 
     public const string ZynStyleVocalLayer = """

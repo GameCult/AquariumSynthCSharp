@@ -64,6 +64,17 @@ internal static class PadSynthWaveform
             var bandwidthHz = (Math.Pow(2.0, bandwidthCents / 1200.0) - 1.0) * bank.RootFrequencyHz * ratio;
             var bandwidthCyclesPerSample = Math.Max(1e-9, bandwidthHz / (2.0 * SampleRate));
             var centerBin = centerCyclesPerSample * tableSize;
+            if (bandwidthCyclesPerSample * tableSize < 0.5)
+            {
+                var bin = (int)Math.Round(centerBin);
+                if (bin > 0 && bin < amplitudes.Length)
+                {
+                    amplitudes[bin] += partial.Gain;
+                }
+
+                continue;
+            }
+
             var radiusBins = Math.Max(2, (int)Math.Ceiling(bandwidthCyclesPerSample * tableSize * 6));
             var left = Math.Max(1, (int)Math.Floor(centerBin - radiusBins));
             var right = Math.Min(amplitudes.Length - 1, (int)Math.Ceiling(centerBin + radiusBins));

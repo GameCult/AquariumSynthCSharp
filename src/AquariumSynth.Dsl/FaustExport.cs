@@ -259,13 +259,16 @@ public static class FaustEmitter
         ParameterMap parameters,
         List<string> warnings)
     {
-        const int tableSize = 4096;
+        const int tableSize = 131072;
         var table = PadSynthWaveform.Generate(bank, tableSize);
         var frequency = parameters.Expression(OwnerField(SpectralPath(bankIndex), "note/frequency"), bank.Treatment.Note.FrequencyHz);
         var readFrequency = $"({F(PadSynthWaveform.SampleRate)} / {F(tableSize)} * ({frequency}) / {F(bank.RootFrequencyHz)})";
         source.AppendLine($"{name}_wave = waveform {{{string.Join(",", table.Select(F))}}};");
-        source.AppendLine($"{name}_read_index = int(os.phasor({tableSize}, {readFrequency}));");
-        source.AppendLine($"{name}_wavetable = {name}_wave, {name}_read_index : rdtable;");
+        source.AppendLine($"{name}_read_pos = os.phasor({tableSize}, {readFrequency});");
+        source.AppendLine($"{name}_read_index = int({name}_read_pos);");
+        source.AppendLine($"{name}_read_frac = {name}_read_pos - float({name}_read_index);");
+        source.AppendLine($"{name}_read_next = ({name}_read_index + 1) % {tableSize};");
+        source.AppendLine($"{name}_wavetable = ({name}_wave, {name}_read_index : rdtable) * (1 - {name}_read_frac) + ({name}_wave, {name}_read_next : rdtable) * {name}_read_frac;");
         EmitVoice(source, patch, bank.Treatment, SpectralPath(bankIndex), name, parameters, warnings, $"{name}_wavetable");
     }
 

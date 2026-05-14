@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-15T00:35:00+01:00
+updated: 2026-05-15T01:15:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -101,7 +101,7 @@ reference_targets:
     priority: 2
     purpose: "Additive, subtractive, PAD, formant, kit, and layered-instrument pressure test."
     source: "https://github.com/zynaddsubfx/zynaddsubfx"
-    status: "Initial ZynInstrumentReader reads plain or gzip-compressed .xiz XML from project-authored fixtures and classifies active ADD/SUB/PAD engines, enabled kit items, layering, envelopes, free envelopes, LFOs, filters, formants, and effects as ReferencePatch features. First Aquarium rebuilds exist for additive lead, PAD texture, and vocal/formant layer and now use named `layer` declarations. Additive rebuilds can use `harmonics` banks attached to layers, PAD rebuilds can use `spectrum` PADsynth-style FFT wavetable banks attached to layers, and PAD/vocal rebuilds use staged voice `env=rl` envelopes through layer defaults. ZynAddSubFX source is pinned under `external/zynaddsubfx` at 3ab608c432996ba4d582176572c0b0f82328c825 for test-only parity work, and `tools/zyn-reference/build-zyn-reference.ps1` now builds an ignored patched source copy with MSYS2/MinGW, proves `PadNoteTest`, and builds `ZynPadReference`. The first optional PAD report against the project-authored fixture emits WAV/listening artifacts and scores poorly but usefully: log-mel 0.552296, envelope 0.774501, score 0.236117. A non-vendored upstream bank survey parsed 1358/1358 .xiz files and identified named kit/layer routing as the first owner abstraction."
+    status: "Initial ZynInstrumentReader reads plain or gzip-compressed .xiz XML from project-authored fixtures and classifies active ADD/SUB/PAD engines, enabled kit items, layering, envelopes, free envelopes, LFOs, filters, formants, and effects as ReferencePatch features. First Aquarium rebuilds exist for additive lead, PAD texture, and vocal/formant layer and now use named `layer` declarations. Additive rebuilds can use `harmonics` banks attached to layers, PAD rebuilds can use `spectrum` PADsynth-style FFT wavetable banks attached to layers, and PAD/vocal rebuilds use staged voice `env=rl` envelopes through layer defaults. ZynAddSubFX source is pinned under `external/zynaddsubfx` at 3ab608c432996ba4d582176572c0b0f82328c825 for test-only parity work, and `tools/zyn-reference/build-zyn-reference.ps1` now builds an ignored patched source copy with MSYS2/MinGW, proves `PadNoteTest`, and builds `ZynPadReference`. The optional PAD report emits note and source-table WAV/listening artifacts. After cutting unearned noise/drive/soft-clip, adding interpolated table reads, and raising Aquarium spectral tables to 131072 frames, the project-authored PAD report is better but still not passing: log-mel 0.405313, envelope 0.35139, score 0.487325. A non-vendored upstream bank survey parsed 1358/1358 .xiz files and identified named kit/layer routing as the first owner abstraction."
     first_slice:
       - "Use the Zyn PAD oracle report to isolate source-table, playback/gain, envelope, and fixture-mapping mismatch before further Zyn DSL golf."
       - "Use named layers as the owner before promoting richer formant morphing syntax."
@@ -143,10 +143,12 @@ next_agent_start_here:
     through `tools/zyn-reference/build-zyn-reference.ps1` using an ignored
     patched artifact copy and builds `ZynPadReference`, which emits PAD table
     samples or note audio from Zyn. The first optional project-authored PAD
-    comparison writes WAV/report artifacts under `artifacts/parity/zyn-pad-reference`
-    and is not close yet: log-mel 0.552296, envelope 0.774501, score 0.236117.
-    Next pressure is isolating whether the mismatch lives in source-table
-    generation, note playback/gain, envelope shape, or fixture mapping.
+    comparison writes WAV/report artifacts under `artifacts/parity/zyn-pad-reference`.
+    User listening called the reference wineglass-pure and Aquarium angry bees.
+    The current de-bee pass cuts unearned noise/drive/soft-clip, interpolates
+    spectral wavetable reads, uses 131072-frame PAD tables, and now reports
+    log-mel 0.405313, envelope 0.35139, score 0.487325. Next pressure is
+    source-table/profile and envelope semantics, not more decorative layers.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -159,6 +161,20 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-15
+    summary: >
+      De-beed the project-authored Zyn PAD rebuild after listening identified
+      Aquarium as a noisy swarm while Zyn sounded like a pure blown wineglass.
+      Cut the unearned `air` noise layer, drive, and soft clipping from the PAD
+      rebuild; added interpolated Faust wavetable reads for spectral banks; and
+      raised spectral PAD tables to Zyn's 131072-frame sample size. The optional
+      Zyn PAD report now also writes the source table WAV
+      `pad-texture-zyn-table0.wav`. Latest report: log-mel 0.405313, envelope
+      0.35139, RMS ratio 1.008516, centroid ratio 1.083082, score 0.487325.
+      This is a real improvement from 0.236117 but not passing; remaining
+      pressure is exact source profile/table generation and Zyn amplitude
+      semantics.
+    verification: "dotnet test AquariumSynthCSharp.slnx --no-restore: 96 passed"
   - date: 2026-05-15
     summary: >
       Added `ZynPadReference`, a test-only executable copied into the ignored

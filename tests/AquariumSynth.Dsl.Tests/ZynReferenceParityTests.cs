@@ -38,6 +38,8 @@ public sealed class ZynReferenceParityTests
         var input = Path.Combine(root, "tests", "AquariumSynth.Dsl.Tests", "Fixtures", "ZynAddSubFX", "ProjectAuthored", "pad-texture.xiz");
         var zynRaw = Path.Combine(artifactDir, "pad-texture-zyn.f32");
         var zynWav = Path.Combine(artifactDir, "pad-texture-zyn.wav");
+        var zynTableRaw = Path.Combine(artifactDir, "pad-texture-zyn-table0.f32");
+        var zynTableWav = Path.Combine(artifactDir, "pad-texture-zyn-table0.wav");
         var aquaWav = Path.Combine(artifactDir, "pad-texture-aqua.wav");
         var reportPath = Path.Combine(artifactDir, "report.txt");
 
@@ -55,10 +57,26 @@ public sealed class ZynReferenceParityTests
         var reference = await RunAsync(bash, ["-lc", command]);
         Assert.Equal(0, reference.ExitCode);
 
+        var tableCommand = string.Join(' ', [
+            "export PATH=/mingw64/bin:/usr/bin:/bin:$PATH;",
+            $"cd {BashQuote(ToMsysPath(root))};",
+            "./artifacts/zyn-reference-build-msys/src/Tests/ZynPadReference.exe",
+            BashQuote(ToMsysPath(input)),
+            BashQuote(ToMsysPath(zynTableRaw)),
+            "0",
+            "0"
+        ]);
+        var tableReference = await RunAsync(bash, ["-lc", tableCommand]);
+        Assert.Equal(0, tableReference.ExitCode);
+
         var zynSamples = await ReadFloat32Async(zynRaw);
+        var zynTableSamples = await ReadFloat32Async(zynTableRaw);
         Assert.Equal(66150, zynSamples.Length);
         Assert.True(Peak(zynSamples) > 0.001f);
+        Assert.True(zynTableSamples.Length > zynSamples.Length);
+        Assert.True(Peak(zynTableSamples) > 0.001f);
         WriteWav(zynWav, zynSamples, 44100, 0.9f);
+        WriteWav(zynTableWav, zynTableSamples, 44100, 0.9f);
 
         var report = new List<string>
         {
@@ -66,9 +84,13 @@ public sealed class ZynReferenceParityTests
             $"renderer: {renderer}",
             $"input: {input}",
             $"stdout: {reference.Stdout.Trim()}",
+            $"table_stdout: {tableReference.Stdout.Trim()}",
             $"zyn_samples: {zynSamples.Length}",
             $"zyn_peak: {Peak(zynSamples):0.######}",
-            $"zyn_rms: {Rms(zynSamples):0.######}"
+            $"zyn_rms: {Rms(zynSamples):0.######}",
+            $"zyn_table_samples: {zynTableSamples.Length}",
+            $"zyn_table_peak: {Peak(zynTableSamples):0.######}",
+            $"zyn_table_rms: {Rms(zynTableSamples):0.######}"
         };
 
         var aquaExport = FaustEmitter.EmitScript(BuiltInScripts.ZynStylePadTexture, new FaustExportOptions("zyn_pad_texture"));

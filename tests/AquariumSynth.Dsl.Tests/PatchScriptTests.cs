@@ -262,8 +262,9 @@ public sealed class PatchScriptTests
             if (rebuild.ReferenceId == "zyn/project/pad-texture")
             {
                 Assert.NotEmpty(patch.SpectralBanks);
+                Assert.Contains(patch.SpectralBanks, bank => bank.Treatment.RateLevelEnvelope is not null);
             }
-            if (rebuild.ReferenceId is "zyn/project/pad-texture" or "zyn/project/vocal-layer")
+            if (rebuild.ReferenceId == "zyn/project/vocal-layer")
             {
                 Assert.Contains(patch.Voices, voice => voice.RateLevelEnvelope is not null);
             }
@@ -405,7 +406,8 @@ public sealed class PatchScriptTests
         Assert.Equal(100, bank.Treatment.Oscillator.FrequencyHz);
         Assert.Equal(.08f, bank.Treatment.Gain, 5);
         Assert.Contains("spectral_0_wave = waveform", export.Source);
-        Assert.Contains("spectral_0_wavetable = spectral_0_wave, spectral_0_read_index : rdtable", export.Source);
+        Assert.Contains("spectral_0_read_frac", export.Source);
+        Assert.Contains("spectral_0_wavetable = (spectral_0_wave, spectral_0_read_index : rdtable)", export.Source);
         Assert.Contains("process =", export.Source);
     }
 
