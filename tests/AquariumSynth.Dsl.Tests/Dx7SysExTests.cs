@@ -271,6 +271,25 @@ public sealed class Dx7SysExTests
     }
 
     [Fact]
+    public void MapsDx7FixedFrequencyOperatorsToAbsoluteHertz()
+    {
+        var oneHertz = InitOperator(
+            frequencyMode: Dx7FrequencyMode.Fixed,
+            frequencyCoarse: 0,
+            frequencyFine: 0,
+            detune: 7);
+        var lowBuzz = InitOperator(
+            frequencyMode: Dx7FrequencyMode.Fixed,
+            frequencyCoarse: 0,
+            frequencyFine: 8,
+            detune: 14);
+
+        Assert.InRange(Dx7SysEx.FixedOperatorFrequencyHz(oneHertz), 0.999f, 1.001f);
+        Assert.InRange(Dx7SysEx.FixedOperatorFrequencyHz(lowBuzz), 1.20f, 1.21f);
+        Assert.InRange(Dx7SysEx.OperatorFrequencyRatio(oneHertz, baseFrequencyHz: 130.8128f), 0.0076f, 0.0077f);
+    }
+
+    [Fact]
     public void AppliesDx7VoiceTransposeToRenderedNoteFrequency()
     {
         Assert.InRange(Dx7SysEx.NoteFrequencyHz(midiNote: 60, transpose: 24), 261.62f, 261.63f);

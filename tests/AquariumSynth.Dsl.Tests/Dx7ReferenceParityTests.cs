@@ -171,6 +171,25 @@ public sealed class Dx7ReferenceParityTests
     }
 
     [Fact]
+    public async Task PublicDomainDx7AnlgSyn1KeepsBuzzingModulationWhenInstalled()
+    {
+        var result = await RenderAndComparePublicDomainDx7VoiceAsync(
+            new CommunityDx7VoiceCase(7, "ANLGSYN 1", 0.65f, 1.0f, 0.25f));
+
+        if (result is null)
+        {
+            return;
+        }
+
+        var report = $"{ParityReport(result.Value.Comparison)}{Environment.NewLine}artifacts: {result.Value.ArtifactDir}";
+
+        Assert.True(result.Value.Comparison.LogMelDistance <= 0.25f, report);
+        Assert.True(result.Value.Comparison.EnvelopeDistance <= 0.17f, report);
+        Assert.InRange(result.Value.Comparison.ZeroCrossingRatio, 0.8f, 1.2f);
+        Assert.True(result.Value.Comparison.Score >= 0.6f, report);
+    }
+
+    [Fact]
     public async Task ProjectAuthoredDx7AlgorithmEightSummedStackMeetsParityWhenInstalled()
     {
         var spec = new DexedPatchSpec(
@@ -354,7 +373,9 @@ public sealed class Dx7ReferenceParityTests
         builder.AppendLine();
         builder.AppendLine("opgraph");
         builder.AppendLine($"    name={graphName}");
-        builder.AppendLine($"    freq={F(Dx7SysEx.NoteFrequencyHz(midiNote: 60, voice.Transpose))}");
+        var graphFrequency = Dx7SysEx.NoteFrequencyHz(midiNote: 60, voice.Transpose);
+        var effectiveMidiNote = Math.Clamp(60 + voice.Transpose - 24, 0, 127);
+        builder.AppendLine($"    freq={F(graphFrequency)}");
         builder.AppendLine($"    gain={F(graphGain)}");
         builder.AppendLine();
 
@@ -363,7 +384,7 @@ public sealed class Dx7ReferenceParityTests
             var level = Dx7SysEx.ApproximateOperatorLevel(op).LinearLevel *
                         Dx7SysEx.OperatorOutputCompensation(topology, op.Number);
             builder.AppendLine($"operator name=op{op.Number}");
-            builder.AppendLine($"    ratio={F(Dx7SysEx.OperatorFrequencyRatio(op, midiNote: Math.Clamp(60 + voice.Transpose - 24, 0, 127)))}");
+            builder.AppendLine($"    ratio={F(Dx7SysEx.OperatorFrequencyRatio(op, midiNote: effectiveMidiNote, baseFrequencyHz: graphFrequency))}");
             builder.AppendLine($"    level={F(level)}");
             if (topology.SelfFeedbackOperators.Contains(op.Number))
             {

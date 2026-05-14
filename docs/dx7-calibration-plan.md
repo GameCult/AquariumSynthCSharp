@@ -119,8 +119,14 @@ math is still fake in the places that matter perceptually.
      transpose byte, so `transpose=12` rendered one octave too high. Aquarium
      now uses `Dx7SysEx.NoteFrequencyHz(midiNote, transpose)`, where `24` is
      neutral.
-   - A first survey also tried `DX1 LEAD B`, `ANLGSYN 1`, `MELLOWSOLO`, and
-     `RES SYNTH1`; they were left out of the passing gate because listening and
+   - `ANLGSYN 1` exposed a second real pitch/frequency bug: DX7 fixed-frequency
+     operators were being lowered as fake note ratios. Aquarium now maps fixed
+     operators through the Dexed log-frequency formula and divides the absolute
+     Hz by the graph base frequency. This restores the low fixed-frequency
+     carrier/modulation buzz for op1/op3 instead of flattening the voice into
+     the wrong drone.
+   - A first survey also tried `DX1 LEAD B`, `MELLOWSOLO`, and `RES SYNTH1`;
+     they were left out of the passing gate because listening and
      log-mel/zero-crossing evidence do not justify calling them parity yet.
      Keep those failures as pressure for oscillator phase, feedback, and
      transient detail rather than padding the test with weak thresholds.

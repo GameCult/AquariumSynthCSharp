@@ -15,6 +15,24 @@ Doctrine update:
 
 Completed this slice:
 
+- Fixed DX7 fixed-frequency operator lowering after `ANLGSYN 1` exposed the
+  missing buzzing modulation. The old lowering treated fixed mode as a fake
+  note ratio, so fixed carriers op1/op3 became `0.5` ratio against the graph
+  frequency. Dexed treats fixed mode as absolute Hz.
+- Added `Dx7SysEx.FixedOperatorFrequencyHz` using Dexed's fixed-mode
+  log-frequency formula and changed `OperatorFrequencyRatio` to return
+  `fixedHz / graphFrequency` for fixed operators.
+- Fresh `ANLGSYN 1` candidate now lowers fixed op3 to ratio `.009227` and op1
+  to `.007615` against `freq=130.8128`, instead of flattening both to `.5`.
+- Added `PublicDomainDx7AnlgSyn1KeepsBuzzingModulationWhenInstalled` with
+  focused gates. Latest metrics: log-mel `.19427659`, envelope `.14924917`,
+  zero-crossing `.94662774`, centroid `.9182808`, score `.659334`.
+- Verified with bundled Python/dexed-py:
+  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  73 passed.
+
+Previous slice:
+
 - Fixed the `Piano Bass` octave bug. The parsed voice has `transpose=12`; the
   old generated Aquarium script hardcoded `freq=261.6256`, so it rendered an
   octave too high. `Dx7SysEx.NoteFrequencyHz(midiNote, transpose)` now treats

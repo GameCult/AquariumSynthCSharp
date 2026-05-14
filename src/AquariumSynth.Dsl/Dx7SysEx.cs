@@ -246,16 +246,29 @@ public static class Dx7SysEx
             : 6f / (outputStep.OutputCompensation + 1);
     }
 
-    public static float OperatorFrequencyRatio(Dx7Operator op, int midiNote = 60)
+    public static float OperatorFrequencyRatio(Dx7Operator op, int midiNote = 60, float baseFrequencyHz = 261.62558f)
     {
         if (op.FrequencyMode == Dx7FrequencyMode.Fixed)
         {
-            return Math.Max(0.5f, op.FrequencyCoarse);
+            return FixedOperatorFrequencyHz(op) / Math.Max(0.0001f, baseFrequencyHz);
         }
 
         var coarse = op.FrequencyCoarse == 0 ? 0.5f : op.FrequencyCoarse;
         var fine = 1 + op.FrequencyFine / 100f;
         return coarse * fine * RatioModeDetuneFactor(op.Detune, midiNote);
+    }
+
+    public static float FixedOperatorFrequencyHz(Dx7Operator op)
+    {
+        var coarse = Math.Clamp(op.FrequencyCoarse, 0, 31);
+        var fine = Math.Clamp(op.FrequencyFine, 0, 99);
+        var logFrequency = (4458616 * ((coarse & 3) * 100 + fine)) >> 3;
+        if (op.Detune != 7)
+        {
+            logFrequency += 13457 * (Math.Clamp(op.Detune, 0, 14) - 7);
+        }
+
+        return MathF.Pow(2, logFrequency / (float)(1 << 24));
     }
 
     public static float NoteFrequencyHz(int midiNote = 60, int transpose = 24)
