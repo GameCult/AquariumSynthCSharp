@@ -159,6 +159,7 @@ public static class Dx7SysEx
     public const int PackedVoiceLength = 128;
     public const int PackedBankVoiceCount = 32;
     public const int PackedBankDataLength = PackedVoiceLength * PackedBankVoiceCount;
+    public const float OperatorModulationRouteIndex = 6.275f;
 
     public static Dx7Voice ParseVoice(ReadOnlySpan<byte> bytes)
     {

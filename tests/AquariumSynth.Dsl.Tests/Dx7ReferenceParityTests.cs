@@ -122,7 +122,7 @@ public sealed class Dx7ReferenceParityTests
             script,
             comparison);
 
-        Assert.True(comparison.LogMelDistance <= 0.26f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
+        Assert.True(comparison.LogMelDistance <= 0.255f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
         Assert.True(comparison.Score >= 0.40f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
     }
 
@@ -174,7 +174,7 @@ public sealed class Dx7ReferenceParityTests
         {
             foreach (var source in edge.SourceOperators)
             {
-                builder.AppendLine($"route from=op{source} to=op{edge.TargetOperator} index=0.7");
+                builder.AppendLine($"route from=op{source} to=op{edge.TargetOperator} index={F(PrcSynth1RouteIndex(source, edge.TargetOperator))}");
             }
         }
 
@@ -205,6 +205,13 @@ public sealed class Dx7ReferenceParityTests
         3 => 2.5f,
         2 => 0.8f,
         _ => 1
+    };
+
+    private static float PrcSynth1RouteIndex(int sourceOperator, int targetOperator) => (sourceOperator, targetOperator) switch
+    {
+        (2, 1) => Dx7SysEx.OperatorModulationRouteIndex,
+        // Cascaded stacks still need algorithm output compensation; do not apply the isolated two-op scale blindly.
+        _ => 0.7f
     };
 
     private static Dx7RateLevelEnvelopeApproximation ScaledEnvelope(Dx7RateLevelEnvelopeApproximation approximation, float scale)

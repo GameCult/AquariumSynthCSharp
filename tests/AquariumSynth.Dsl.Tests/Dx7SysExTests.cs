@@ -209,6 +209,14 @@ public sealed class Dx7SysExTests
     }
 
     [Fact]
+    public void CalibratesDx7OutputLevelToAquariumRouteIndex()
+    {
+        var fullScalePhaseDeviationRadians = 2 * Dx7SysEx.OperatorOutputAmplitude(99) * Dx7SysEx.OperatorModulationRouteIndex;
+
+        Assert.InRange(fullScalePhaseDeviationRadians, 12.5f, 12.6f);
+    }
+
+    [Fact]
     public void ApproximatesDx7RateLevelEnvelopeAsStagedEnvelope()
     {
         var approximation = Dx7SysEx.ApproximateRateLevelEnvelope(new Dx7Envelope(

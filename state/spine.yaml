@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-14T04:04:00+01:00
+updated: 2026-05-14T04:10:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -45,6 +45,7 @@ live_invariants:
   - Operator feedback must render through Faust as delayed recursion, not as a direct cyclic self-reference.
   - DX7 operator output level approximation belongs in reference import/rebuild helpers, not the generic DSL model.
   - DX7 carrier output amplitude follows the measured `2^((outputLevel - 99) / 8)` curve; do not restore the old internal-level proxy.
+  - DX7 isolated two-operator modulation uses Aquarium route index `6.275` for full-level modulators; do not apply that blindly to cascaded stacks before algorithm output compensation is modeled.
   - DX7 calibration must proceed through isolated rungs in `docs/dx7-calibration-plan.md`; do not keep tuning hard PRC-specific constants as a substitute for a level/index model.
   - Staged operator envelopes own multi-target operator level contours through `env=rl rates=... levels=...`; do not force DX7-style contours back into the general ADSR voice envelope model.
   - DX7 rate/level envelopes may lower to staged operator envelopes or labeled ADSR approximations, but exact DX7 EG timing/gain calibration remains missing pressure.
@@ -99,10 +100,10 @@ reference_targets:
 next_agent_start_here:
   recommended_first_task: >
     Listen to the latest generated PRC SYNTH1 WAVs under
-    Continue the ladder in `docs/dx7-calibration-plan.md` with isolated
-    two-operator modulation-index calibration. Single-carrier output amplitude
-    is now fitted; do not keep tuning PRC constants until route/index scaling is
-    measured.
+    Continue the ladder in `docs/dx7-calibration-plan.md` with feedback scaling
+    and algorithm output compensation. Single-carrier amplitude and isolated
+    two-op modulation index are now fitted; cascaded PRC stacks still need a
+    real compensation model.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -115,6 +116,15 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-14
+    summary: >
+      Completed the isolated two-operator modulation-index rung. Dexed sweeps
+      fit full-level modulation at about 12.55 radians, which maps to Aquarium
+      route index 6.275 under the current Faust phase formula. The PRC probe
+      applies that calibrated route only to the isolated `op2 -> op1` branch;
+      applying it to the cascaded stack made metrics worse, leaving algorithm
+      output compensation as explicit pressure.
+    verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore --filter PublicDomainDx7PrcSynth1WritesListeningWavsWhenInstalled: passed"
   - date: 2026-05-14
     summary: >
       Added `docs/dx7-calibration-plan.md` and completed the first calibration

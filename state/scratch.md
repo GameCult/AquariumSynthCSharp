@@ -15,6 +15,21 @@ Doctrine update:
 
 Completed this slice:
 
+- Completed the second calibration rung for isolated two-operator FM. A Dexed
+  sweep fits full-scale DX7 modulation at about `12.55` radians. Given the
+  current Aquarium Faust formula, that maps to an Aquarium route index of
+  `6.275` for a full-level modulator.
+- Added `Dx7SysEx.OperatorModulationRouteIndex` and a regression test for the
+  calibrated phase-deviation scale. The hard PRC probe applies that scale only
+  to the isolated `op2 -> op1` branch; applying it blindly to the cascaded
+  `op6/op5/op4 -> op3` stack made PRC worse, which confirms algorithm output
+  compensation is a separate rung.
+- Latest PRC run with the carrier curve plus isolated-route calibration:
+  log-mel `0.2526254`, score `0.44758993`, duration ratio `0.9927914`, RMS
+  ratio `0.8931149`. The log-mel gate is back to `<= 0.255`.
+
+Previous slice:
+
 - Wrote `docs/dx7-calibration-plan.md` and referenced it from memory/spine.
   The ladder is now: single-carrier amplitude, two-op modulation index,
   feedback scaling, envelope level curve, algorithm output compensation, then
