@@ -253,6 +253,12 @@ public static class Dx7SysEx
         return coarse * fine * RatioModeDetuneFactor(op.Detune, midiNote);
     }
 
+    public static int OperatorRateScaling(Dx7Operator op, int midiNote = 60)
+    {
+        var noteGroup = Math.Clamp(midiNote / 3 - 7, 0, 31);
+        return (Math.Clamp(op.RateScaling, 0, 7) * noteGroup) >> 3;
+    }
+
     public static float FixedOperatorFrequencyHz(Dx7Operator op)
     {
         var coarse = Math.Clamp(op.FrequencyCoarse, 0, 31);
@@ -294,13 +300,15 @@ public static class Dx7SysEx
         float gateSeconds,
         float durationSeconds = 1.4f,
         int sampleRate = 44100,
-        float sustainFloor = 0f)
+        float sustainFloor = 0f,
+        int rateScaling = 0)
     {
         var trace = TraceInterpolatedEnvelope(
             envelope,
             gateSeconds,
             Math.Max(durationSeconds, gateSeconds + 0.55f),
-            sampleRate: sampleRate);
+            sampleRate: sampleRate,
+            rateScaling: rateScaling);
         var gateSample = Math.Clamp((int)MathF.Round(gateSeconds * sampleRate), 0, trace.Count - 1);
         var peakSample = FirstPeakIndex(trace, gateSample);
         var level2Sample = SplitIndex(peakSample, gateSample, 0.35f);
@@ -335,9 +343,10 @@ public static class Dx7SysEx
         float gateSeconds,
         float durationSeconds,
         int outputLevel = 99,
-        int sampleRate = 44100)
+        int sampleRate = 44100,
+        int rateScaling = 0)
     {
-        var state = Dx7EnvelopeState.Start(envelope, outputLevel, sampleRate);
+        var state = Dx7EnvelopeState.Start(envelope, outputLevel, sampleRate, rateScaling);
         var sampleCount = Math.Max(1, (int)MathF.Round(Math.Max(1f / sampleRate, durationSeconds) * sampleRate));
         var gateSample = Math.Clamp((int)MathF.Round(Math.Max(0, gateSeconds) * sampleRate), 0, sampleCount);
         var points = new List<Dx7EnvelopeTracePoint>(sampleCount);
@@ -360,9 +369,10 @@ public static class Dx7SysEx
         float durationSeconds,
         int outputLevel = 99,
         int sampleRate = 44100,
-        int blockSize = 64)
+        int blockSize = 64,
+        int rateScaling = 0)
     {
-        var state = Dx7EnvelopeState.Start(envelope, outputLevel, sampleRate);
+        var state = Dx7EnvelopeState.Start(envelope, outputLevel, sampleRate, rateScaling);
         var sampleCount = Math.Max(1, (int)MathF.Round(Math.Max(1f / sampleRate, durationSeconds) * sampleRate));
         var gateSample = Math.Clamp((int)MathF.Round(Math.Max(0, gateSeconds) * sampleRate), 0, sampleCount);
         var points = new List<Dx7EnvelopeTracePoint>(sampleCount);
@@ -634,16 +644,18 @@ public static class Dx7SysEx
         private const int JumpTarget = 1716;
         private readonly int _sampleRate;
         private readonly int _outputLevel;
+        private readonly int _rateScaling;
         private long _level;
         private long _targetLevel;
         private bool _rising;
         private int _increment;
         private bool _down = true;
 
-        private Dx7EnvelopeState(int outputLevel, int sampleRate)
+        private Dx7EnvelopeState(int outputLevel, int sampleRate, int rateScaling)
         {
             _outputLevel = outputLevel;
             _sampleRate = sampleRate;
+            _rateScaling = Math.Clamp(rateScaling, 0, 63);
         }
 
         public int Stage { get; private set; }
@@ -651,9 +663,9 @@ public static class Dx7SysEx
         public float Gain =>
             MathF.Pow(2, ((_level / 65536f) - (14 << 8)) / 256f);
 
-        public static Dx7EnvelopeState Start(Dx7Envelope envelope, int outputLevel, int sampleRate)
+        public static Dx7EnvelopeState Start(Dx7Envelope envelope, int outputLevel, int sampleRate, int rateScaling)
         {
-            var state = new Dx7EnvelopeState(outputLevel, sampleRate);
+            var state = new Dx7EnvelopeState(outputLevel, sampleRate, rateScaling);
             state.AdvanceStage(envelope, 0);
             return state;
         }
@@ -718,7 +730,7 @@ public static class Dx7SysEx
                 2 => envelope.Rate3,
                 _ => envelope.Rate4
             };
-            var qrate = Math.Min((Math.Clamp(rate, 0, 99) * 41) >> 6, 63);
+            var qrate = Math.Min(((Math.Clamp(rate, 0, 99) * 41) >> 6) + _rateScaling, 63);
             var increment = (4 + (qrate & 3)) << (2 + 6 + (qrate >> 2));
             _increment = (int)((long)increment * 44100 / Math.Max(1, _sampleRate));
         }

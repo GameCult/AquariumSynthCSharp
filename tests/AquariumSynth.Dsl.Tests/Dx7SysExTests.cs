@@ -271,6 +271,17 @@ public sealed class Dx7SysExTests
     }
 
     [Fact]
+    public void MapsDx7OperatorRateScalingAtPlayedMidiNote()
+    {
+        var unscaled = InitOperator(rateScaling: 0);
+        var scaled = InitOperator(rateScaling: 7);
+
+        Assert.Equal(0, Dx7SysEx.OperatorRateScaling(unscaled, midiNote: 60));
+        Assert.Equal(0, Dx7SysEx.OperatorRateScaling(scaled, midiNote: 21));
+        Assert.Equal(11, Dx7SysEx.OperatorRateScaling(scaled, midiNote: 60));
+    }
+
+    [Fact]
     public void MapsDx7FixedFrequencyOperatorsToAbsoluteHertz()
     {
         var oneHertz = InitOperator(
@@ -450,10 +461,11 @@ public sealed class Dx7SysExTests
     }
 
     private static Dx7Operator InitOperator(
-        int frequencyCoarse,
+        int frequencyCoarse = 1,
         int frequencyFine = 0,
         int detune = 7,
-        Dx7FrequencyMode frequencyMode = Dx7FrequencyMode.Ratio) =>
+        Dx7FrequencyMode frequencyMode = Dx7FrequencyMode.Ratio,
+        int rateScaling = 0) =>
         new(
             Number: 1,
             Envelope: new Dx7Envelope(99, 99, 99, 99, 99, 99, 99, 0),
@@ -462,7 +474,7 @@ public sealed class Dx7SysExTests
             RightDepth: 0,
             LeftCurve: 0,
             RightCurve: 0,
-            RateScaling: 0,
+            RateScaling: rateScaling,
             AmplitudeModulationSensitivity: 0,
             KeyVelocitySensitivity: 0,
             OutputLevel: 99,

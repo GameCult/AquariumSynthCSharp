@@ -46,12 +46,13 @@ live_invariants:
   - Operator feedback must render through Faust as delayed recursion, not as a direct cyclic self-reference.
   - DX7 operator output level approximation belongs in reference import/rebuild helpers, not the generic DSL model.
   - DX7 carrier output amplitude follows the measured `2^((outputLevel - 99) / 8)` curve; do not restore the old internal-level proxy.
-  - DX7 isolated two-operator modulation uses Aquarium route index `6.275` for full-level modulators; do not apply that blindly to cascaded stacks before algorithm output compensation is modeled.
+  - DX7 isolated two-operator modulation uses Aquarium route index `6.275` for full-level modulators; do not apply that blindly to cascaded stacks.
   - DX7 feedback lowers through `Dx7SysEx.OperatorFeedbackAmount`; feedback value 5 remains 0.19 for PRC, while feedback value 7 is much hotter at 2.2 to restore community-patch buzz. Do not restore PRC-local `feedback * constant` folklore.
   - DX7 ratio-mode detune lowers through `Dx7SysEx.OperatorFrequencyRatio`; do not silently drop detune from operator graph scripts.
   - DX7 voice transpose lowers through `Dx7SysEx.NoteFrequencyHz`; transpose 24 is neutral, 12 is one octave down. Do not hardcode `freq=261.6256` for imported voices.
   - DX7 fixed-frequency operators lower through `Dx7SysEx.FixedOperatorFrequencyHz` as absolute Hz divided by the graph base frequency; do not treat fixed mode as a note ratio.
-  - DX7 algorithm output compensation lowers through ROM `COM` values relative to the algorithm-32 six-output baseline; do not restore PRC-local carrier scale tables.
+  - DX7 ROM `COM` output compensation is not a carrier-balance authority in Aquarium lowering; `OperatorOutputCompensation` returns unity and graph gain owns loudness recovery.
+  - DX7 operator key-scaling and rate-scaling lower against the effective played MIDI note after voice transpose; do not hardcode MIDI 60 inside imported operator level or envelope timing.
   - DX7 route lowering is topology-aware: isolated direct branches use `OperatorModulationRouteIndex` (`6.275`); summed edges and direct edges feeding summed modulation use `SummedOperatorModulationRouteIndex` (`6.0`).
   - `SummedOperatorModulationRouteIndex` is backed by the hard PRC target, a project-authored algorithm-8 stack probe, and split cascade/summed-pair probes; do not restore the older under-bright `1.6` scale.
   - DX7 calibration must proceed through isolated rungs in `docs/dx7-calibration-plan.md`; do not keep tuning hard PRC-specific constants as a substitute for a level/index model.
@@ -78,7 +79,7 @@ reference_targets:
     priority: 1
     purpose: "Structured FM/operator graph pressure test."
     source: "https://github.com/asb2m10/dexed"
-    status: "DX7 SysEx parser, public-domain SysEx fixture, dexed-py reference rendering, project-authored Dexed patch rendering, first thresholded rendered parity test for analog1.syx voice 13, hard PRC SYNTH1 probe with listening WAV artifacts and log-mel <= 0.255, project-authored algorithm-8 summed-stack parity, renderable delayed operator feedback, DX7 effective operator-level approximation, measured carrier output amplitude, isolated route index, feedback table, ratio detune lowering, ROM COM output compensation, staged operator envelopes, DX7 envelope tracing, algorithm topology extraction, envelope-to-ADSR approximation, two Aquarium DSL rebuild attempts, first-class operator graph support, and Aquarium candidate rendering through Faust-generated C# exist."
+    status: "DX7 SysEx parser, public-domain SysEx fixture, dexed-py reference rendering, project-authored Dexed patch rendering, first thresholded rendered parity test for analog1.syx voice 13, hard PRC SYNTH1 probe with listening WAV artifacts, project-authored algorithm-8 summed-stack parity, renderable delayed operator feedback, DX7 effective operator-level approximation, measured carrier output amplitude, isolated route index, feedback table, ratio detune lowering, voice transpose lowering, fixed-frequency lowering, ROM COM compensation cut, operator key/rate scaling at the effective played note, staged operator envelopes, DX7 envelope tracing, algorithm topology extraction, envelope-to-ADSR approximation, two Aquarium DSL rebuild attempts, first-class operator graph support, and Aquarium candidate rendering through Faust-generated C# exist."
     first_slice:
       - "Add a harder public-domain DX7 parity target that audibly needs operator routing."
   zynaddsubfx:
@@ -118,18 +119,18 @@ next_agent_start_here:
     `artifacts/parity/dx7-prc-synth1`. Continue the ladder in
     `docs/dx7-calibration-plan.md` with envelope level curve calibration.
     Single-carrier amplitude, isolated
-    two-op modulation index, feedback, ratio detune, ROM COM output
-    compensation, and topology-aware route lowering are now fitted or mapped;
+    two-op modulation index, feedback, ratio detune, voice transpose,
+    fixed-frequency operators, ROM COM compensation cut, operator key/rate
+    scaling, and topology-aware route lowering are now fitted or mapped;
     a project-authored algorithm-8 stack test now backs the summed route scale
     outside PRC. Curved applied-envelope lowering plus stronger summed/cascaded
     route scale now gives PRC the same character with closer harsh stacked
     modulation. Split project-authored algorithm-8 cascade and summed-pair
     probes now back the 6.0 summed/cascaded route scale. Next pressure is
-    residual PRC high-air/timbre mismatch and high zero-crossing mismatch on
-    broader public-domain community voices before broad import. The community
-    gate now includes `{ Mooger }`, fixed `Piano Bass`, and fixed-frequency
-    `ANLGSYN 1`; do not describe the remaining analog1.syx survey voices as
-    passing.
+    residual community harmonic mismatch, especially `MELLOWSOLO`, plus
+    missing LFO/operator attack behavior on `ANLGSYN 1`. The community gate
+    now includes `{ Mooger }`, fixed `Piano Bass`, `RES SYNTH1`, and
+    `ANLGSYN 1`; `MELLOWSOLO` is a pressure artifact test, not passing parity.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -142,6 +143,19 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-14
+    summary: >
+      Lowered DX7 operator key-scaling and rate-scaling against the effective
+      played MIDI note after voice transpose. `Dx7SysEx.OperatorRateScaling`
+      now feeds the block-interpolated applied envelope trace, and the DX7
+      probe no longer computes operator levels at hardcoded MIDI 60. This
+      improves `RES SYNTH1` attack/log-mel and `Piano Bass` harmonic metrics;
+      `Piano Bass` graph gain rebalances to 0.72. Added a `MELLOWSOLO`
+      pressure artifact test because it remains the clearest harmonic mismatch
+      and should not be promoted as passing stock. A trial that made envelope
+      tracing depend on operator output level was cut because it worsened
+      `MELLOWSOLO` and `ANLGSYN 1`.
+    verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore --filter Dx7... focused pass: 28 passed"
   - date: 2026-05-14
     summary: >
       Removed DX7 ROM COM carrier compensation after listening found the

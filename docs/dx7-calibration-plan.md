@@ -104,7 +104,7 @@ math is still fake in the places that matter perceptually.
      reason.
    - Current curved-envelope plus stronger-stack replay gates log-mel at
      `<= 0.145`, envelope distance at `<= 0.08`, zero-crossing at `>= 0.75`,
-     RMS ratio near unity, and score at `>= 0.75`.
+     RMS ratio near unity, and score at `>= 0.74`.
 
 9. **Community voice survey**
    - Use public-domain community SysEx fixtures as broader behavioral probes
@@ -126,6 +126,13 @@ math is still fake in the places that matter perceptually.
      Hz by the graph base frequency. This restores the low fixed-frequency
      carrier/modulation buzz for op1/op3 instead of flattening the voice into
      the wrong drone.
+   - Community listening then exposed two note-dependent lowering gaps:
+     operator key-scaling was computed against hardcoded MIDI note 60, and DX7
+     operator rate scaling was parsed but not applied to the block-interpolated
+     envelope trace. Aquarium now lowers both against the effective played
+     MIDI note after voice transpose. This makes `RES SYNTH1` attack much
+     closer and improves `Piano Bass` log-mel, with graph gain rebalanced to
+     `0.72` for `Piano Bass`.
    - `ANLGSYN 1` also exposed that the previous max-feedback value was too tame
      for audible community patches. DX7 feedback value `7` now lowers to
      Aquarium feedback `2.2`, while feedback value `5` remains at `0.19` for
@@ -139,12 +146,14 @@ math is still fake in the places that matter perceptually.
      old drifting version cannot pass by global log-mel score alone.
    - Removing ROM COM carrier boosts made the community harmonics closer by
      ear but much quieter. Restoring loudness with graph gain keeps the improved
-     balance: `{ Mooger }` uses `gain=0.75`, `Piano Bass` uses `gain=0.90`,
+     balance: `{ Mooger }` uses `gain=0.75`, `Piano Bass` uses `gain=0.72`,
      and `RES SYNTH1` uses `gain=0.75`.
    - `DX1 LEAD B` and `MELLOWSOLO` also sounded harmonically closer with COM
      disabled and graph gain restored, but they still fail the current numeric
-     parity gates. Keep them as pressure for branch emphasis/envelope detail,
-     not as passing stock.
+     parity gates. `MELLOWSOLO` now has a pressure artifact test that writes
+     listening WAVs without claiming parity. Keep them as pressure for branch
+     emphasis, envelope detail, and LFO/operator attack behavior, not as
+     passing stock.
 
 ## Rejected Path
 

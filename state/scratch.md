@@ -15,6 +15,28 @@ Doctrine update:
 
 Completed this slice:
 
+- Listening report split the remaining DX7 mismatch: `RES SYNTH1` mostly
+  needed a harder attack, `ANLGSYN 1` still smells like missing LFO/operator
+  attack behavior, and `MELLOWSOLO` is the clearest harmonic mismatch.
+- Fixed two note-dependent DX7 lowering gaps:
+  - operator key-scaling now uses the effective played MIDI note after voice
+    transpose instead of hardcoded MIDI 60;
+  - `Dx7SysEx.OperatorRateScaling` now feeds
+    `ApproximateAppliedRateLevelEnvelope`/`TraceInterpolatedEnvelope`.
+- Kept graph gain as loudness authority after the scaling change:
+  `Piano Bass` moved from `.90` to `.72`.
+- Added `PublicDomainDx7MellowSoloWritesPressureWavsWhenInstalled`; it writes
+  listening artifacts but only gates as pressure (`log-mel <= .45`, score
+  `>= .5`) because it is not passing parity by ear.
+- Cut a tempting output-level-dependent envelope trace experiment. It looked
+  more Dexed-shaped on paper, but worsened `MELLOWSOLO` and `ANLGSYN 1`, so it
+  does not belong in the live machine yet.
+- Focused verification with bundled Python/dexed-py:
+  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore --filter "Dx7SysExTests|PublicDomainDx7MoogerAndPianoBassMeetRenderedParityWhenInstalled|PublicDomainDx7AnlgSyn1KeepsBuzzingModulationWhenInstalled|PublicDomainDx7MellowSoloWritesPressureWavsWhenInstalled|PublicDomainDx7PrcSynth1WritesListeningWavsWhenInstalled"`:
+  28 passed.
+
+Previous slice:
+
 - Corrected DX7 ROM COM handling after user listening caught that the
   no-compensation probe had closer harmonics across the community patches and
   was mainly too quiet.
