@@ -160,6 +160,7 @@ public static class Dx7SysEx
     public const int PackedBankVoiceCount = 32;
     public const int PackedBankDataLength = PackedVoiceLength * PackedBankVoiceCount;
     public const float OperatorModulationRouteIndex = 6.275f;
+    public const float SummedOperatorModulationRouteIndex = 1.6f;
 
     public static Dx7Voice ParseVoice(ReadOnlySpan<byte> bytes)
     {
@@ -217,6 +218,11 @@ public static class Dx7SysEx
 
     public static float OperatorFeedbackAmount(int feedback) =>
         FeedbackAmounts[Math.Clamp(feedback, 0, FeedbackAmounts.Length - 1)];
+
+    public static float OperatorRouteIndex(Dx7AlgorithmTopology topology, Dx7ModulationEdge edge) =>
+        edge.Kind == "sum" || FeedsSummedModulation(topology, edge.TargetOperator)
+            ? SummedOperatorModulationRouteIndex
+            : OperatorModulationRouteIndex;
 
     public static float OperatorOutputCompensation(Dx7AlgorithmTopology topology, int operatorNumber)
     {
@@ -479,6 +485,11 @@ public static class Dx7SysEx
         var detuneRatio = 0.0209f * MathF.Exp(-0.396f * logFrequency) / 7f;
         return MathF.Pow(2, detuneRatio * logFrequency * (Math.Clamp(detune, 0, 14) - 7));
     }
+
+    private static bool FeedsSummedModulation(Dx7AlgorithmTopology topology, int operatorNumber) =>
+        topology.ModulationEdges.Any(edge =>
+            edge.Kind == "sum" &&
+            edge.SourceOperators.Contains(operatorNumber));
 
     private static int ScaleVelocity(int velocity, int sensitivity)
     {

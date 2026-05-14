@@ -65,8 +65,11 @@ math is still fake in the places that matter perceptually.
 7. **Summed/cascaded modulation**
    - Render project-authored algorithm-8 stacks that isolate `6 -> 5 -> 3`
      and `4 + 5 -> 3`.
-   - Replace the hard `PRC SYNTH1` cascaded-route probe constant with a fitted
-     summed-modulator route rule.
+   - Replace hard `PRC SYNTH1` route probe logic with a topology-aware DX7
+     route rule: isolated direct branches keep the two-op scale, while
+     summed/cascaded branches use the summed-modulator scale.
+   - A hard-target calibrated summed-modulator scale exists; project-authored
+     isolated stack sweeps should still tighten it before broad DX7 import.
 
 8. **Hard target replay**
    - Re-run `PRC SYNTH1`.

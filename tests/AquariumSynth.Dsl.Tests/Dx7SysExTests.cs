@@ -229,6 +229,28 @@ public sealed class Dx7SysExTests
     }
 
     [Fact]
+    public void CalibratesDx7SummedModulationRouteIndexSeparately()
+    {
+        var topology = Dx7SysEx.AlgorithmTopology(8);
+        var direct = Assert.Single(topology.ModulationEdges, edge =>
+            edge.Kind == "direct" &&
+            edge.SourceOperators.SequenceEqual([2]) &&
+            edge.TargetOperator == 1);
+        var summed = Assert.Single(topology.ModulationEdges, edge =>
+            edge.Kind == "sum" &&
+            edge.SourceOperators.SequenceEqual([4, 5]) &&
+            edge.TargetOperator == 3);
+        var cascaded = Assert.Single(topology.ModulationEdges, edge =>
+            edge.Kind == "direct" &&
+            edge.SourceOperators.SequenceEqual([6]) &&
+            edge.TargetOperator == 5);
+
+        Assert.Equal(Dx7SysEx.OperatorModulationRouteIndex, Dx7SysEx.OperatorRouteIndex(topology, direct));
+        Assert.Equal(1.6f, Dx7SysEx.OperatorRouteIndex(topology, summed));
+        Assert.Equal(1.6f, Dx7SysEx.OperatorRouteIndex(topology, cascaded));
+    }
+
+    [Fact]
     public void CalibratesDx7FeedbackToAquariumFeedbackAmount()
     {
         Assert.Equal(0, Dx7SysEx.OperatorFeedbackAmount(0));

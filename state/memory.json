@@ -27,6 +27,7 @@
       "DX7 calibrated feedback amount table",
       "DX7 ratio detune lowering",
       "DX7 ROM COM output compensation",
+      "DX7 topology-aware route lowering",
       "staged operator envelope DSL",
       "DX7 envelope-to-ADSR approximation",
       "standard ADSR envelope model",
@@ -66,9 +67,9 @@
     "rule": "Add DSL abstractions only when reference rebuilds prove the missing invariant. Do not consume references that cannot be backed by parity tests; parsing alone is inventory, not evidence of expressivity."
   },
   "dx7_reference_path": {
-    "status": "DX7 SysEx parser extracts voice edit buffers, packed voices, packed 32-voice banks, six operators, envelopes, algorithm, feedback, oscillator sync, LFO, transpose, voice name, checksum validation, ReferencePatch features, algorithm topology from the reverse-engineered OPS algorithm ROM table, envelope-to-ADSR approximations, measured carrier output amplitude, isolated two-op modulation route scale, calibrated feedback amount table, ratio detune lowering, ROM COM output compensation, staged operator envelopes, two Aquarium DSL rebuild attempts, first-class OperatorGraph support, public-domain SysEx fixture coverage, dexed-py reference rendering, Aquarium candidate rendering through Faust-generated C#, one thresholded rendered parity test for analog1.syx voice 13, a hard PRC SYNTH1 parity probe with listening WAV artifacts and log-mel <= 0.255, and renderable delayed operator feedback.",
-    "lesson": "Algorithm 32's additive six-carrier shape maps cleanly to six Aquarium voices. Algorithm 8 justified OperatorGraph: operators, modulation edges, carriers, and feedback belong to a graph authority, not Voice fields. The first rendered parity rung is behavioral and sine-like, not exact DX7 operator execution. A harder algorithm-8 target exposed that feedback must be delayed recursion in Faust, not a direct cyclic self-reference. Static DX7 output-level approximation helped import/rebuild math but was mathematically wrong for carrier amplitude. A single-carrier Dexed sweep shows carrier amplitude follows 2^((outputLevel - 99) / 8). Isolated two-op DX7 FM maps full-level modulation to Aquarium route index 6.275; applying that blindly to cascaded PRC stacks is wrong. Feedback now lowers through a fitted table instead of PRC-local constants. Ratio-mode detune belongs in operator frequency lowering. ROM COM values carry output-count compensation; because the amplitude curve was fitted against algorithm 32, DX7 carriers scale by 6/(COM+1). Staged operator envelopes now let Aquarium express four-rate/four-level contours in readable DSL.",
-    "next": "Follow docs/dx7-calibration-plan.md: calibrate envelope level curve and summed/cascaded modulation before adding new DSL surface or tuning PRC constants."
+    "status": "DX7 SysEx parser extracts voice edit buffers, packed voices, packed 32-voice banks, six operators, envelopes, algorithm, feedback, oscillator sync, LFO, transpose, voice name, checksum validation, ReferencePatch features, algorithm topology from the reverse-engineered OPS algorithm ROM table, envelope-to-ADSR approximations, measured carrier output amplitude, isolated two-op modulation route scale, calibrated feedback amount table, ratio detune lowering, ROM COM output compensation, topology-aware route lowering, staged operator envelopes, two Aquarium DSL rebuild attempts, first-class OperatorGraph support, public-domain SysEx fixture coverage, dexed-py reference rendering, Aquarium candidate rendering through Faust-generated C#, one thresholded rendered parity test for analog1.syx voice 13, a hard PRC SYNTH1 parity probe with listening WAV artifacts and log-mel <= 0.255, and renderable delayed operator feedback.",
+    "lesson": "Algorithm 32's additive six-carrier shape maps cleanly to six Aquarium voices. Algorithm 8 justified OperatorGraph: operators, modulation edges, carriers, and feedback belong to a graph authority, not Voice fields. The first rendered parity rung is behavioral and sine-like, not exact DX7 operator execution. A harder algorithm-8 target exposed that feedback must be delayed recursion in Faust, not a direct cyclic self-reference. Static DX7 output-level approximation helped import/rebuild math but was mathematically wrong for carrier amplitude. A single-carrier Dexed sweep shows carrier amplitude follows 2^((outputLevel - 99) / 8). Isolated two-op DX7 FM maps full-level modulation to Aquarium route index 6.275, while summed/cascaded algorithm-8 branches need a lower topology-aware route scale. Feedback now lowers through a fitted table instead of PRC-local constants. Ratio-mode detune belongs in operator frequency lowering. ROM COM values carry output-count compensation; because the amplitude curve was fitted against algorithm 32, DX7 carriers scale by 6/(COM+1). Staged operator envelopes now let Aquarium express four-rate/four-level contours in readable DSL.",
+    "next": "Follow docs/dx7-calibration-plan.md: calibrate envelope level curve and independently sweep summed/cascaded modulation before adding new DSL surface or tuning PRC constants."
   },
   "note_and_envelope_model": {
     "rule": "Notes own frequency, gate duration, and host/MIDI source. Envelopes own ADSR level shape.",
@@ -83,7 +84,7 @@
   },
   "last_verified": {
     "command": "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore",
-    "result": "59 passed; latest PRC log-mel 0.24476814, score 0.5708394",
-    "commit": "pending DX7 detune and COM compensation"
+    "result": "60 passed; latest focused PRC log-mel 0.24476814, score 0.5708394",
+    "commit": "pending DX7 topology-aware route lowering"
   }
 }

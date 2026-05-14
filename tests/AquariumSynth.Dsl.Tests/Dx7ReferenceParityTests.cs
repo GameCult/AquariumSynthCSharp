@@ -175,7 +175,7 @@ public sealed class Dx7ReferenceParityTests
         {
             foreach (var source in edge.SourceOperators)
             {
-                builder.AppendLine($"route from=op{source} to=op{edge.TargetOperator} index={F(PrcSynth1RouteIndex(source, edge.TargetOperator))}");
+                builder.AppendLine($"route from=op{source} to=op{edge.TargetOperator} index={F(Dx7SysEx.OperatorRouteIndex(topology, edge))}");
             }
         }
 
@@ -186,13 +186,6 @@ public sealed class Dx7ReferenceParityTests
 
         return builder.ToString();
     }
-
-    private static float PrcSynth1RouteIndex(int sourceOperator, int targetOperator) => (sourceOperator, targetOperator) switch
-    {
-        (2, 1) => Dx7SysEx.OperatorModulationRouteIndex,
-        // Hard-target probe scar: cascaded stacks need dedicated summed-modulator calibration.
-        _ => 1.6f
-    };
 
     private static Dx7RateLevelEnvelopeApproximation ScaledEnvelope(Dx7RateLevelEnvelopeApproximation approximation, float scale)
     {

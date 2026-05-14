@@ -15,6 +15,16 @@ Doctrine update:
 
 Completed this slice:
 
+- Moved the remaining PRC cascaded-route scalar into a topology-aware DX7 route
+  helper. `Dx7SysEx.OperatorRouteIndex(topology, edge)` now keeps the isolated
+  two-op route scale (`6.275`) for standalone direct branches and uses the
+  summed/cascaded scale (`1.6`) for sum edges and direct edges feeding a sum.
+- The PRC probe no longer owns any private route-index function. Latest focused
+  run still passes with log-mel `0.24476814`, score `0.5708394`, RMS ratio
+  `1.0108943`.
+
+Previous slice:
+
 - Added the ratio-detune and algorithm-output-compensation rungs to the DX7
   lowering. `Dx7SysEx.OperatorFrequencyRatio` now applies ratio-mode detune
   from the Dexed/DX7 note formula, and `Dx7SysEx.OperatorOutputCompensation`
