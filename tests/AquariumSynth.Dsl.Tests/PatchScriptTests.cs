@@ -333,7 +333,29 @@ public sealed class PatchScriptTests
         Assert.Equal(.4f, envelope.Rate4Seconds, 5);
         Assert.Equal(0, envelope.Level4);
         Assert.Equal(.75f, op2.Note.GateSeconds, 5);
-        Assert.Contains("rl4_env(0.004, 1, 0.12, 0.7, 0.2, 0.25, 0.4, 0, 0.75)", export.Source);
+        Assert.Equal(RateLevelCurve.Linear, envelope.Curve1);
+        Assert.Contains("rl4_env(0.004, 1, 0, 0.12, 0.7, 0, 0.2, 0.25, 0, 0.4, 0, 0, 0.75)", export.Source);
+    }
+
+    [Fact]
+    public void OperatorGraphSyntaxParsesCurvedRateLevelEnvelope()
+    {
+        var patch = PatchScript.Parse("""
+            opgraph name=pair freq=220 gain=.2
+            operator name=op2 ratio=2 level=.8 env=rl rates=.004,.12,.2,.4 levels=1.2,.7,.25,0 curves=lin,exp,exp,lin gate=.75
+            operator name=op1 ratio=1 level=1 env=ad:.01:.08
+            route from=op2 to=op1 index=.8
+            carrier name=op1
+            """);
+        var export = FaustEmitter.Emit(patch);
+
+        var envelope = Assert.Single(patch.OperatorGraphs[0].Operators, op => op.Id == 2).RateLevelEnvelope;
+        Assert.NotNull(envelope);
+        Assert.Equal(RateLevelCurve.Linear, envelope.Curve1);
+        Assert.Equal(RateLevelCurve.Exponential, envelope.Curve2);
+        Assert.Equal(RateLevelCurve.Exponential, envelope.Curve3);
+        Assert.Equal(RateLevelCurve.Linear, envelope.Curve4);
+        Assert.Contains("rl4_env(0.004, 1.2, 0, 0.12, 0.7, 1, 0.2, 0.25, 1, 0.4, 0, 0, 0.75)", export.Source);
     }
 
     [Fact]

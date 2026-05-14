@@ -65,9 +65,16 @@ math is still fake in the places that matter perceptually.
      EG levels improves some envelope metrics but fails the hard PRC log-mel
      target. Do not land it without isolated envelope parity.
    - Current trace evidence lives in
-     `artifacts/parity/dx7-envelope-trace/egstep.csv`: DX7 EG can spike above
-     unit gain and collapse to a tiny sustain within milliseconds, unlike the
-     current linear `env=rl` approximation.
+     `artifacts/parity/dx7-envelope-trace/egstep.csv`: DX7 raw EG state can
+     spike above unit gain and collapse to a tiny sustain within milliseconds,
+     unlike the current linear `env=rl` approximation.
+   - Dexed's rendered audio does not hear that raw state directly. The operator
+     path samples EG once per 64-sample block and linearly interpolates the
+     applied gain across the block, so a DX7-capable Aquarium envelope must
+     model both the rate/level state machine and its block-interpolated output.
+   - Aquarium staged operator envelopes now support per-segment curves, e.g.
+     `env=rl rates=.00145,.0508,.5268,.35 levels=2,.297,.0156,0 curves=lin,exp,exp,exp`.
+     This is a general staged-contour feature, not a DX7-specific syntax escape.
 
 7. **Summed/cascaded modulation**
    - Render project-authored algorithm-8 stacks that isolate `6 -> 5 -> 3`

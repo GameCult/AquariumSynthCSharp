@@ -15,16 +15,26 @@ Doctrine update:
 
 Completed this slice:
 
+- Extended staged operator envelopes with per-segment curves:
+  `curves=lin,exp,exp,lin`. Linear remains the default, and levels can now
+  express deliberate transient overshoot above `1` instead of clipping away
+  the DX7 evidence.
 - Added `Dx7SysEx.TraceEnvelope`, a DX7 EG microscope that follows the internal
   rate/level state machine closely enough to expose gain and stage over time.
+- Added `Dx7SysEx.TraceInterpolatedEnvelope`, which traces the gain actually
+  applied by Dexed-style operator rendering: one EG sample per 64-sample block,
+  linearly interpolated across the block.
 - Added an envelope comparison artifact test that writes
-  `artifacts/parity/dx7-envelope-trace/egstep.csv`. The first rows show the
-  current mismatch plainly: DX7 jumps to gain `2`, falls below `.02` in about
-  9 ms, while Aquarium `env=rl` is still near `1` and linearly drifting.
+  `artifacts/parity/dx7-envelope-trace/egstep.csv`. The first rows show both
+  DX7 raw state and applied gain: raw jumps to `2` immediately, while applied
+  gain ramps from `.03125` to `2` over the first 64-sample block and remains
+  near `1` around 20 ms. Aquarium `env=rl` is a different contour entirely.
+  The artifact now also includes a curved Aquarium staged-envelope candidate
+  that tracks the applied-gain contour far more closely.
 - Tried adding a first `env=dx7` runtime lowering, then cut it. The trace
   matched the Python `graph.py` envelope but not Dexed plugin audio, so the
-  syntax was not allowed to survive. The durable result is the microscope, not
-  a half-proven model.
+  syntax was not allowed to survive. The durable result is the microscope and
+  the applied-gain trace, not a half-proven model.
 
 Previous slice:
 

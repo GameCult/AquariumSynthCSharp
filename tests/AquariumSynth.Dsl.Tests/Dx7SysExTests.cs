@@ -316,6 +316,29 @@ public sealed class Dx7SysExTests
         Assert.True(trace[(int)(0.9f * 44100)].Gain < 0.001f);
     }
 
+    [Fact]
+    public void TracesDx7EnvelopeAppliedBlockInterpolatedGain()
+    {
+        var trace = Dx7SysEx.TraceInterpolatedEnvelope(
+            new Dx7Envelope(
+                Rate1: 98,
+                Rate2: 64,
+                Rate3: 48,
+                Rate4: 55,
+                Level1: 99,
+                Level2: 76,
+                Level3: 43,
+                Level4: 0),
+            gateSeconds: 0.75f,
+            durationSeconds: 1.1f);
+
+        Assert.InRange(trace[0].Gain, 0.02f, 0.04f);
+        Assert.True(trace[63].Gain > 1.9f);
+        Assert.InRange(trace[127].Gain, 1.88f, 1.91f);
+        Assert.InRange(trace[(int)(0.02f * 44100)].Gain, 0.99f, 1.02f);
+        Assert.InRange(trace[(int)(0.2f * 44100)].Gain, 0.12f, 0.14f);
+    }
+
     private static byte[] InitVoice(string name, int algorithm, int feedback)
     {
         var data = new byte[Dx7SysEx.VoiceEditBufferLength];

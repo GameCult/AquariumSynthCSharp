@@ -194,28 +194,51 @@ public sealed class Dx7ReferenceParityTests
             Level3: 43,
             Level4: 0);
         var dx7 = Dx7SysEx.TraceEnvelope(envelope, gateSeconds: 0.75f, durationSeconds: 1.1f);
+        var dx7Applied = Dx7SysEx.TraceInterpolatedEnvelope(envelope, gateSeconds: 0.75f, durationSeconds: 1.1f);
         var approximation = ScaledEnvelope(Dx7SysEx.ApproximateRateLevelEnvelope(envelope), 0.62f, 0.75f);
         var aquarium = TraceRateLevelEnvelope(approximation.Envelope, approximation.GateSeconds, durationSeconds: 1.1f);
+        var aquariumCurved = TraceRateLevelEnvelope(
+            new RateLevelEnvelope(
+                64f / 44100,
+                2f,
+                0.0522449f - 64f / 44100,
+                0.297302f,
+                0.5790476f - 0.0522449f,
+                0.015625f,
+                0.35f,
+                0f,
+                RateLevelCurve.Linear,
+                RateLevelCurve.Exponential,
+                RateLevelCurve.Exponential,
+                RateLevelCurve.Exponential),
+            gateSeconds: 0.75f,
+            durationSeconds: 1.1f);
         var artifactDir = ArtifactPath("parity", "dx7-envelope-trace");
         Directory.CreateDirectory(artifactDir);
         var path = Path.Combine(artifactDir, "egstep.csv");
 
         using var writer = new StreamWriter(path);
-        writer.WriteLine("time_seconds,dx7_gain,aquarium_gain,dx7_stage");
+        writer.WriteLine("time_seconds,dx7_raw_gain,dx7_applied_gain,aquarium_rl_gain,aquarium_curved_gain,dx7_stage");
         for (var i = 0; i < Math.Min(dx7.Count, aquarium.Length); i += 64)
         {
             writer.WriteLine(string.Join(
                 ",",
                 F(dx7[i].TimeSeconds),
                 F(dx7[i].Gain),
+                F(dx7Applied[i].Gain),
                 F(aquarium[i]),
+                F(aquariumCurved[i]),
                 dx7[i].Stage.ToString(System.Globalization.CultureInfo.InvariantCulture)));
         }
 
-        var shape = NormalizedDistance(
-            dx7.Select(point => point.Gain).ToArray(),
+        var linearShape = NormalizedDistance(
+            dx7Applied.Select(point => point.Gain).ToArray(),
             aquarium);
-        Assert.True(shape > 0.75f, $"expected current Aquarium envelope to visibly differ; shape distance {shape}, artifact: {path}");
+        var curvedShape = NormalizedDistance(
+            dx7Applied.Select(point => point.Gain).ToArray(),
+            aquariumCurved);
+        Assert.True(linearShape > 0.55f, $"expected current Aquarium envelope to visibly differ; shape distance {linearShape}, artifact: {path}");
+        Assert.True(curvedShape < linearShape * 0.6f, $"expected curved Aquarium envelope to improve shape; linear {linearShape}, curved {curvedShape}, artifact: {path}");
     }
 
     private static string FixturePath(params string[] parts) =>
@@ -336,7 +359,11 @@ public sealed class Dx7ReferenceParityTests
             envelope.Rate3Seconds * scale,
             envelope.Level3,
             envelope.Rate4Seconds * scale,
-            envelope.Level4);
+            envelope.Level4,
+            envelope.Curve1,
+            envelope.Curve2,
+            envelope.Curve3,
+            envelope.Curve4);
         return approximation with
         {
             Envelope = scaled,
@@ -353,24 +380,31 @@ public sealed class Dx7ReferenceParityTests
             var age = sample / (float)sampleRate;
             var releaseStart = Math.Max(gateSeconds, envelope.Rate1Seconds + envelope.Rate2Seconds + envelope.Rate3Seconds);
             values[sample] = age < envelope.Rate1Seconds
-                ? Segment(age, 0, envelope.Rate1Seconds, 0, envelope.Level1)
+                ? Segment(age, 0, envelope.Rate1Seconds, 0, envelope.Level1, envelope.Curve1)
                 : age < envelope.Rate1Seconds + envelope.Rate2Seconds
-                    ? Segment(age, envelope.Rate1Seconds, envelope.Rate2Seconds, envelope.Level1, envelope.Level2)
+                    ? Segment(age, envelope.Rate1Seconds, envelope.Rate2Seconds, envelope.Level1, envelope.Level2, envelope.Curve2)
                     : age < envelope.Rate1Seconds + envelope.Rate2Seconds + envelope.Rate3Seconds
-                        ? Segment(age, envelope.Rate1Seconds + envelope.Rate2Seconds, envelope.Rate3Seconds, envelope.Level2, envelope.Level3)
+                        ? Segment(age, envelope.Rate1Seconds + envelope.Rate2Seconds, envelope.Rate3Seconds, envelope.Level2, envelope.Level3, envelope.Curve3)
                         : age < releaseStart
                             ? envelope.Level3
                             : age < releaseStart + envelope.Rate4Seconds
-                                ? Segment(age, releaseStart, envelope.Rate4Seconds, envelope.Level3, envelope.Level4)
+                                ? Segment(age, releaseStart, envelope.Rate4Seconds, envelope.Level3, envelope.Level4, envelope.Curve4)
                                 : envelope.Level4;
         }
 
         return values;
     }
 
-    private static float Segment(float time, float start, float duration, float from, float to)
+    private static float Segment(float time, float start, float duration, float from, float to, RateLevelCurve curve = RateLevelCurve.Linear)
     {
         var t = Math.Clamp((time - start) / Math.Max(0.0001f, duration), 0, 1);
+        if (curve == RateLevelCurve.Exponential)
+        {
+            var a = Math.Max(0.00001f, from);
+            var b = Math.Max(0.00001f, to);
+            return MathF.Exp(MathF.Log(a) + (MathF.Log(b) - MathF.Log(a)) * t);
+        }
+
         return from + (to - from) * t;
     }
 

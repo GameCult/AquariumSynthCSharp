@@ -635,16 +635,41 @@ public static class PatchScript
 
         private ParsedEnvelope RateLevelParsedEnvelope(IReadOnlyList<float> rates, IReadOnlyList<float> levels, IReadOnlyDictionary<string, string> fields, int line, string fieldPath)
         {
+            var curves = TryGetAny(fields, ["curves", "curve"], out var curveText)
+                ? ParseCurveList(curveText, line)
+                : [RateLevelCurve.Linear, RateLevelCurve.Linear, RateLevelCurve.Linear, RateLevelCurve.Linear];
+            if (curves.Count != 4)
+            {
+                throw new PatchScriptException(line, "rate/level envelope needs four curves");
+            }
+
             var envelope = new RateLevelEnvelope(
-                Math.Max(0, rates[0]), Math.Clamp(levels[0], 0, 1.5f),
-                Math.Max(0, rates[1]), Math.Clamp(levels[1], 0, 1.5f),
-                Math.Max(0, rates[2]), Math.Clamp(levels[2], 0, 1.5f),
-                Math.Max(0, rates[3]), Math.Clamp(levels[3], 0, 1.5f));
+                Math.Max(0, rates[0]), Math.Clamp(levels[0], 0, 4f),
+                Math.Max(0, rates[1]), Math.Clamp(levels[1], 0, 4f),
+                Math.Max(0, rates[2]), Math.Clamp(levels[2], 0, 4f),
+                Math.Max(0, rates[3]), Math.Clamp(levels[3], 0, 4f),
+                curves[0], curves[1], curves[2], curves[3]);
             var defaultGate = Math.Max(envelope.Rate1Seconds + envelope.Rate2Seconds + envelope.Rate3Seconds, 0.02f);
             return new ParsedEnvelope(
                 new Envelope(envelope.Rate1Seconds, envelope.Rate2Seconds + envelope.Rate3Seconds, envelope.Level3, envelope.Rate4Seconds),
                 GateSeconds(fields, line, defaultGate, fieldPath),
                 envelope);
+        }
+
+        private static IReadOnlyList<RateLevelCurve> ParseCurveList(string value, int line)
+        {
+            var parts = value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (parts.Length == 0)
+            {
+                throw new PatchScriptException(line, "curves list cannot be empty");
+            }
+
+            return parts.Select(part => part.ToLowerInvariant() switch
+            {
+                "lin" or "linear" => RateLevelCurve.Linear,
+                "exp" or "exponential" => RateLevelCurve.Exponential,
+                _ => throw new PatchScriptException(line, $"unknown rate/level curve `{part}`")
+            }).ToArray();
         }
 
         private float GateSeconds(IReadOnlyDictionary<string, string> fields, int line, float defaultValue, string fieldPath) =>

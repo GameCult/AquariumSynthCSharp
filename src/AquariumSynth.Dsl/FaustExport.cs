@@ -58,8 +58,10 @@ public static class FaustEmitter
         source.AppendLine("release_start(a,d,g) = max(g, a + d);");
         source.AppendLine("oneshot_adsr(a,d,s,r,g) = select2(age < a, select2(age < a + d, select2(age < release_start(a,d,g), select2(age < release_start(a,d,g) + r, 0.0, s * (1.0 - (age - release_start(a,d,g)) / max(0.0001, r))), s), 1.0 - (1.0 - s) * ((age - a) / max(0.0001, d))), age / max(0.0001, a));");
         source.AppendLine("seg(t,t0,d,a,b) = a + (b - a) * clip01((t - t0) / max(0.0001, d));");
+        source.AppendLine("seg_exp(t,t0,d,a,b) = exp(log(max(0.00001, a)) + (log(max(0.00001, b)) - log(max(0.00001, a))) * clip01((t - t0) / max(0.0001, d)));");
+        source.AppendLine("seg_curve(c,t,t0,d,a,b) = select2(c < 0.5, seg_exp(t,t0,d,a,b), seg(t,t0,d,a,b));");
         source.AppendLine("rl_release_start(r1,r2,r3,g) = max(g, r1 + r2 + r3);");
-        source.AppendLine("rl4_env(r1,l1,r2,l2,r3,l3,r4,l4,g) = select2(age < r1, select2(age < r1 + r2, select2(age < r1 + r2 + r3, select2(age < rl_release_start(r1,r2,r3,g), select2(age < rl_release_start(r1,r2,r3,g) + r4, l4, seg(age, rl_release_start(r1,r2,r3,g), r4, l3, l4)), l3), seg(age, r1 + r2, r3, l2, l3)), seg(age, r1, r2, l1, l2)), seg(age, 0, r1, 0, l1));");
+        source.AppendLine("rl4_env(r1,l1,c1,r2,l2,c2,r3,l3,c3,r4,l4,c4,g) = select2(age < r1, select2(age < r1 + r2, select2(age < r1 + r2 + r3, select2(age < rl_release_start(r1,r2,r3,g), select2(age < rl_release_start(r1,r2,r3,g) + r4, l4, seg_curve(c4, age, rl_release_start(r1,r2,r3,g), r4, l3, l4)), l3), seg_curve(c3, age, r1 + r2, r3, l2, l3)), seg_curve(c2, age, r1, r2, l1, l2)), seg_curve(c1, age, 0, r1, 0, l1));");
         source.AppendLine("lfo_sin(hz, phase) = sin(2.0 * ma.PI * (age * hz + phase));");
         source.AppendLine("lfo_tri(hz, phase) = 1.0 - 4.0 * abs((age * hz + phase - floor(age * hz + phase)) - 0.5);");
         source.AppendLine("lfo_sq(hz, phase) = select2((age * hz + phase - floor(age * hz + phase)) < 0.5, -1.0, 1.0);");
@@ -283,7 +285,10 @@ public static class FaustEmitter
     }
 
     private static string RateLevelEnvelopeExpression(RateLevelEnvelope envelope, string gate) =>
-        $"rl4_env({F(envelope.Rate1Seconds)}, {F(envelope.Level1)}, {F(envelope.Rate2Seconds)}, {F(envelope.Level2)}, {F(envelope.Rate3Seconds)}, {F(envelope.Level3)}, {F(envelope.Rate4Seconds)}, {F(envelope.Level4)}, {gate})";
+        $"rl4_env({F(envelope.Rate1Seconds)}, {F(envelope.Level1)}, {Curve(envelope.Curve1)}, {F(envelope.Rate2Seconds)}, {F(envelope.Level2)}, {Curve(envelope.Curve2)}, {F(envelope.Rate3Seconds)}, {F(envelope.Level3)}, {Curve(envelope.Curve3)}, {F(envelope.Rate4Seconds)}, {F(envelope.Level4)}, {Curve(envelope.Curve4)}, {gate})";
+
+    private static string Curve(RateLevelCurve curve) =>
+        curve == RateLevelCurve.Exponential ? "1" : "0";
 
     private static string OscillatorExpression(SynthPatch patch, Voice voice, int voiceIndex, string frequency, string duty, string fmIndex, ParameterMap parameters)
     {

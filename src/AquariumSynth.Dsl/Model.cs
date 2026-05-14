@@ -40,6 +40,12 @@ public sealed record Envelope(
     public float DurationSeconds => AttackSeconds + DecaySeconds + ReleaseSeconds;
 }
 
+public enum RateLevelCurve
+{
+    Linear,
+    Exponential
+}
+
 public sealed record RateLevelEnvelope(
     float Rate1Seconds,
     float Level1,
@@ -48,7 +54,11 @@ public sealed record RateLevelEnvelope(
     float Rate3Seconds,
     float Level3,
     float Rate4Seconds,
-    float Level4);
+    float Level4,
+    RateLevelCurve Curve1 = RateLevelCurve.Linear,
+    RateLevelCurve Curve2 = RateLevelCurve.Linear,
+    RateLevelCurve Curve3 = RateLevelCurve.Linear,
+    RateLevelCurve Curve4 = RateLevelCurve.Linear);
 
 public enum NoteSource
 {

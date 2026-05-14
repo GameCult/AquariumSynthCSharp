@@ -51,11 +51,21 @@ public sealed record Dx7RateLevelEnvelopeApproximation(
     float GateSeconds,
     string Notes)
 {
-    public string ToScriptSpec() =>
-        $"env=rl rates={F(Envelope.Rate1Seconds)},{F(Envelope.Rate2Seconds)},{F(Envelope.Rate3Seconds)},{F(Envelope.Rate4Seconds)} " +
-        $"levels={F(Envelope.Level1)},{F(Envelope.Level2)},{F(Envelope.Level3)},{F(Envelope.Level4)} gate={F(GateSeconds)}";
+    public string ToScriptSpec()
+    {
+        var curves = Envelope.Curve1 == RateLevelCurve.Linear &&
+                     Envelope.Curve2 == RateLevelCurve.Linear &&
+                     Envelope.Curve3 == RateLevelCurve.Linear &&
+                     Envelope.Curve4 == RateLevelCurve.Linear
+            ? ""
+            : $" curves={Curve(Envelope.Curve1)},{Curve(Envelope.Curve2)},{Curve(Envelope.Curve3)},{Curve(Envelope.Curve4)}";
+        return $"env=rl rates={F(Envelope.Rate1Seconds)},{F(Envelope.Rate2Seconds)},{F(Envelope.Rate3Seconds)},{F(Envelope.Rate4Seconds)} " +
+               $"levels={F(Envelope.Level1)},{F(Envelope.Level2)},{F(Envelope.Level3)},{F(Envelope.Level4)}{curves} gate={F(GateSeconds)}";
+    }
 
     private static string F(float value) => value.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static string Curve(RateLevelCurve curve) => curve == RateLevelCurve.Exponential ? "exp" : "lin";
 }
 
 public sealed record Dx7EnvelopeTracePoint(float TimeSeconds, float Gain, int Stage);
@@ -284,6 +294,41 @@ public static class Dx7SysEx
             }
             state.Advance(envelope);
             points.Add(new Dx7EnvelopeTracePoint(sample / (float)sampleRate, state.Gain, state.Stage));
+        }
+
+        return points;
+    }
+
+    public static IReadOnlyList<Dx7EnvelopeTracePoint> TraceInterpolatedEnvelope(
+        Dx7Envelope envelope,
+        float gateSeconds,
+        float durationSeconds,
+        int outputLevel = 99,
+        int sampleRate = 44100,
+        int blockSize = 64)
+    {
+        var state = Dx7EnvelopeState.Start(envelope, outputLevel, sampleRate);
+        var sampleCount = Math.Max(1, (int)MathF.Round(Math.Max(1f / sampleRate, durationSeconds) * sampleRate));
+        var gateSample = Math.Clamp((int)MathF.Round(Math.Max(0, gateSeconds) * sampleRate), 0, sampleCount);
+        var points = new List<Dx7EnvelopeTracePoint>(sampleCount);
+        var previousGain = 0f;
+
+        for (var blockStart = 0; blockStart < sampleCount; blockStart += Math.Max(1, blockSize))
+        {
+            if (blockStart >= gateSample)
+            {
+                state.KeyDown(envelope, down: false);
+            }
+            state.Advance(envelope);
+            var currentGain = state.Gain;
+            var count = Math.Min(blockSize, sampleCount - blockStart);
+            for (var i = 0; i < count; i++)
+            {
+                var t = (i + 1) / (float)blockSize;
+                var gain = previousGain + (currentGain - previousGain) * t;
+                points.Add(new Dx7EnvelopeTracePoint((blockStart + i) / (float)sampleRate, gain, state.Stage));
+            }
+            previousGain = currentGain;
         }
 
         return points;
