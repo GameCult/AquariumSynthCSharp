@@ -12,6 +12,23 @@ Doctrine update:
   Aquarium can reproduce the behavior in terse, readable syntax.
 - Parsing a synth format is inventory. Rebuilding and testing behavior is the
   proof.
+- Pinned reference synths are test-only oracles, not Aquarium organs. ZynAddSubFX
+  now lives under `external/zynaddsubfx` as GPL development material pinned at
+  `3ab608c432996ba4d582176572c0b0f82328c825`; it must not enter the NuGet
+  package or runtime dependency graph.
+
+Current slice:
+
+- Added ZynAddSubFX as a submodule at `external/zynaddsubfx`.
+- Added guard tests proving the pinned Zyn source exists, keeps its GPL license,
+  exposes the PAD implementation files, and is fixed to the expected commit.
+- Tightened the package-boundary test so `external/`, C++ sources, and headers
+  do not ship in `AquariumSynth.Dsl.nupkg`.
+- Full verification:
+  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  95 passed.
+- Next coherent cut: build a test-only Zyn PAD reference renderer/wrapper from
+  the pinned source and compare it to the Aquarium `spectrum` rebuild.
 
 Completed this slice:
 

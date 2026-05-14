@@ -19,6 +19,16 @@ DX7 reference-render tests use `dexed-py` when a Python with `dexed` and
 specific runtime; otherwise the tests skip the render path and still parse the
 vendored public-domain fixture.
 
+ZynAddSubFX is pinned as a GPL test/development reference under
+`external/zynaddsubfx`. Initialize it with:
+
+```powershell
+git submodule update --init --recursive
+```
+
+That source is a parity oracle only. Aquarium does not ship Zyn code, link it
+from `AquariumSynth.Dsl`, or treat it as runtime machinery.
+
 ## Package Boundary
 
 Aquarium consumes this library as a pinned `AquariumSynth.Dsl` NuGet package,
@@ -30,8 +40,9 @@ version is packed and tested.
 dotnet pack src\AquariumSynth.Dsl\AquariumSynth.Dsl.csproj -c Release
 ```
 
-The test suite verifies that development fixtures, Python render helpers, and
-SysEx banks do not ship in `AquariumSynth.Dsl.nupkg`.
+The test suite verifies that development fixtures, Python render helpers,
+external reference synth sources, and SysEx banks do not ship in
+`AquariumSynth.Dsl.nupkg`.
 
 ## Shape
 

@@ -1,0 +1,3 @@
+[submodule "external/zynaddsubfx"]
+	path = external/zynaddsubfx
+	url = https://github.com/zynaddsubfx/zynaddsubfx

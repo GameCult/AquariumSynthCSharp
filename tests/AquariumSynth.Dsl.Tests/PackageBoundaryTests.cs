@@ -31,6 +31,9 @@ public sealed class PackageBoundaryTests
             Assert.DoesNotContain(entries, entry => entry.EndsWith(".syx", StringComparison.OrdinalIgnoreCase));
             Assert.DoesNotContain(entries, entry => entry.EndsWith(".xiz", StringComparison.OrdinalIgnoreCase));
             Assert.DoesNotContain(entries, entry => entry.EndsWith(".py", StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(entries, entry => entry.StartsWith("external/", StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(entries, entry => entry.EndsWith(".cpp", StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(entries, entry => entry.EndsWith(".h", StringComparison.OrdinalIgnoreCase));
         }
         finally
         {

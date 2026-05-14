@@ -41,6 +41,9 @@ credible parity test path should not be consumed.
 - DX7 reference audio uses `dexed-py` when available, with public-domain SysEx
   fixtures stored under the test project. These are development references, not
   package content.
+- ZynAddSubFX source is pinned under `external/zynaddsubfx` as GPL
+  test/development material. It may be compiled or wrapped only for parity
+  tests; Aquarium must not ship, link, or runtime-depend on it.
 - Do not add a generic graph escape hatch until a specific family of references
 forces it.
 - When a reference target exceeds the current voice-centric DSL, document the
@@ -126,7 +129,10 @@ First deliverable:
   curves, fuller kit/effect routing, and richer formant/vowel morphing remain
   pressure.
 
-Do not vendor the upstream Zyn instrument-bank submodule until its preset
+The upstream ZynAddSubFX engine source is pinned as `external/zynaddsubfx`
+for parity tests, currently at `3ab608c432996ba4d582176572c0b0f82328c825`.
+That checkout is GPL reference machinery, not Aquarium implementation. Do not
+vendor the upstream Zyn instrument-bank submodule until its preset
 license/provenance is explicit enough for this repo. Use project-authored
 fixtures for parser shape and only promote external fixtures with clean source
 notes.

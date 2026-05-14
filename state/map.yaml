@@ -16,6 +16,7 @@ surfaces:
   tests: tests/AquariumSynth.Dsl.Tests
   reference_roadmap: docs/reference-synth-roadmap.md
   dx7_public_domain_fixtures: tests/AquariumSynth.Dsl.Tests/Fixtures/Dx7/PublicDomain
+  zyn_reference_source: external/zynaddsubfx
   zyn_project_fixtures: tests/AquariumSynth.Dsl.Tests/Fixtures/ZynAddSubFX/ProjectAuthored
   package: AquariumSynth.Dsl 0.1.0-aquarium.1
 modules:
@@ -46,6 +47,7 @@ boundaries:
     - Faust source generation, target-code generation, and candidate rendering
   dev_only:
     - public-domain DX7 SysEx fixtures
+    - pinned GPL ZynAddSubFX source for parity tests
     - project-authored ZynAddSubFX .xiz fixtures
     - dexed-py reference renderer
     - structured .aqua patch library
@@ -54,3 +56,4 @@ checks:
   package: dotnet pack src/AquariumSynth.Dsl/AquariumSynth.Dsl.csproj -c Release
   faust_validation: automatic in tests when Faust is installed
   dexed_py_reference: optional in tests when AQUARIUM_DX7_PYTHON or a Python with dexed-py is available
+  zyn_reference_source: pinned submodule used only for parity tests; never package content
