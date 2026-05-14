@@ -83,8 +83,9 @@ First deliverable:
   direct DX7 rate/level lowering on `PRC SYNTH1` still fails hard enough to
   make EG timing/gain calibration the live pressure. The hard PRC probe now
   writes ignored listening artifacts under `artifacts/parity/dx7-prc-synth1`
-  so metrics and ears can steer the next calibration pass together. It now
-  clears a modest hard-target floor above `0.60`; remaining mismatch points at
+  so metrics and ears can steer the next calibration pass together. Listening
+  showed aggregate score was a weak judge for this target, so the hard PRC
+  probe now gates primarily on log-mel distance; remaining mismatch points at
   DX7 output/index scaling and algorithm output compensation rather than a
   missing authoring syntax.
 

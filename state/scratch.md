@@ -15,6 +15,25 @@ Doctrine update:
 
 Completed this slice:
 
+- Reoriented the `PRC SYNTH1` hard probe around the perceptual metric that
+  matched listening: log-mel distance. The probe now asserts log-mel
+  `<= 0.255` plus a loose aggregate score floor instead of treating aggregate
+  score as the main judge.
+- Spectral diagnosis showed the Dexed reference has dominant peaks around
+  `393`, `131`, `524`, and `656` Hz. The prior Aquarium candidate had too
+  little `80-160` Hz body when based at `392`, while the corrected DX7 note
+  basis restored the low body but exposed weak mid harmonic structure and high
+  centroid/zero-crossing mismatch.
+- Current run with bundled Python and Faust: log-mel distance `0.25093183`,
+  score `0.4135618`, envelope distance `0.3595946`, duration ratio
+  `0.992578`, RMS ratio `1.0658501`, zero-crossing ratio `0.24567787`,
+  centroid ratio `1.3291793`.
+- Calibration lesson: the hard target is now a spectral calibration problem.
+  DX7 output/index scaling still needs a real model; aggregate score can move
+  in the wrong direction while log-mel and the ear move in the right direction.
+
+Previous slice:
+
 - Tightened the hard DX7 `PRC SYNTH1` probe from a "writes WAVs" smoke test to
   a modest passing parity target: threshold now requires score >= `0.60`.
 - The useful cuts were not new syntax. The candidate improved by removing

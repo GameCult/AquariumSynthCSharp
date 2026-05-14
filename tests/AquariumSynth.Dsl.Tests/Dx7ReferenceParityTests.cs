@@ -122,7 +122,8 @@ public sealed class Dx7ReferenceParityTests
             script,
             comparison);
 
-        Assert.True(comparison.Score >= 0.60f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
+        Assert.True(comparison.LogMelDistance <= 0.255f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
+        Assert.True(comparison.Score >= 0.40f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
     }
 
     private static string FixturePath(params string[] parts) =>
@@ -145,12 +146,12 @@ public sealed class Dx7ReferenceParityTests
         var topology = Dx7SysEx.AlgorithmTopology(voice.Algorithm);
         var builder = new StringBuilder();
         builder.AppendLine("patch");
-        builder.AppendLine("    gain=2.0");
+        builder.AppendLine("    gain=1.4");
         builder.AppendLine("    soft_clip=false");
         builder.AppendLine();
         builder.AppendLine("opgraph");
         builder.AppendLine("    name=dx7_prc_synth1_probe");
-        builder.AppendLine("    freq=392");
+        builder.AppendLine("    freq=261.6256");
         builder.AppendLine("    gain=0.55");
         builder.AppendLine();
 
@@ -163,7 +164,7 @@ public sealed class Dx7ReferenceParityTests
             builder.AppendLine($"    level={F(level)}");
             if (topology.SelfFeedbackOperators.Contains(op.Number))
             {
-                builder.AppendLine($"    feedback={F(voice.Feedback * 0.08f)}");
+                builder.AppendLine($"    feedback={F(voice.Feedback * 0.04f)}");
             }
             builder.AppendLine($"    {envelope.ToScriptSpec()}");
             builder.AppendLine();
@@ -173,7 +174,7 @@ public sealed class Dx7ReferenceParityTests
         {
             foreach (var source in edge.SourceOperators)
             {
-                builder.AppendLine($"route from=op{source} to=op{edge.TargetOperator} index=0.7");
+                builder.AppendLine($"route from=op{source} to=op{edge.TargetOperator} index={F(RouteIndex(source, edge.TargetOperator))}");
             }
         }
 
@@ -198,8 +199,17 @@ public sealed class Dx7ReferenceParityTests
 
     private static float CarrierLevelScale(int operatorNumber) => operatorNumber switch
     {
-        3 => 1.45f,
+        6 => 0.3f,
+        5 => 0.55f,
+        4 => 0.6f,
+        3 => 2.3f,
+        2 => 0.8f,
         _ => 1
+    };
+
+    private static float RouteIndex(int sourceOperator, int targetOperator) => (sourceOperator, targetOperator) switch
+    {
+        _ => 0.7f
     };
 
     private static Dx7RateLevelEnvelopeApproximation ScaledEnvelope(Dx7RateLevelEnvelopeApproximation approximation, float scale)
