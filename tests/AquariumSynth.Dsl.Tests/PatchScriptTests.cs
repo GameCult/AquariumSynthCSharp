@@ -247,6 +247,46 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
+    public void ZynStyleReferenceRebuildsParseExportAndDeclarePressure()
+    {
+        foreach (var rebuild in ReferenceRebuildCatalog.ZynRebuilds)
+        {
+            var patch = PatchScript.Parse(rebuild.Script);
+            var export = FaustEmitter.Emit(patch, new FaustExportOptions(rebuild.Id.Replace('/', '_').Replace('-', '_')));
+
+            Assert.Contains("process =", export.Source);
+            Assert.NotEmpty(rebuild.MatchedFeatures);
+            Assert.NotEmpty(rebuild.MissingFeatures);
+            Assert.All(rebuild.MissingFeatures, feature => Assert.False(string.IsNullOrWhiteSpace(feature.Notes)));
+        }
+    }
+
+    [Fact]
+    public void ZynReferenceRebuildsTrackFixtureFeaturePressure()
+    {
+        var fixtures = new Dictionary<string, string>
+        {
+            ["zyn/project/additive-lead"] = Path.Combine("ZynAddSubFX", "ProjectAuthored", "additive-lead.xiz"),
+            ["zyn/project/pad-texture"] = Path.Combine("ZynAddSubFX", "ProjectAuthored", "pad-texture.xiz"),
+            ["zyn/project/vocal-layer"] = Path.Combine("ZynAddSubFX", "ProjectAuthored", "vocal-layer.xiz")
+        };
+
+        foreach (var rebuild in ReferenceRebuildCatalog.ZynRebuilds)
+        {
+            var instrument = ZynInstrumentReader.ParseFile(FixturePath(fixtures[rebuild.ReferenceId]));
+            var sourceFeatures = instrument.Features();
+
+            foreach (var matched in rebuild.MatchedFeatures)
+            {
+                if (sourceFeatures.Any(feature => feature.Name == matched.Name))
+                {
+                    Assert.Contains(sourceFeatures, feature => feature.Name == matched.Name && feature.Value == matched.Value);
+                }
+            }
+        }
+    }
+
+    [Fact]
     public void Dx7Algorithm32RebuildMatchesAdditiveCarrierShape()
     {
         var rebuild = ReferenceRebuildCatalog.Dx7Rebuilds.Single(item => item.ReferenceId == "dx7/algo32-additive-organ");
@@ -636,4 +676,7 @@ public sealed class PatchScriptTests
 
         return directory?.FullName ?? throw new InvalidOperationException("could not find repository root");
     }
+
+    private static string FixturePath(string path) =>
+        Path.Combine(AppContext.BaseDirectory, "Fixtures", path);
 }

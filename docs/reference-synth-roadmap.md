@@ -118,7 +118,11 @@ First deliverable:
   The current classifier identifies active ADD/SUB/PAD engines, enabled kit
   items, layering, envelopes, free envelopes, LFOs, filters, formants, and
   effects.
-- Rebuild one additive lead, one PAD texture, and one formant/vocal patch.
+- Rebuild one additive lead, one PAD texture, and one formant/vocal patch. The
+  first rebuild catalog entries now parse/export and record the first Zyn
+  missing abstractions: additive harmonic-bank syntax, PAD-style spectral
+  source generation, free envelopes for normal voices, named kit/layer routing,
+  and richer formant/vowel morphing.
 
 Do not vendor the upstream Zyn instrument-bank submodule until its preset
 license/provenance is explicit enough for this repo. Use project-authored

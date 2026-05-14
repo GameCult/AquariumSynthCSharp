@@ -606,6 +606,8 @@ public static class BuiltInScripts
 
     public static readonly IReadOnlyList<string> Dx7StyleNames = ["algo32-additive-organ", "algo8-bright-pair", "public-domain-mc-mm-5-3"];
 
+    public static readonly IReadOnlyList<string> ZynStyleNames = ["additive-lead", "pad-texture", "vocal-layer"];
+
     public const string Dx7StyleAlgorithm32AdditiveOrgan = """
         patch
             gain=0.58
@@ -753,6 +755,135 @@ public static class BuiltInScripts
             sustain=0.08
             env_decay=0.008
             release=0.004
+        """;
+
+    public const string ZynStyleAdditiveLead = """
+        patch
+            gain=0.72
+            soft_clip=true
+
+        param
+            name=brightness
+            path=/macro/brightness
+            default=0.86
+            min=0
+            max=1
+            step=0.001
+
+        param
+            name=motion
+            path=/macro/motion
+            default=0.018
+            min=0
+            max=0.05
+            step=0.001
+            unit=ratio
+
+        defaults
+            wave=sine
+            attack=0.006
+            sustain=0.52
+            decay=0.34
+            sustain_level=0.72
+            lpf=@/macro/brightness
+            hpf=0.01
+            vibrato=@/macro/motion
+            vibrato_hz=5.5
+
+        voice freq=220 gain=0.16
+        voice freq=440 gain=0.075
+        voice freq=660 gain=0.045
+        voice freq=880 gain=0.025
+        """;
+
+    public const string ZynStylePadTexture = """
+        patch
+            gain=0.56
+            soft_clip=true
+
+        param
+            name=spread
+            path=/macro/spread
+            default=0.018
+            min=0
+            max=0.04
+            step=0.001
+            unit=ratio
+
+        defaults
+            wave=saw
+            attack=0.55
+            sustain=1.8
+            decay=1.4
+            sustain_level=0.78
+            lpf=0.42
+            hpf=0.025
+            drive=0.04
+
+        mod
+            name=slow_air
+            wave=sine
+            hz=0.18
+            lpf=0.18
+            gain=0.05
+
+        voice freq=130.8128 gain=0.07 vibrato=@/macro/spread vibrato_hz=0.09
+        voice freq=196 gain=0.052 vibrato=0.012 vibrato_hz=0.13
+        voice freq=261.6256 gain=0.044 wave=triangle vibrato=0.009 vibrato_hz=0.11
+        voice wave=noise freq=1800 gain=0.018 noise=0.82 attack=0.8 sustain=1.7 decay=1.1 lpf=0.36 hpf=0.22
+        """;
+
+    public const string ZynStyleVocalLayer = """
+        patch
+            gain=0.64
+            soft_clip=true
+
+        param
+            name=vowel
+            path=/macro/vowel
+            default=0.58
+            min=0
+            max=1
+            step=0.001
+
+        defaults
+            attack=0.08
+            sustain=0.95
+            decay=0.65
+            sustain_level=0.7
+            lpf=0.72
+            hpf=0.04
+
+        mod
+            name=vowel_sway
+            wave=sine
+            hz=0.7
+            formant_mix=0.22
+            gain=0.04
+
+        voice
+            wave=saw
+            freq=174.614
+            gain=0.11
+            formants=520:90:0.9,1080:150:1,2450:280:0.35
+            formant_mix=@/macro/vowel
+
+        voice
+            wave=triangle
+            freq=87.307
+            gain=0.075
+            lpf=0.48
+            drive=0.08
+
+        voice
+            wave=noise
+            freq=2600
+            gain=0.018
+            noise=0.75
+            hpf=0.58
+            lpf=0.62
+            formants=700:120:0.5,1600:220:0.6
+            formant_mix=0.3
         """;
 
     public static readonly IReadOnlyList<(string Name, string Script)> AdvancedReferenceScripts =
@@ -945,6 +1076,7 @@ public static class BuiltInScripts
         foreach (var item in FmBellPrimitiveGolfScripts) yield return ("fm-bell", item.Name, item.Script);
         foreach (var item in WobbleBassPrimitiveGolfScripts) yield return ("wobble-bass", item.Name, item.Script);
         foreach (var item in ReferenceRebuildCatalog.Dx7Rebuilds) yield return ("dx7", item.Name, item.Script);
+        foreach (var item in ReferenceRebuildCatalog.ZynRebuilds) yield return ("zynaddsubfx", item.Name, item.Script);
         foreach (var item in AdvancedReferenceScripts) yield return ("advanced", item.Name, item.Script);
     }
 

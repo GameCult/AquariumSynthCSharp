@@ -15,6 +15,21 @@ Doctrine update:
 
 Completed this slice:
 
+- Added first Zyn-style Aquarium rebuilds for the project-authored additive
+  lead, PAD texture, and vocal/formant layer fixtures. They live in
+  `BuiltInScripts` and `ReferenceRebuildCatalog.ZynRebuilds`.
+- The rebuild tests parse/export every Zyn script and compare matched feature
+  claims against source fixture features where the same feature name exists.
+- Current missing abstractions from this first Zyn pass: terse additive
+  harmonic-bank syntax, a PAD/spectral source authority, free envelopes for
+  normal voices, named kit/layer routing with per-layer effect sends, and richer
+  formant/vowel morphing. No new runtime surface was added yet.
+- Verified with bundled Python/dexed-py still wired:
+  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  83 passed.
+
+Previous slice:
+
 - Started the ZynAddSubFX phase and stopped treating DX7 as the active trench.
 - Added `ZynInstrumentReader` for `.xiz`-shaped XML. It reads plain XML and
   gzip-compressed XML, extracts instrument metadata and kit items, and emits

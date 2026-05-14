@@ -12,6 +12,62 @@ public sealed record ReferenceRebuild(
 
 public static class ReferenceRebuildCatalog
 {
+    public static readonly IReadOnlyList<ReferenceRebuild> ZynRebuilds =
+    [
+        new(
+            "zyn/project-additive-lead/aquarium",
+            "zynaddsubfx",
+            "Project additive lead",
+            "zyn/project/additive-lead",
+            BuiltInScripts.ZynStyleAdditiveLead,
+            [
+                new("engine_add", "1", "Represented as explicit additive sine partial voices."),
+                new("partial_voice_count", "4", "The additive shape is represented as four explicit Aquarium partial voices."),
+                new("envelope_count", "2", "Amplitude and pitch contour pressure maps to ADSR plus vibrato in the current patch surface."),
+                new("lfo_count", "1", "The fixture's amplitude/frequency motion is represented as patch-level vibrato/macro motion.")
+            ],
+            [
+                new("additive_harmonic_bank", "Zyn ADDsynth harmonic table", "Aquarium currently writes each partial as a voice; it lacks a terse harmonic-bank source."),
+                new("zyn_free_envelope_exactness", "Zyn envelope parameter semantics", "The rebuild uses Aquarium ADSR/motion controls rather than Zyn's exact envelope timing model.")
+            ],
+            "This is the easy Zyn pressure case: Aquarium can say the sound as layered partials, but the syntax is already showing the need for a compact additive harmonic-bank abstraction."),
+        new(
+            "zyn/project-pad-texture/aquarium",
+            "zynaddsubfx",
+            "Project PAD texture",
+            "zyn/project/pad-texture",
+            BuiltInScripts.ZynStylePadTexture,
+            [
+                new("engine_pad", "1", "Approximated as slow layered oscillators plus an air/noise layer."),
+                new("filter_count", "1", "Represented with low-pass/high-pass field sites."),
+                new("free_envelope_count", "1", "Approximated with slow ADSR timing and macro spread."),
+                new("slow_modulation", "patch_lfo", "The rebuild adds slow patch modulation because PAD texture wants motion even though the minimal fixture only marks PAD/filter/free-envelope pressure.")
+            ],
+            [
+                new("pad_spectral_source", "PADsynth wavetable/spectral generation", "Aquarium has no PAD-style spectral source; this rebuild is a texture approximation."),
+                new("free_envelope_shape", "arbitrary Zyn envelope points", "Aquarium has ADSR and staged operator envelopes, but not a general free envelope for normal voices.")
+            ],
+            "This is pressure, not a claim of PAD parity. The current voice DSL can sketch the texture, but PAD-style spectral generation deserves its own source authority if repeated targets need it."),
+        new(
+            "zyn/project-vocal-layer/aquarium",
+            "zynaddsubfx",
+            "Project vocal layer",
+            "zyn/project/vocal-layer",
+            BuiltInScripts.ZynStyleVocalLayer,
+            [
+                new("engine_add", "1", "The air/formant layer is represented as a formant-filtered oscillator voice."),
+                new("engine_sub", "1", "The body layer is represented as a lower triangle voice."),
+                new("layered_instrument", "yes", "Multiple Zyn kit items map to multiple Aquarium voices."),
+                new("formant_filter_count", "1", "Represented with Aquarium formant filters and a vowel macro."),
+                new("effect_count", "1", "Approximated with local drive/soft clipping rather than a Zyn effect slot.")
+            ],
+            [
+                new("kit_item_authority", "Zyn per-kit-item engine/effect routing", "Aquarium has layered voices but no named kit-item/layer contract with per-layer effect sends."),
+                new("formant_motion", "Zyn formant/vowel morph details", "Aquarium can mix static formants, but richer vowel morphing remains pressure.")
+            ],
+            "This rebuild keeps the useful part: layered source plus formant intent. It also exposes that repeated Zyn-style kit targets will need explicit layer naming and routing rather than anonymous voice piles.")
+    ];
+
     public static readonly IReadOnlyList<ReferenceRebuild> Dx7Rebuilds =
     [
         new(
@@ -70,6 +126,11 @@ public static class ReferenceRebuildCatalog
 
     public static IEnumerable<ReferenceRebuild> All()
     {
+        foreach (var rebuild in ZynRebuilds)
+        {
+            yield return rebuild;
+        }
+
         foreach (var rebuild in Dx7Rebuilds)
         {
             yield return rebuild;

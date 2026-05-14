@@ -93,10 +93,10 @@ reference_targets:
     priority: 2
     purpose: "Additive, subtractive, PAD, formant, kit, and layered-instrument pressure test."
     source: "https://github.com/zynaddsubfx/zynaddsubfx"
-    status: "Initial ZynInstrumentReader reads plain or gzip-compressed .xiz XML from project-authored fixtures and classifies active ADD/SUB/PAD engines, enabled kit items, layering, envelopes, free envelopes, LFOs, filters, formants, and effects as ReferencePatch features."
+    status: "Initial ZynInstrumentReader reads plain or gzip-compressed .xiz XML from project-authored fixtures and classifies active ADD/SUB/PAD engines, enabled kit items, layering, envelopes, free envelopes, LFOs, filters, formants, and effects as ReferencePatch features. First Aquarium rebuilds exist for additive lead, PAD texture, and vocal/formant layer."
     first_slice:
-      - "Choose the first three Aquarium rebuild targets from the project-authored additive lead, PAD texture, and vocal/formant layer fixtures."
-      - "Design the smallest readable Aquarium DSL patches that express those categories, then decide which missing abstractions are real."
+      - "Choose the first Zyn abstraction to promote only if repeated rebuilds justify it: additive harmonic bank, PAD spectral source, free envelope, named layer routing, or richer formant morphing."
+      - "Do not add all of them at once."
   faust:
     priority: 3
     purpose: "General DSP graph topology pressure test."
@@ -126,10 +126,11 @@ next_agent_start_here:
     Continue the ZynAddSubFX phase. The first parser/classifier slice exists in
     `src/AquariumSynth.Dsl/ZynInstrument.cs` with project-authored fixtures
     under `tests/AquariumSynth.Dsl.Tests/Fixtures/ZynAddSubFX/ProjectAuthored`.
-    Next pressure is to rebuild one additive lead, one PAD texture, and one
-    vocal/formant layer in readable Aquarium DSL, then name the missing
-    abstractions instead of translating Zyn internals blindly. Leave DX7 alone
-    unless a regression test fails.
+    Next pressure is to choose one Zyn abstraction candidate from the first
+    rebuild evidence: additive harmonic bank, PAD spectral source, free
+    envelope, named layer routing, or richer formant morphing. Promote only one
+    after mapping ownership and tests. Leave DX7 alone unless a regression test
+    fails.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -142,6 +143,17 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-14
+    summary: >
+      Added first Zyn-style Aquarium rebuilds for the project-authored additive
+      lead, PAD texture, and vocal/formant layer fixtures. The rebuild catalog
+      now records matched and missing features for each target, while tests
+      parse/export the scripts and verify matched feature claims against source
+      fixture features where names overlap. The first concrete Zyn pressure is:
+      additive harmonic-bank syntax, PAD/spectral source generation, free
+      envelopes for normal voices, named kit/layer routing with per-layer effect
+      sends, and richer formant/vowel morphing.
+    verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore: 83 passed"
   - date: 2026-05-14
     summary: >
       Started the ZynAddSubFX phase after closing the current DX7 community
