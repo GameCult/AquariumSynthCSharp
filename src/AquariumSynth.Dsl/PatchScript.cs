@@ -297,8 +297,13 @@ public static class PatchScript
         {
             var waveform = TryGetAny(fields, ["wave", "w"], out var wave) ? ParseWaveform(wave, line) : Waveform.Sine;
             var frequency = GetBoundFloat(fields, line, 440, VoiceField(voiceIndex, "note/frequency"), "freq", "frequency", "f");
-            var gateSeconds = GetBoundFloat(fields, line, 0.1f, VoiceField(voiceIndex, "note/gate"), "gate", "hold", "duration", "sustain", "s");
-            var sustainLevel = GetBoundFloat(fields, line, 1, VoiceField(voiceIndex, "env/sustain_level"), "sustain_level", "sl");
+            var envelopeSpec = TryGetAny(fields, ["env", "envelope"], out var envSpec)
+                ? ParseEnvelopeSpec(envSpec, fields, line, VoicePath(voiceIndex))
+                : null;
+            var gateSeconds = envelopeSpec?.GateSeconds ??
+                              GetBoundFloat(fields, line, 0.1f, VoiceField(voiceIndex, "note/gate"), "gate", "hold", "duration", "sustain", "s");
+            var sustainLevel = envelopeSpec?.Envelope.SustainLevel ??
+                               GetBoundFloat(fields, line, 1, VoiceField(voiceIndex, "env/sustain_level"), "sustain_level", "sl");
             var gainScale = 1f;
             if (TryGetAny(fields, ["punch", "pu"], out var punch))
             {
@@ -345,11 +350,12 @@ public static class PatchScript
                     GetBoundFloat(fields, line, 0.5f, VoiceField(voiceIndex, "osc/duty"), "duty", "du"),
                     GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "osc/phase"), "phase", "pa")),
                 Note = new Note(frequency, gateSeconds, noteSource),
-                Envelope = new Envelope(
+                Envelope = envelopeSpec?.Envelope ?? new Envelope(
                     GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "env/attack"), "attack", "a"),
                     GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "env/decay"), "env_decay", "ed"),
                     sustainLevel,
                     GetBoundFloat(fields, line, 0.1f, VoiceField(voiceIndex, "env/release"), "release", "rel", "decay", "d")),
+                RateLevelEnvelope = envelopeSpec?.RateLevelEnvelope,
                 Pitch = new PitchMotion(
                     GetBoundFloat(fields, line, 20, VoiceField(voiceIndex, "pitch/min_freq"), "min_freq", "min"),
                     GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "pitch/ramp"), "pitch_ramp", "pr"),
@@ -653,6 +659,8 @@ public static class PatchScript
             _parameterBindings.Add(new ParameterBinding(fieldPath, parameter.Path));
             return parameter.Default;
         }
+
+        private static string VoicePath(int voiceIndex) => $"/voices/{voiceIndex}";
 
         private static string VoiceField(int voiceIndex, string field) => $"/voices/{voiceIndex}/{field}";
 

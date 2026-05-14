@@ -43,12 +43,13 @@ public static class ReferenceRebuildCatalog
                 new("engine_pad", "1", "Approximated as slow layered oscillators plus an air/noise layer."),
                 new("named_layers", "pad_low,pad_high,air", "Layer declarations separate PAD body from air/noise texture."),
                 new("filter_count", "1", "Represented with low-pass/high-pass field sites."),
-                new("free_envelope_count", "1", "Approximated with slow ADSR timing and macro spread."),
+                new("free_envelope_count", "1", "Approximated with staged voice rate/level envelopes and macro spread."),
+                new("voice_rate_level_envelope", "3", "PAD body and air layers use staged rate/level envelopes attached through layer defaults."),
                 new("slow_modulation", "patch_lfo", "The rebuild adds slow patch modulation because PAD texture wants motion even though the minimal fixture only marks PAD/filter/free-envelope pressure.")
             ],
             [
                 new("pad_spectral_source", "PADsynth wavetable/spectral generation", "Aquarium has no PAD-style spectral source; this rebuild is a texture approximation."),
-                new("free_envelope_shape", "arbitrary Zyn envelope points", "Aquarium has ADSR and staged operator envelopes, but not a general free envelope for normal voices.")
+                new("free_envelope_shape", "arbitrary Zyn envelope points", "Aquarium has staged voice envelopes now, but not arbitrary point/free-mode Zyn envelope curves.")
             ],
             "This is pressure, not a claim of PAD parity. The current voice DSL can sketch the texture, but PAD-style spectral generation deserves its own source authority if repeated targets need it."),
         new(
@@ -62,6 +63,7 @@ public static class ReferenceRebuildCatalog
                 new("engine_sub", "1", "The body layer is represented as a lower triangle voice."),
                 new("layered_instrument", "yes", "Multiple Zyn kit items map to multiple Aquarium voices."),
                 new("named_layers", "air,body,breath", "Layer declarations preserve source identity before voice expansion."),
+                new("voice_rate_level_envelope", "3", "Each vocal layer uses a staged rate/level voice envelope for asymmetric onset and release shape."),
                 new("formant_filter_count", "1", "Represented with Aquarium formant filters and a vowel macro."),
                 new("effect_count", "1", "Approximated with local drive/soft clipping rather than a Zyn effect slot.")
             ],

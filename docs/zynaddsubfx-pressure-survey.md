@@ -86,3 +86,15 @@ The harmonic bank records authored additive partial intent under a named layer,
 then lowers to ordinary sine voices. It does not claim Zyn ADDsynth's full
 oscillator table: phase, bandwidth, oscillator shaping, and exact free-envelope
 behavior remain separate pressure.
+
+Normal voices can also use staged rate/level envelopes through the same
+`env=rl` surface already used by operator graphs:
+
+```text
+layer name=pad engine=pad env=rl rates=.5,.7,1.0,1.4 levels=1,.85,.7,0 gate=2.2
+voice layer=pad freq=220
+```
+
+That gives PAD and vocal layers asymmetric contour authority without returning
+to anonymous ADSR piles. Arbitrary Zyn free-envelope point curves remain
+pressure; the staged surface is the first coherent rung, not the whole ladder.

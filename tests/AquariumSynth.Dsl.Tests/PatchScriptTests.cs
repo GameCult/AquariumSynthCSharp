@@ -259,6 +259,10 @@ public sealed class PatchScriptTests
             Assert.NotEmpty(rebuild.MatchedFeatures);
             Assert.NotEmpty(rebuild.MissingFeatures);
             Assert.Contains(rebuild.MatchedFeatures, feature => feature.Name == "named_layers");
+            if (rebuild.ReferenceId is "zyn/project/pad-texture" or "zyn/project/vocal-layer")
+            {
+                Assert.Contains(patch.Voices, voice => voice.RateLevelEnvelope is not null);
+            }
             Assert.All(rebuild.MissingFeatures, feature => Assert.False(string.IsNullOrWhiteSpace(feature.Notes)));
         }
     }
@@ -355,6 +359,26 @@ public sealed class PatchScriptTests
             layer name=drawbar
             harmonics layer=drawbar root=110 partials=1
             """));
+    }
+
+    [Fact]
+    public void LayeredVoiceRateLevelEnvelopeParsesAndExports()
+    {
+        var patch = PatchScript.Parse("""
+            param path=/macro/gate default=.9 min=.1 max=3 step=.01
+            layer name=pad engine=pad gain=.08 env=rl rates=.1,.2,.3,.4 levels=1,.8,.5,0 curves=lin,exp,exp,lin gate=.9
+            voice layer=pad freq=220 gate=@/macro/gate
+            """);
+        var export = FaustEmitter.Emit(patch);
+
+        var voice = Assert.Single(patch.Voices);
+        Assert.NotNull(voice.RateLevelEnvelope);
+        Assert.Equal(.9f, voice.Note.GateSeconds, 5);
+        Assert.Contains(patch.ParameterBindings, binding => binding.FieldPath == "/voices/0/note/gate");
+        Assert.Equal(.1f, voice.Envelope.AttackSeconds, 5);
+        Assert.Equal(.5f, voice.Envelope.SustainLevel, 5);
+        Assert.Equal(RateLevelCurve.Exponential, voice.RateLevelEnvelope.Curve2);
+        Assert.Contains("rl4_env(0.1, 1, 0, 0.2, 0.8, 1, 0.3, 0.5, 1, 0.4, 0, 0, patch_param_0)", export.Source);
     }
 
     [Fact]

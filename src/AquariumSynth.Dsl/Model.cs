@@ -218,6 +218,7 @@ public sealed record Voice
     public Oscillator Oscillator { get; init; } = new();
     public Note Note { get; init; } = new();
     public Envelope Envelope { get; init; } = new();
+    public RateLevelEnvelope? RateLevelEnvelope { get; init; }
     public PitchMotion Pitch { get; init; } = new();
     public DutyMotion Duty { get; init; } = new();
     public Filter Filter { get; init; } = new();

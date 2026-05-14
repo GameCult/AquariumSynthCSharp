@@ -828,9 +828,9 @@ public static class BuiltInScripts
             lpf=0.18
             gain=0.05
 
-        layer name=pad_low engine=pad min_key=36 max_key=84 gain=0.07 vibrato=@/macro/spread vibrato_hz=0.09
-        layer name=pad_high engine=pad min_key=48 max_key=108 gain=0.044 vibrato=0.009 vibrato_hz=0.11
-        layer name=air engine=add min_key=0 max_key=127 gain=0.018 wave=noise noise=0.82 attack=0.8 sustain=1.7 decay=1.1 lpf=0.36 hpf=0.22
+        layer name=pad_low engine=pad min_key=36 max_key=84 gain=0.07 vibrato=@/macro/spread vibrato_hz=0.09 env=rl rates=0.55,0.68,0.95,1.4 levels=1,0.86,0.78,0 curves=lin,exp,lin,lin gate=2.18
+        layer name=pad_high engine=pad min_key=48 max_key=108 gain=0.044 vibrato=0.009 vibrato_hz=0.11 env=rl rates=0.42,0.58,0.9,1.25 levels=1,0.84,0.72,0 curves=lin,exp,lin,lin gate=1.9
+        layer name=air engine=add min_key=0 max_key=127 gain=0.018 wave=noise noise=0.82 env=rl rates=0.8,0.6,1.1,1.1 levels=1,0.82,0.55,0 curves=lin,lin,exp,lin gate=2.5 lpf=0.36 hpf=0.22
 
         voice layer=pad_low freq=130.8128
         voice layer=pad_low freq=196 gain=0.052 vibrato=0.012 vibrato_hz=0.13
@@ -866,9 +866,9 @@ public static class BuiltInScripts
             formant_mix=0.22
             gain=0.04
 
-        layer name=air engine=add min_key=48 max_key=108 gain=0.11 send=formant
-        layer name=body engine=sub min_key=24 max_key=72 gain=0.075
-        layer name=breath engine=add min_key=0 max_key=127 gain=0.018 wave=noise noise=0.75 hpf=0.58 lpf=0.62 send=formant
+        layer name=air engine=add min_key=48 max_key=108 gain=0.11 send=formant env=rl rates=0.08,0.24,0.58,0.55 levels=1,0.82,0.7,0 curves=lin,exp,lin,lin gate=0.9
+        layer name=body engine=sub min_key=24 max_key=72 gain=0.075 env=rl rates=0.12,0.28,0.55,0.6 levels=1,0.78,0.64,0 curves=lin,exp,lin,lin gate=0.95
+        layer name=breath engine=add min_key=0 max_key=127 gain=0.018 wave=noise noise=0.75 hpf=0.58 lpf=0.62 send=formant env=rl rates=0.18,0.25,0.48,0.42 levels=1,0.65,0.38,0 curves=lin,lin,exp,lin gate=0.85
 
         voice
             layer=air

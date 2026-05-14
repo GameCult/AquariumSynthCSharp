@@ -187,18 +187,20 @@ public static class FaustEmitter
         var dutyExpression = $"clip01({parameters.Expression(VoiceField(voiceIndex, "osc/duty"), voice.Oscillator.Duty)} + {parameters.Expression(VoiceField(voiceIndex, "duty/ramp"), voice.Duty.RampPerSecond)} * age + patch_mod_duty + {duty})";
         var fmIndex = $"max(0.0, {parameters.Expression(VoiceField(voiceIndex, "fm/index"), voice.Fm.Index)} + patch_mod_fm_index + {fmIndexMod}) * {FmDecay(parameters.Expression(VoiceField(voiceIndex, "fm/decay"), voice.Fm.IndexDecaySeconds), voice.Fm.IndexDecaySeconds, parameters.IsBound(VoiceField(voiceIndex, "fm/decay")))}";
         var oscillator = OscillatorExpression(patch, voice, voiceIndex, frequency, dutyExpression, fmIndex, parameters);
-        var envelope = EnvelopeExpression(
-            voice.Envelope,
-            noteGate,
-            UsesHostPlayback(patch.Playback) || voice.Note.Source == NoteSource.Host,
-            field => parameters.Expression(VoiceField(voiceIndex, field), field switch
-            {
-                "env/attack" => voice.Envelope.AttackSeconds,
-                "env/decay" => voice.Envelope.DecaySeconds,
-                "env/sustain_level" => voice.Envelope.SustainLevel,
-                "env/release" => voice.Envelope.ReleaseSeconds,
-                _ => throw new ArgumentOutOfRangeException(nameof(field), field, null)
-            }));
+        var envelope = voice.RateLevelEnvelope is not null
+            ? RateLevelEnvelopeExpression(voice.RateLevelEnvelope, noteGate)
+            : EnvelopeExpression(
+                voice.Envelope,
+                noteGate,
+                UsesHostPlayback(patch.Playback) || voice.Note.Source == NoteSource.Host,
+                field => parameters.Expression(VoiceField(voiceIndex, field), field switch
+                {
+                    "env/attack" => voice.Envelope.AttackSeconds,
+                    "env/decay" => voice.Envelope.DecaySeconds,
+                    "env/sustain_level" => voice.Envelope.SustainLevel,
+                    "env/release" => voice.Envelope.ReleaseSeconds,
+                    _ => throw new ArgumentOutOfRangeException(nameof(field), field, null)
+                }));
         var tremoloDepth = parameters.Expression(VoiceField(voiceIndex, "color/tremolo"), Math.Clamp(voice.Color.TremoloDepth, 0, 1));
         var tremoloHz = parameters.Expression(VoiceField(voiceIndex, "color/tremolo_hz"), voice.Color.TremoloHz);
         var hasTremolo = voice.Color.TremoloDepth > 0 && voice.Color.TremoloHz > 0 ||

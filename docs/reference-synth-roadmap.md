@@ -120,10 +120,10 @@ First deliverable:
   effects.
 - Rebuild one additive lead, one PAD texture, and one formant/vocal patch. The
   first rebuild catalog entries now parse/export and record the first Zyn
-  missing abstractions. Named layers and additive harmonic-bank syntax now
-  exist; PAD-style spectral source generation, free envelopes for normal
-  voices, fuller kit/effect routing, and richer formant/vowel morphing remain
-  pressure.
+  missing abstractions. Named layers, additive harmonic-bank syntax, and staged
+  rate/level envelopes for normal voices now exist; PAD-style spectral source
+  generation, arbitrary Zyn free-envelope point curves, fuller kit/effect
+  routing, and richer formant/vowel morphing remain pressure.
 
 Do not vendor the upstream Zyn instrument-bank submodule until its preset
 license/provenance is explicit enough for this repo. Use project-authored
@@ -147,6 +147,18 @@ partials=1:.16,2:.075`. The parser preserves the bank as authored structure
 and lowers it to ordinary voices. This gives additive lead, drawbar, and future
 partial-bank targets a reusable surface without pretending to implement Zyn
 ADDsynth phase, bandwidth, or free-envelope details.
+
+The third response is staged voice envelopes. Normal voices and layer defaults
+can now use the existing readable rate/level surface:
+
+```text
+layer name=pad engine=pad env=rl rates=.5,.7,1.0,1.4 levels=1,.85,.7,0 gate=2.2
+voice layer=pad freq=220
+```
+
+This promotes the envelope authority already used by operator graphs into the
+voice path. It is enough to express layered PAD/vocal onset and release shapes,
+but it is not yet a Zyn free-envelope point editor.
 
 Sources:
 

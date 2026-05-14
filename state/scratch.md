@@ -15,6 +15,24 @@ Doctrine update:
 
 Completed this slice:
 
+- Promoted staged rate/level envelopes to normal voices and layer defaults.
+  Voice fields now accept `env=rl rates=... levels=... curves=... gate=...`;
+  the model stores `Voice.RateLevelEnvelope`, and Faust emission uses
+  `rl4_env` for those voices.
+- Converted Zyn PAD texture and vocal-layer rebuilds to use staged envelopes
+  through named layers. This gives two non-additive targets asymmetric
+  envelope contour authority without inventing a new parser.
+- Arbitrary Zyn free-envelope point curves remain missing pressure. This slice
+  is the coherent staged-envelope rung, not a free-mode clone.
+- Focused verification passed:
+  `dotnet test tests\AquariumSynth.Dsl.Tests\AquariumSynth.Dsl.Tests.csproj --no-restore --filter "FullyQualifiedName~LayeredVoiceRateLevelEnvelope|FullyQualifiedName~ZynStyleReferenceRebuildsParseExportAndDeclarePressure|FullyQualifiedName~BuiltInReferenceScriptsParseAndExportFaust"`:
+  3 passed.
+- Full verification with bundled Python/dexed-py:
+  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  91 passed.
+
+Previous slice:
+
 - Added additive harmonic-bank syntax attached to named layers:
   `harmonics layer=body root=220 partials=1:.16,2:.075`.
 - The parser preserves each bank as `HarmonicBank`/`HarmonicPartial` model
