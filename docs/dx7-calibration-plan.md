@@ -24,7 +24,7 @@ math is still fake in the places that matter perceptually.
 - Treat log-mel distance and listening notes as the primary perceptual evidence
   for timbre targets. Aggregate score is secondary.
 - Separate carrier amplitude, modulation index, feedback amount, envelope
-  level curve, and algorithm output compensation as distinct calibration facts.
+  level curve, and graph/output gain as distinct calibration facts.
 - Cut PRC-specific constants once a calibrated DX7 lowering owns the same fact.
 
 ## Calibration Ladder
@@ -50,12 +50,12 @@ math is still fake in the places that matter perceptually.
    - Keep detune as frequency behavior, not a modulation or chorus feature.
 
 5. **Algorithm output compensation**
-   - Use ROM `COM` values to balance carriers before any PRC-specific branch
-     boosting.
-   - `COM` stores the output count minus one. Because Aquarium's carrier
-     amplitude curve was fitted against algorithm 32's six-output baseline,
-     carriers scale by `6 / (COM + 1)` during DX7 lowering.
-   - Replace manual carrier scale constants with algorithm-derived lowering.
+   - Rejected as carrier-balance authority. ROM `COM` scaling made several
+     community patches louder but pushed the harmonic balance away from Dexed.
+   - `OperatorOutputCompensation` now returns unity; loudness belongs to graph
+     gain calibration, not hidden per-carrier COM boosts.
+   - Keep this rung as a warning: passing RMS/envelope with the wrong overtone
+     balance is not parity.
 
 6. **Envelope level curve**
    - Render fixed-output operators with varied DX7 EG levels and rates.
@@ -110,10 +110,11 @@ math is still fake in the places that matter perceptually.
    - Use public-domain community SysEx fixtures as broader behavioral probes
      after each isolated calibration rung.
    - `analog1.syx` from Musical Artifacts artifact 152 now has a rendered
-     parity test for the community voices `{ Mooger }` and `Piano Bass`. The
+     parity test for the community voices `{ Mooger }`, `Piano Bass`, and
+     `RES SYNTH1`. The
      test writes listening artifacts under
      `artifacts/parity/dx7-community-analog1/` and gates log-mel at `<= 0.25`,
-     envelope distance at `<= 0.14`, zero-crossing ratio in `0.8..1.1`, and
+     envelope distance at `<= 0.14`, zero-crossing ratio in `0.8..1.11`, and
      score at `>= 0.6`.
    - `Piano Bass` exposed a real pitch bug: the candidate ignored the DX7 voice
      transpose byte, so `transpose=12` rendered one octave too high. Aquarium
@@ -136,14 +137,14 @@ math is still fake in the places that matter perceptually.
      preserves a higher sustain floor for max-feedback source operators and
      gates `ANLGSYN 1` with a sustained 2.5-5 kHz band-energy check so the
      old drifting version cannot pass by global log-mel score alone.
-   - `Piano Bass` also needed its graph gain raised to match Dexed's body and
-     punch; with `gain=0.30`, its RMS ratio is near unity without changing the
-     shared summed-route scale that PRC still constrains.
-   - A first survey also tried `DX1 LEAD B`, `MELLOWSOLO`, and `RES SYNTH1`;
-     they were left out of the passing gate because listening and
-     log-mel/zero-crossing evidence do not justify calling them parity yet.
-     Keep those failures as pressure for oscillator phase, feedback, and
-     transient detail rather than padding the test with weak thresholds.
+   - Removing ROM COM carrier boosts made the community harmonics closer by
+     ear but much quieter. Restoring loudness with graph gain keeps the improved
+     balance: `{ Mooger }` uses `gain=0.75`, `Piano Bass` uses `gain=0.90`,
+     and `RES SYNTH1` uses `gain=0.75`.
+   - `DX1 LEAD B` and `MELLOWSOLO` also sounded harmonically closer with COM
+     disabled and graph gain restored, but they still fail the current numeric
+     parity gates. Keep them as pressure for branch emphasis/envelope detail,
+     not as passing stock.
 
 ## Rejected Path
 

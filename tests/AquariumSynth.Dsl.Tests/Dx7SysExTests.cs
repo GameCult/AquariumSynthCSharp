@@ -151,13 +151,13 @@ public sealed class Dx7SysExTests
     }
 
     [Fact]
-    public void MapsDx7AlgorithmOutputCompensationRelativeToAlgorithmThirtyTwo()
+    public void DoesNotApplyDx7AlgorithmOutputCompensationToImportedOperators()
     {
         var algorithm8 = Dx7SysEx.AlgorithmTopology(8);
         var algorithm32 = Dx7SysEx.AlgorithmTopology(32);
 
-        Assert.Equal(3, Dx7SysEx.OperatorOutputCompensation(algorithm8, 1));
-        Assert.Equal(3, Dx7SysEx.OperatorOutputCompensation(algorithm8, 3));
+        Assert.Equal(1, Dx7SysEx.OperatorOutputCompensation(algorithm8, 1));
+        Assert.Equal(1, Dx7SysEx.OperatorOutputCompensation(algorithm8, 3));
         Assert.Equal(1, Dx7SysEx.OperatorOutputCompensation(algorithm8, 2));
         Assert.Equal(1, Dx7SysEx.OperatorOutputCompensation(algorithm32, 1));
     }

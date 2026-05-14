@@ -15,6 +15,26 @@ Doctrine update:
 
 Completed this slice:
 
+- Corrected DX7 ROM COM handling after user listening caught that the
+  no-compensation probe had closer harmonics across the community patches and
+  was mainly too quiet.
+- `Dx7SysEx.OperatorOutputCompensation` now returns unity. Loudness recovery
+  moved to graph gain instead of hidden carrier boosts.
+- Community parity gains with COM disabled:
+  `{ Mooger }` `.75`, `Piano Bass` `.90`, `RES SYNTH1` `.75`.
+- `RES SYNTH1` is now in the passing community gate. Latest metrics:
+  score `.7277295`, log-mel `.1461968`, envelope `.10764466`, RMS `.941083`,
+  zero-crossing `.1.1022931`.
+- `DX1 LEAD B` and `MELLOWSOLO` sound closer by ear with COM disabled and
+  graph gain restored, but still fail numeric gates. Latest survey:
+  `DX1 LEAD B` score `.45156077`, log-mel `.43533683`, RMS `.8193191`;
+  `MELLOWSOLO` score `.5359293`, log-mel `.39420125`, RMS `.99559265`.
+- Verified with bundled Python/dexed-py:
+  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  74 passed.
+
+Previous slice:
+
 - Fixed the remaining `ANLGSYN 1` drift that listening caught after the
   conditional output-clip pass. The old candidate still lost 2.5-5 kHz energy
   midway through the note.
@@ -33,7 +53,7 @@ Completed this slice:
   `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
   74 passed.
 
-Previous slice:
+Earlier slice:
 
 - Tightened `ANLGSYN 1` after listening caught the `deeooh` failure: the
   max-feedback candidate had a better attack but lost sustained buzz midway.

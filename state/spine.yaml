@@ -144,6 +144,18 @@ next_agent_start_here:
 completed_slices:
   - date: 2026-05-14
     summary: >
+      Removed DX7 ROM COM carrier compensation after listening found the
+      no-compensation community renders had closer harmonics and were mainly
+      too quiet. `OperatorOutputCompensation` now returns unity; graph gain owns
+      loudness recovery. Passing community graph gains are now `{ Mooger }`
+      0.75, `Piano Bass` 0.90, and `RES SYNTH1` 0.75. `RES SYNTH1` joined the
+      passing community gate with score 0.7277295, log-mel 0.1461968, envelope
+      0.10764466, RMS 0.941083. `DX1 LEAD B` and `MELLOWSOLO` sound closer by
+      ear under no-COM/gain-restored lowering but still fail numeric gates, so
+      they remain pressure targets.
+    verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore: 74 passed"
+  - date: 2026-05-14
+    summary: >
       Fixed the remaining `ANLGSYN 1` drift after listening found the
       conditional output-clip candidate still lost buzz halfway through the
       note. `Dx7SysEx.ApproximateAppliedRateLevelEnvelope` now accepts a

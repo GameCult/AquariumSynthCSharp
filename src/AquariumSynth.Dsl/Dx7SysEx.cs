@@ -238,12 +238,7 @@ public static class Dx7SysEx
 
     public static float OperatorOutputCompensation(Dx7AlgorithmTopology topology, int operatorNumber)
     {
-        var outputStep = topology.RomSteps.FirstOrDefault(step =>
-            step.TargetOperator == operatorNumber &&
-            step.OutputCompensation > 0);
-        return outputStep is null
-            ? 1
-            : 6f / (outputStep.OutputCompensation + 1);
+        return 1;
     }
 
     public static float OperatorFrequencyRatio(Dx7Operator op, int midiNote = 60, float baseFrequencyHz = 261.62558f)
