@@ -32,7 +32,7 @@ public static class FaustEmitter
     public static FaustExport Emit(SynthPatch patch, FaustExportOptions? options = null)
     {
         options ??= new FaustExportOptions();
-        if (patch.Voices.Count == 0 && patch.OperatorGraphs.Count == 0) throw new ArgumentException("cannot export an empty patch", nameof(patch));
+        if (patch.Voices.Count == 0 && patch.SpectralBanks.Count == 0 && patch.OperatorGraphs.Count == 0) throw new ArgumentException("cannot export an empty patch", nameof(patch));
 
         var warnings = new List<string>();
         var parameters = new ParameterMap(patch, warnings);
@@ -91,7 +91,13 @@ public static class FaustEmitter
         for (var i = 0; i < patch.Voices.Count; i++)
         {
             var name = $"voice_{i}";
-            EmitVoice(source, patch, patch.Voices[i], i, name, parameters, warnings);
+            EmitVoice(source, patch, patch.Voices[i], VoicePath(i), name, parameters, warnings);
+            voices.Add(name);
+        }
+        for (var i = 0; i < patch.SpectralBanks.Count; i++)
+        {
+            var name = $"spectral_{i}";
+            EmitSpectralBank(source, patch, patch.SpectralBanks[i], i, name, parameters, warnings);
             voices.Add(name);
         }
         for (var i = 0; i < patch.OperatorGraphs.Count; i++)
@@ -144,12 +150,13 @@ public static class FaustEmitter
         StringBuilder source,
         SynthPatch patch,
         Voice voice,
-        int voiceIndex,
+        string ownerPath,
         string name,
         ParameterMap parameters,
-        List<string> warnings)
+        List<string> warnings,
+        string? oscillatorOverride = null)
     {
-        if (voice.Filter.LowPassResonance != 0 || parameters.IsBound(VoiceField(voiceIndex, "filter/resonance")))
+        if (voice.Filter.LowPassResonance != 0 || parameters.IsBound(OwnerField(ownerPath, "filter/resonance")))
         {
             warnings.Add($"{name}: low-pass resonance is approximated with Faust resonlp");
         }
@@ -165,35 +172,35 @@ public static class FaustEmitter
         var lpfMod = ModExpressionForTarget(voice.Modulators, ModTarget.LowPass);
         var hpfMod = ModExpressionForTarget(voice.Modulators, ModTarget.HighPass);
 
-        var minFreq = parameters.Expression(VoiceField(voiceIndex, "pitch/min_freq"), voice.Pitch.MinFrequencyHz);
-        var noteFreq = NoteFrequencyExpression(source, patch.Playback, voice.Note, name, VoiceField(voiceIndex, "note/frequency"), parameters);
-        var noteGate = NoteGateExpression(source, patch.Playback, voice.Note, name, VoiceField(voiceIndex, "note/gate"), parameters);
-        var pitchRamp = parameters.Expression(VoiceField(voiceIndex, "pitch/ramp"), voice.Pitch.RampPerSecond);
-        var pitchDelta = parameters.Expression(VoiceField(voiceIndex, "pitch/delta"), voice.Pitch.DeltaRampPerSecond);
-        var vibratoDepth = parameters.Expression(VoiceField(voiceIndex, "pitch/vibrato"), voice.Pitch.VibratoDepth);
-        var vibratoHz = parameters.Expression(VoiceField(voiceIndex, "pitch/vibrato_hz"), voice.Pitch.VibratoHz);
-        var vibratoDelay = parameters.Expression(VoiceField(voiceIndex, "pitch/vibrato_delay"), voice.Pitch.VibratoDelaySeconds);
+        var minFreq = parameters.Expression(OwnerField(ownerPath, "pitch/min_freq"), voice.Pitch.MinFrequencyHz);
+        var noteFreq = NoteFrequencyExpression(source, patch.Playback, voice.Note, name, OwnerField(ownerPath, "note/frequency"), parameters);
+        var noteGate = NoteGateExpression(source, patch.Playback, voice.Note, name, OwnerField(ownerPath, "note/gate"), parameters);
+        var pitchRamp = parameters.Expression(OwnerField(ownerPath, "pitch/ramp"), voice.Pitch.RampPerSecond);
+        var pitchDelta = parameters.Expression(OwnerField(ownerPath, "pitch/delta"), voice.Pitch.DeltaRampPerSecond);
+        var vibratoDepth = parameters.Expression(OwnerField(ownerPath, "pitch/vibrato"), voice.Pitch.VibratoDepth);
+        var vibratoHz = parameters.Expression(OwnerField(ownerPath, "pitch/vibrato_hz"), voice.Pitch.VibratoHz);
+        var vibratoDelay = parameters.Expression(OwnerField(ownerPath, "pitch/vibrato_delay"), voice.Pitch.VibratoDelaySeconds);
         var baseFreq = $"max({minFreq}, {noteFreq} * pow(2.0, {pitchRamp} * age + 0.5 * {pitchDelta} * age * age))";
         var hasVibrato = voice.Pitch.VibratoDepth != 0 && voice.Pitch.VibratoHz > 0 ||
-                         parameters.IsBound(VoiceField(voiceIndex, "pitch/vibrato")) ||
-                         parameters.IsBound(VoiceField(voiceIndex, "pitch/vibrato_hz"));
+                         parameters.IsBound(OwnerField(ownerPath, "pitch/vibrato")) ||
+                         parameters.IsBound(OwnerField(ownerPath, "pitch/vibrato_hz"));
         var vibrato = hasVibrato
             ? $" * (1.0 + select2(age < {vibratoDelay}, 0.0, sin(2.0 * ma.PI * (age - {vibratoDelay}) * {vibratoHz}) * {vibratoDepth}))"
             : "";
         var arpeggio = voice.Arpeggio is null
             ? "1.0"
-            : $"select2(age < {parameters.Expression(VoiceField(voiceIndex, "arpeggio/delay"), voice.Arpeggio.DelaySeconds)}, {parameters.Expression(VoiceField(voiceIndex, "arpeggio/multiplier"), voice.Arpeggio.Multiplier)}, 1.0)";
+            : $"select2(age < {parameters.Expression(OwnerField(ownerPath, "arpeggio/delay"), voice.Arpeggio.DelaySeconds)}, {parameters.Expression(OwnerField(ownerPath, "arpeggio/multiplier"), voice.Arpeggio.Multiplier)}, 1.0)";
         var frequency = $"(({baseFreq}){vibrato}) * {arpeggio} * pow(2.0, patch_mod_pitch + {pitch})";
-        var dutyExpression = $"clip01({parameters.Expression(VoiceField(voiceIndex, "osc/duty"), voice.Oscillator.Duty)} + {parameters.Expression(VoiceField(voiceIndex, "duty/ramp"), voice.Duty.RampPerSecond)} * age + patch_mod_duty + {duty})";
-        var fmIndex = $"max(0.0, {parameters.Expression(VoiceField(voiceIndex, "fm/index"), voice.Fm.Index)} + patch_mod_fm_index + {fmIndexMod}) * {FmDecay(parameters.Expression(VoiceField(voiceIndex, "fm/decay"), voice.Fm.IndexDecaySeconds), voice.Fm.IndexDecaySeconds, parameters.IsBound(VoiceField(voiceIndex, "fm/decay")))}";
-        var oscillator = OscillatorExpression(patch, voice, voiceIndex, frequency, dutyExpression, fmIndex, parameters);
+        var dutyExpression = $"clip01({parameters.Expression(OwnerField(ownerPath, "osc/duty"), voice.Oscillator.Duty)} + {parameters.Expression(OwnerField(ownerPath, "duty/ramp"), voice.Duty.RampPerSecond)} * age + patch_mod_duty + {duty})";
+        var fmIndex = $"max(0.0, {parameters.Expression(OwnerField(ownerPath, "fm/index"), voice.Fm.Index)} + patch_mod_fm_index + {fmIndexMod}) * {FmDecay(parameters.Expression(OwnerField(ownerPath, "fm/decay"), voice.Fm.IndexDecaySeconds), voice.Fm.IndexDecaySeconds, parameters.IsBound(OwnerField(ownerPath, "fm/decay")))}";
+        var oscillator = oscillatorOverride ?? OscillatorExpression(patch, voice, ownerPath, frequency, dutyExpression, fmIndex, parameters);
         var envelope = voice.RateLevelEnvelope is not null
             ? RateLevelEnvelopeExpression(voice.RateLevelEnvelope, noteGate)
             : EnvelopeExpression(
                 voice.Envelope,
                 noteGate,
                 UsesHostPlayback(patch.Playback) || voice.Note.Source == NoteSource.Host,
-                field => parameters.Expression(VoiceField(voiceIndex, field), field switch
+                field => parameters.Expression(OwnerField(ownerPath, field), field switch
                 {
                     "env/attack" => voice.Envelope.AttackSeconds,
                     "env/decay" => voice.Envelope.DecaySeconds,
@@ -201,22 +208,22 @@ public static class FaustEmitter
                     "env/release" => voice.Envelope.ReleaseSeconds,
                     _ => throw new ArgumentOutOfRangeException(nameof(field), field, null)
                 }));
-        var tremoloDepth = parameters.Expression(VoiceField(voiceIndex, "color/tremolo"), Math.Clamp(voice.Color.TremoloDepth, 0, 1));
-        var tremoloHz = parameters.Expression(VoiceField(voiceIndex, "color/tremolo_hz"), voice.Color.TremoloHz);
+        var tremoloDepth = parameters.Expression(OwnerField(ownerPath, "color/tremolo"), Math.Clamp(voice.Color.TremoloDepth, 0, 1));
+        var tremoloHz = parameters.Expression(OwnerField(ownerPath, "color/tremolo_hz"), voice.Color.TremoloHz);
         var hasTremolo = voice.Color.TremoloDepth > 0 && voice.Color.TremoloHz > 0 ||
-                         parameters.IsBound(VoiceField(voiceIndex, "color/tremolo")) ||
-                         parameters.IsBound(VoiceField(voiceIndex, "color/tremolo_hz"));
+                         parameters.IsBound(OwnerField(ownerPath, "color/tremolo")) ||
+                         parameters.IsBound(OwnerField(ownerPath, "color/tremolo_hz"));
         var tremolo = hasTremolo
             ? $" * (1.0 - {tremoloDepth} * (0.5 + 0.5 * lfo_sin({tremoloHz}, 0.0)))"
             : "";
-        var noiseMix = $"clip01({parameters.Expression(VoiceField(voiceIndex, "color/noise"), voice.Color.NoiseMix)} + patch_mod_noise + {noise})";
-        var driveExpression = $"clip01({parameters.Expression(VoiceField(voiceIndex, "color/drive"), voice.Color.Drive)} + patch_mod_drive + {drive})";
-        var foldExpression = $"clip01({parameters.Expression(VoiceField(voiceIndex, "color/fold"), voice.Color.Fold)} + patch_mod_fold + {fold})";
-        var formantMix = $"clip01({parameters.Expression(VoiceField(voiceIndex, "color/formant_mix"), voice.Color.FormantMix)} + patch_mod_formant_mix + {formant})";
-        var lpf = $"clip01({parameters.Expression(VoiceField(voiceIndex, "filter/lpf"), voice.Filter.LowPass)} * (1.0 + {parameters.Expression(VoiceField(voiceIndex, "filter/lpf_ramp"), voice.Filter.LowPassRamp)} * age * 1.8) + patch_mod_lpf + {lpfMod})";
-        var hpf = $"clip01({parameters.Expression(VoiceField(voiceIndex, "filter/hpf"), voice.Filter.HighPass)} * (1.0 + {parameters.Expression(VoiceField(voiceIndex, "filter/hpf_ramp"), voice.Filter.HighPassRamp)} * age * 2.0) + patch_mod_hpf + {hpfMod})";
-        var hasResonance = voice.Filter.LowPassResonance > 0 || parameters.IsBound(VoiceField(voiceIndex, "filter/resonance"));
-        var resonance = parameters.Expression(VoiceField(voiceIndex, "filter/resonance"), voice.Filter.LowPassResonance);
+        var noiseMix = $"clip01({parameters.Expression(OwnerField(ownerPath, "color/noise"), voice.Color.NoiseMix)} + patch_mod_noise + {noise})";
+        var driveExpression = $"clip01({parameters.Expression(OwnerField(ownerPath, "color/drive"), voice.Color.Drive)} + patch_mod_drive + {drive})";
+        var foldExpression = $"clip01({parameters.Expression(OwnerField(ownerPath, "color/fold"), voice.Color.Fold)} + patch_mod_fold + {fold})";
+        var formantMix = $"clip01({parameters.Expression(OwnerField(ownerPath, "color/formant_mix"), voice.Color.FormantMix)} + patch_mod_formant_mix + {formant})";
+        var lpf = $"clip01({parameters.Expression(OwnerField(ownerPath, "filter/lpf"), voice.Filter.LowPass)} * (1.0 + {parameters.Expression(OwnerField(ownerPath, "filter/lpf_ramp"), voice.Filter.LowPassRamp)} * age * 1.8) + patch_mod_lpf + {lpfMod})";
+        var hpf = $"clip01({parameters.Expression(OwnerField(ownerPath, "filter/hpf"), voice.Filter.HighPass)} * (1.0 + {parameters.Expression(OwnerField(ownerPath, "filter/hpf_ramp"), voice.Filter.HighPassRamp)} * age * 2.0) + patch_mod_hpf + {hpfMod})";
+        var hasResonance = voice.Filter.LowPassResonance > 0 || parameters.IsBound(OwnerField(ownerPath, "filter/resonance"));
+        var resonance = parameters.Expression(OwnerField(ownerPath, "filter/resonance"), voice.Filter.LowPassResonance);
         var lowpass = hasResonance
             ? $"fi.resonlp(max(20.0, {lpf} * 18000.0), 0.7 + clip01({resonance}) * 18.0, 1.0)"
             : $"fi.lowpass(1, max(20.0, {lpf} * 18000.0))";
@@ -228,10 +235,10 @@ public static class FaustEmitter
         source.AppendLine($"{name}_folded = {name}_driven * (1.0 - {foldExpression}) + fold({name}_driven * (1.0 + {foldExpression} * 3.5)) * {foldExpression};");
         source.AppendLine($"{name}_filtered = {name}_folded : {lowpass} : fi.highpass(1, max(5.0, ({hpf}) * ({hpf}) * 7000.0));");
         if (voice.Phaser.OffsetSeconds != 0 || voice.Phaser.RampSecondsPerSecond != 0 ||
-            parameters.IsBound(VoiceField(voiceIndex, "phaser/offset")) ||
-            parameters.IsBound(VoiceField(voiceIndex, "phaser/ramp")))
+            parameters.IsBound(OwnerField(ownerPath, "phaser/offset")) ||
+            parameters.IsBound(OwnerField(ownerPath, "phaser/ramp")))
         {
-            var delay = $"min(2047.0, max(0.0, abs({parameters.Expression(VoiceField(voiceIndex, "phaser/offset"), voice.Phaser.OffsetSeconds)} + {parameters.Expression(VoiceField(voiceIndex, "phaser/ramp"), voice.Phaser.RampSecondsPerSecond)} * age) * ma.SR))";
+            var delay = $"min(2047.0, max(0.0, abs({parameters.Expression(OwnerField(ownerPath, "phaser/offset"), voice.Phaser.OffsetSeconds)} + {parameters.Expression(OwnerField(ownerPath, "phaser/ramp"), voice.Phaser.RampSecondsPerSecond)} * age) * ma.SR))";
             source.AppendLine($"{name}_phased = {name}_filtered + ({name}_filtered : de.fdelay(2048, {delay}));");
         }
         else
@@ -239,8 +246,26 @@ public static class FaustEmitter
             source.AppendLine($"{name}_phased = {name}_filtered;");
         }
         source.AppendLine($"{name}_formants = {FormantExpression(name, voice)};");
-        source.AppendLine($"{name} = (({name}_phased * (1.0 - {formantMix}) + {name}_formants * {formantMix}) * {envelope}{tremolo} * max(0.0, 1.0 + patch_mod_gain + {gain}) * {parameters.Expression(VoiceField(voiceIndex, "gain"), voice.Gain)});");
+        source.AppendLine($"{name} = (({name}_phased * (1.0 - {formantMix}) + {name}_formants * {formantMix}) * {envelope}{tremolo} * max(0.0, 1.0 + patch_mod_gain + {gain}) * {parameters.Expression(OwnerField(ownerPath, "gain"), voice.Gain)});");
         source.AppendLine();
+    }
+
+    private static void EmitSpectralBank(
+        StringBuilder source,
+        SynthPatch patch,
+        SpectralBank bank,
+        int bankIndex,
+        string name,
+        ParameterMap parameters,
+        List<string> warnings)
+    {
+        const int tableSize = 1024;
+        var table = SpectralWaveform(bank, tableSize);
+        var frequency = parameters.Expression(OwnerField(SpectralPath(bankIndex), "note/frequency"), bank.Treatment.Note.FrequencyHz);
+        source.AppendLine($"{name}_wave = waveform {{{string.Join(",", table.Select(F))}}};");
+        source.AppendLine($"{name}_read_index = int(os.phasor({tableSize}, {frequency}));");
+        source.AppendLine($"{name}_wavetable = {name}_wave, {name}_read_index : rdtable;");
+        EmitVoice(source, patch, bank.Treatment, SpectralPath(bankIndex), name, parameters, warnings, $"{name}_wavetable");
     }
 
     private static string NoteFrequencyExpression(StringBuilder source, Playback playback, Note note, string name, string fieldPath, ParameterMap parameters)
@@ -292,16 +317,16 @@ public static class FaustEmitter
     private static string Curve(RateLevelCurve curve) =>
         curve == RateLevelCurve.Exponential ? "1" : "0";
 
-    private static string OscillatorExpression(SynthPatch patch, Voice voice, int voiceIndex, string frequency, string duty, string fmIndex, ParameterMap parameters)
+    private static string OscillatorExpression(SynthPatch patch, Voice voice, string ownerPath, string frequency, string duty, string fmIndex, ParameterMap parameters)
     {
         var hasFmMod = patch.Controls.Any(control => control.Modulator.Target == ModTarget.FmIndex) ||
                        voice.Modulators.Any(modulator => modulator.Target == ModTarget.FmIndex) ||
-                       parameters.IsBound(VoiceField(voiceIndex, "fm/index")) ||
-                       parameters.IsBound(VoiceField(voiceIndex, "fm/decay"));
+                       parameters.IsBound(OwnerField(ownerPath, "fm/index")) ||
+                       parameters.IsBound(OwnerField(ownerPath, "fm/decay"));
         var phaseMod = voice.Fm.Index > 0 || voice.Fm.IndexDecaySeconds > 0 || hasFmMod
-            ? $" + sin(2.0 * ma.PI * os.phasor(1.0, {frequency} * max(0.0, {parameters.Expression(VoiceField(voiceIndex, "fm/ratio"), Math.Max(voice.Fm.Ratio, 0))}))) * ({fmIndex}) / ma.PI"
+            ? $" + sin(2.0 * ma.PI * os.phasor(1.0, {frequency} * max(0.0, {parameters.Expression(OwnerField(ownerPath, "fm/ratio"), Math.Max(voice.Fm.Ratio, 0))}))) * ({fmIndex}) / ma.PI"
             : "";
-        var phase = $"wrap01(os.phasor(1.0, {frequency}) + {parameters.Expression(VoiceField(voiceIndex, "osc/phase"), voice.Oscillator.Phase)}{phaseMod})";
+        var phase = $"wrap01(os.phasor(1.0, {frequency}) + {parameters.Expression(OwnerField(ownerPath, "osc/phase"), voice.Oscillator.Phase)}{phaseMod})";
         return voice.Oscillator.Waveform switch
         {
             Waveform.Sine => $"sin(2.0 * ma.PI * {phase})",
@@ -442,6 +467,43 @@ public static class FaustEmitter
         return $"({string.Join(" + ", parts)}) / {F(gainSum)}";
     }
 
+    private static float[] SpectralWaveform(SpectralBank bank, int tableSize)
+    {
+        var samples = new float[tableSize];
+        var maxBin = tableSize / 2 - 1;
+        var amplitudes = new double[maxBin + 1];
+        foreach (var partial in bank.Partials)
+        {
+            var center = Math.Max(1, partial.Ratio);
+            var sigma = Math.Max(0.05, center * bank.SpreadRatio * 8);
+            var left = Math.Max(1, (int)Math.Floor(center - sigma * 4));
+            var right = Math.Min(maxBin, (int)Math.Ceiling(center + sigma * 4));
+            for (var bin = left; bin <= right; bin++)
+            {
+                var distance = (bin - center) / sigma;
+                amplitudes[bin] += partial.Gain * Math.Exp(-0.5 * distance * distance);
+            }
+        }
+
+        for (var i = 0; i < tableSize; i++)
+        {
+            var phase = i / (double)tableSize;
+            var value = 0.0;
+            for (var bin = 1; bin <= maxBin; bin++)
+            {
+                if (amplitudes[bin] == 0) continue;
+                value += amplitudes[bin] * Math.Sin(Math.Tau * bin * phase);
+            }
+
+            samples[i] = (float)value;
+        }
+
+        var peak = samples.Select(Math.Abs).DefaultIfEmpty(0).Max();
+        if (peak <= 0) return samples;
+        for (var i = 0; i < samples.Length; i++) samples[i] /= peak;
+        return samples;
+    }
+
     private static string ModExpressionForTarget(IEnumerable<ControlLane> controls, ModTarget target)
     {
         var expressions = controls.Where(control => control.Modulator.Target == target)
@@ -498,7 +560,11 @@ public static class FaustEmitter
 
     private static string ParameterIdentifier(int index) => $"patch_param_{index}";
 
-    private static string VoiceField(int voiceIndex, string field) => $"/voices/{voiceIndex}/{field}";
+    private static string VoicePath(int voiceIndex) => $"/voices/{voiceIndex}";
+
+    private static string SpectralPath(int spectralIndex) => $"/spectral/{spectralIndex}";
+
+    private static string OwnerField(string ownerPath, string field) => $"{ownerPath}/{field}";
 
     private static int GraphIndex(string name)
     {

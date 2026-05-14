@@ -386,7 +386,7 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
-    public void SpectralBankSyntaxExpandsPadPartialCloud()
+    public void SpectralBankSyntaxEmitsPadWavetableSource()
     {
         var patch = PatchScript.Parse("""
             layer name=pad engine=pad gain=.08 wave=saw env=rl rates=.1,.2,.3,.4 levels=1,.8,.5,0 gate=.9
@@ -399,14 +399,13 @@ public sealed class PatchScriptTests
         Assert.Equal(100, bank.RootFrequencyHz);
         Assert.Equal(.01f, bank.SpreadRatio, 5);
         Assert.Equal(2, bank.Partials.Count);
-        Assert.Equal(4, patch.Voices.Count);
-        Assert.All(patch.Voices, voice => Assert.Equal("pad", voice.Layer?.Name));
-        Assert.All(patch.Voices, voice => Assert.NotNull(voice.RateLevelEnvelope));
-        Assert.Equal([99, 101, 148.5f, 151.5f], patch.Voices.Select(voice => voice.Oscillator.FrequencyHz).ToArray());
-        Assert.Equal(.04f, patch.Voices[0].Gain, 5);
-        Assert.Equal(.04f, patch.Voices[1].Gain, 5);
-        Assert.Equal(.02f, patch.Voices[2].Gain, 5);
-        Assert.Equal(.02f, patch.Voices[3].Gain, 5);
+        Assert.Empty(patch.Voices);
+        Assert.Equal("pad", bank.Treatment.Layer?.Name);
+        Assert.NotNull(bank.Treatment.RateLevelEnvelope);
+        Assert.Equal(100, bank.Treatment.Oscillator.FrequencyHz);
+        Assert.Equal(.08f, bank.Treatment.Gain, 5);
+        Assert.Contains("spectral_0_wave = waveform", export.Source);
+        Assert.Contains("spectral_0_wavetable = spectral_0_wave, spectral_0_read_index : rdtable", export.Source);
         Assert.Contains("process =", export.Source);
     }
 
@@ -698,6 +697,23 @@ public sealed class PatchScriptTests
     public async Task FaustCompilerValidatesParameterizedPatchWhenInstalled()
     {
         var export = FaustEmitter.EmitScript("param path=/macro/brightness default=.45 min=0 max=1 step=.001;v w=saw f=80 lpf=@/macro/brightness");
+        var validation = await FaustCompiler.ValidateAsync(export.Source);
+
+        if (validation is null)
+        {
+            return;
+        }
+
+        Assert.True(validation.Success, validation.Stderr);
+    }
+
+    [Fact]
+    public async Task FaustCompilerValidatesSpectralBankWhenInstalled()
+    {
+        var export = FaustEmitter.EmitScript("""
+            layer name=pad engine=pad gain=.08 env=rl rates=.1,.2,.3,.4 levels=1,.8,.5,0 gate=.9
+            spectrum layer=pad root=100 spread=.01 partials=1:.08,2:.04,3:.02
+            """);
         var validation = await FaustCompiler.ValidateAsync(export.Source);
 
         if (validation is null)

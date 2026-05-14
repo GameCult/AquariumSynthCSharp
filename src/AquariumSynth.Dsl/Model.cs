@@ -205,7 +205,8 @@ public sealed record SpectralBank(
     string LayerName,
     float RootFrequencyHz,
     float SpreadRatio,
-    IReadOnlyList<HarmonicPartial> Partials);
+    IReadOnlyList<HarmonicPartial> Partials,
+    Voice Treatment);
 
 public sealed record ReferencePatch(
     string Id,

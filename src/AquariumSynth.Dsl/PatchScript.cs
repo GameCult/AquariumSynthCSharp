@@ -6,7 +6,6 @@ public sealed class PatchScriptException(int line, string message) : Exception($
 {
     public int Line { get; } = line;
 }
-
 public static class PatchScript
 {
     public static SynthPatch Parse(string script)
@@ -43,7 +42,7 @@ public static class PatchScript
 
         public List<Voice> Voices { get; } = [];
         public List<OperatorGraph> OperatorGraphs => _operatorGraphs;
-        public bool HasOutput => Voices.Count > 0 || _operatorGraphs.Count > 0 || _pendingOperatorGraph is not null;
+        public bool HasOutput => Voices.Count > 0 || _spectralBanks.Count > 0 || _operatorGraphs.Count > 0 || _pendingOperatorGraph is not null;
         private Repeat? Repeat { get; set; }
         private Playback Playback { get; set; } = new();
         private float Gain { get; set; } = 1;
@@ -111,7 +110,7 @@ public static class PatchScript
                     break;
                 case "voice":
                     FlushPendingOperatorGraph();
-                    Voices.Add(ParseVoice(ExpandVoiceFields(fields, line), Voices.Count, line));
+                    Voices.Add(ParseVoice(ExpandVoiceFields(fields, line), VoicePath(Voices.Count), line));
                     break;
                 case "opgraph":
                     StartOperatorGraph(fields, line);
@@ -190,7 +189,7 @@ public static class PatchScript
                     ["freq"] = F(rootFrequency * partial.Ratio),
                     ["gain"] = F(partial.Gain)
                 };
-                Voices.Add(ParseVoice(ExpandVoiceFields(voiceFields, line), Voices.Count, line));
+                Voices.Add(ParseVoice(ExpandVoiceFields(voiceFields, line), VoicePath(Voices.Count), line));
             }
         }
 
@@ -222,9 +221,7 @@ public static class PatchScript
                 throw new PatchScriptException(line, "spectrum needs at least one partial");
             }
 
-            _spectralBanks.Add(new SpectralBank(layerName, rootFrequency, spread, partials));
-
-            var sharedFields = Without(fields,
+            var treatmentFields = Without(fields,
                 "layer",
                 "root",
                 "base",
@@ -235,37 +232,17 @@ public static class PatchScript
                 "detune",
                 "partials",
                 "bank",
-                "tones",
-                "gain",
-                "g");
-            foreach (var partial in partials)
-            {
-                if (spread == 0)
-                {
-                    AddSpectralVoice(sharedFields, layerName, rootFrequency * partial.Ratio, partial.Gain, line);
-                    continue;
-                }
-
-                AddSpectralVoice(sharedFields, layerName, rootFrequency * partial.Ratio * (1 - spread), partial.Gain * 0.5f, line);
-                AddSpectralVoice(sharedFields, layerName, rootFrequency * partial.Ratio * (1 + spread), partial.Gain * 0.5f, line);
-            }
+                "tones");
+            treatmentFields["layer"] = layerName;
+            treatmentFields["freq"] = F(rootFrequency);
+            var treatment = ParseVoice(
+                ExpandVoiceFields(treatmentFields, line),
+                SpectralPath(_spectralBanks.Count),
+                line);
+            _spectralBanks.Add(new SpectralBank(layerName, rootFrequency, spread, partials, treatment));
         }
 
-        private void AddSpectralVoice(
-            IReadOnlyDictionary<string, string> sharedFields,
-            string layerName,
-            float frequency,
-            float gain,
-            int line)
-        {
-            var voiceFields = new Dictionary<string, string>(sharedFields, StringComparer.OrdinalIgnoreCase)
-            {
-                ["layer"] = layerName,
-                ["freq"] = F(frequency),
-                ["gain"] = F(gain)
-            };
-            Voices.Add(ParseVoice(ExpandVoiceFields(voiceFields, line), Voices.Count, line));
-        }
+        private static string SpectralPath(int spectralIndex) => $"/spectral/{spectralIndex}";
 
         private Dictionary<string, string> ExpandVoiceFields(Dictionary<string, string> fields, int line)
         {
@@ -372,21 +349,21 @@ public static class PatchScript
             }
         }
 
-        private Voice ParseVoice(IReadOnlyDictionary<string, string> fields, int voiceIndex, int line)
+        private Voice ParseVoice(IReadOnlyDictionary<string, string> fields, string ownerPath, int line)
         {
             var waveform = TryGetAny(fields, ["wave", "w"], out var wave) ? ParseWaveform(wave, line) : Waveform.Sine;
-            var frequency = GetBoundFloat(fields, line, 440, VoiceField(voiceIndex, "note/frequency"), "freq", "frequency", "f");
+            var frequency = GetBoundFloat(fields, line, 440, OwnerField(ownerPath, "note/frequency"), "freq", "frequency", "f");
             var envelopeSpec = TryGetAny(fields, ["env", "envelope"], out var envSpec)
-                ? ParseEnvelopeSpec(envSpec, fields, line, VoicePath(voiceIndex))
+                ? ParseEnvelopeSpec(envSpec, fields, line, ownerPath)
                 : null;
             var gateSeconds = envelopeSpec?.GateSeconds ??
-                              GetBoundFloat(fields, line, 0.1f, VoiceField(voiceIndex, "note/gate"), "gate", "hold", "duration", "sustain", "s");
+                              GetBoundFloat(fields, line, 0.1f, OwnerField(ownerPath, "note/gate"), "gate", "hold", "duration", "sustain", "s");
             var sustainLevel = envelopeSpec?.Envelope.SustainLevel ??
-                               GetBoundFloat(fields, line, 1, VoiceField(voiceIndex, "env/sustain_level"), "sustain_level", "sl");
+                               GetBoundFloat(fields, line, 1, OwnerField(ownerPath, "env/sustain_level"), "sustain_level", "sl");
             var gainScale = 1f;
             if (TryGetAny(fields, ["punch", "pu"], out var punch))
             {
-                gainScale = PunchGain(ParseBoundFloat(punch, line, 0, VoiceField(voiceIndex, "env/sustain_level")));
+                gainScale = PunchGain(ParseBoundFloat(punch, line, 0, OwnerField(ownerPath, "env/sustain_level")));
                 sustainLevel = 1 / gainScale;
             }
             var noteSource = ParseNoteSource(GetAny(fields, ["note_source", "source"], "oneshot"), line);
@@ -414,8 +391,8 @@ public static class PatchScript
             if (hasArpDelay || hasArpMult)
             {
                 arpeggio = new Arpeggio(
-                    ParseBoundFloat(arpDelay ?? throw new PatchScriptException(line, "arpeggio needs arp_delay"), line, 0, VoiceField(voiceIndex, "arpeggio/delay")),
-                    ParseBoundFloat(arpMult ?? throw new PatchScriptException(line, "arpeggio needs arp_mult"), line, 1, VoiceField(voiceIndex, "arpeggio/multiplier")));
+                    ParseBoundFloat(arpDelay ?? throw new PatchScriptException(line, "arpeggio needs arp_delay"), line, 0, OwnerField(ownerPath, "arpeggio/delay")),
+                    ParseBoundFloat(arpMult ?? throw new PatchScriptException(line, "arpeggio needs arp_mult"), line, 1, OwnerField(ownerPath, "arpeggio/multiplier")));
             }
 
             return new Voice
@@ -426,47 +403,47 @@ public static class PatchScript
                 Oscillator = new Oscillator(
                     waveform,
                     frequency,
-                    GetBoundFloat(fields, line, 0.5f, VoiceField(voiceIndex, "osc/duty"), "duty", "du"),
-                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "osc/phase"), "phase", "pa")),
+                    GetBoundFloat(fields, line, 0.5f, OwnerField(ownerPath, "osc/duty"), "duty", "du"),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "osc/phase"), "phase", "pa")),
                 Note = new Note(frequency, gateSeconds, noteSource),
                 Envelope = envelopeSpec?.Envelope ?? new Envelope(
-                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "env/attack"), "attack", "a"),
-                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "env/decay"), "env_decay", "ed"),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "env/attack"), "attack", "a"),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "env/decay"), "env_decay", "ed"),
                     sustainLevel,
-                    GetBoundFloat(fields, line, 0.1f, VoiceField(voiceIndex, "env/release"), "release", "rel", "decay", "d")),
+                    GetBoundFloat(fields, line, 0.1f, OwnerField(ownerPath, "env/release"), "release", "rel", "decay", "d")),
                 RateLevelEnvelope = envelopeSpec?.RateLevelEnvelope,
                 Pitch = new PitchMotion(
-                    GetBoundFloat(fields, line, 20, VoiceField(voiceIndex, "pitch/min_freq"), "min_freq", "min"),
-                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "pitch/ramp"), "pitch_ramp", "pr"),
-                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "pitch/delta"), "pitch_delta", "pd", "pitch_dramp", "pdr"),
-                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "pitch/vibrato"), "vibrato", "vi"),
-                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "pitch/vibrato_hz"), "vibrato_hz", "vh"),
-                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "pitch/vibrato_delay"), "vibrato_delay", "vd")),
-                Duty = new DutyMotion(GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "duty/ramp"), "duty_ramp", "dur")),
+                    GetBoundFloat(fields, line, 20, OwnerField(ownerPath, "pitch/min_freq"), "min_freq", "min"),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "pitch/ramp"), "pitch_ramp", "pr"),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "pitch/delta"), "pitch_delta", "pd", "pitch_dramp", "pdr"),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "pitch/vibrato"), "vibrato", "vi"),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "pitch/vibrato_hz"), "vibrato_hz", "vh"),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "pitch/vibrato_delay"), "vibrato_delay", "vd")),
+                Duty = new DutyMotion(GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "duty/ramp"), "duty_ramp", "dur")),
                 Filter = new Filter(
-                    GetBoundFloat(fields, line, 1, VoiceField(voiceIndex, "filter/lpf"), "lpf", "l"),
-                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "filter/lpf_ramp"), "lpf_ramp", "lr"),
-                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "filter/resonance"), "resonance", "res"),
-                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "filter/hpf"), "hpf", "h"),
-                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "filter/hpf_ramp"), "hpf_ramp", "hr")),
+                    GetBoundFloat(fields, line, 1, OwnerField(ownerPath, "filter/lpf"), "lpf", "l"),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "filter/lpf_ramp"), "lpf_ramp", "lr"),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "filter/resonance"), "resonance", "res"),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "filter/hpf"), "hpf", "h"),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "filter/hpf_ramp"), "hpf_ramp", "hr")),
                 Phaser = new Phaser(
-                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "phaser/offset"), "phaser", "ph"),
-                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "phaser/ramp"), "phaser_ramp", "phr")),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "phaser/offset"), "phaser", "ph"),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "phaser/ramp"), "phaser_ramp", "phr")),
                 Arpeggio = arpeggio,
                 Fm = new FrequencyModulation(
-                    GetBoundFloat(fields, line, 1, VoiceField(voiceIndex, "fm/ratio"), "fm", "fmr", "fm_ratio"),
-                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "fm/index"), "fm_index", "fmi"),
-                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "fm/decay"), "fm_decay", "fmd")),
+                    GetBoundFloat(fields, line, 1, OwnerField(ownerPath, "fm/ratio"), "fm", "fmr", "fm_ratio"),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "fm/index"), "fm_index", "fmi"),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "fm/decay"), "fm_decay", "fmd")),
                 Color = new VoiceColor(
-                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "color/noise"), "noise", "nz"),
-                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "color/drive"), "drive", "drv"),
-                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "color/fold"), "fold", "fl"),
-                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "color/tremolo"), "tremolo", "tr"),
-                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "color/tremolo_hz"), "tremolo_hz", "th"),
-                    GetBoundFloat(fields, line, 0, VoiceField(voiceIndex, "color/formant_mix"), "formant_mix", "fmix")),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "color/noise"), "noise", "nz"),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "color/drive"), "drive", "drv"),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "color/fold"), "fold", "fl"),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "color/tremolo"), "tremolo", "tr"),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "color/tremolo_hz"), "tremolo_hz", "th"),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "color/formant_mix"), "formant_mix", "fmix")),
                 Formants = formants,
                 Modulators = modulators,
-                Gain = GetBoundFloat(fields, line, 0.2f, VoiceField(voiceIndex, "gain"), "gain", "g") * gainScale
+                Gain = GetBoundFloat(fields, line, 0.2f, OwnerField(ownerPath, "gain"), "gain", "g") * gainScale
             };
         }
 
@@ -741,7 +718,7 @@ public static class PatchScript
 
         private static string VoicePath(int voiceIndex) => $"/voices/{voiceIndex}";
 
-        private static string VoiceField(int voiceIndex, string field) => $"/voices/{voiceIndex}/{field}";
+        private static string OwnerField(string ownerPath, string field) => $"{ownerPath}/{field}";
 
         private static List<OperatorNode> ParseOperatorNodes(string value, int line) =>
             value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)

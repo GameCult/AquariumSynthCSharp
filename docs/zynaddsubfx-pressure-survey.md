@@ -106,7 +106,7 @@ layer name=pad_low engine=pad
 spectrum layer=pad_low root=130.8128 spread=.012 partials=1:.07,1.5:.052
 ```
 
-The command records PAD-like partial intent under the layer and lowers it to
-detuned voice pairs. This is not a PADsynth wavetable generator. It is the
-smallest honest source authority needed before exact PAD synthesis earns its
-own machinery.
+The command records PAD-like partial intent under the layer and emits a static
+Faust wavetable source before normal voice treatment. This is not exact
+PADsynth bandwidth/FFT generation. It is the smallest honest source authority
+needed before exact PAD synthesis earns its own machinery.

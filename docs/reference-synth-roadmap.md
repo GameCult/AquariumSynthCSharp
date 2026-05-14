@@ -162,16 +162,17 @@ voice path. It is enough to express layered PAD/vocal onset and release shapes,
 but it is not yet a Zyn free-envelope point editor.
 
 The fourth response is `spectrum`: PAD layers can declare a source-level partial
-cloud that lowers to detuned voice pairs:
+cloud that emits as a Faust wavetable source before normal voice treatment:
 
 ```text
 layer name=pad_low engine=pad
 spectrum layer=pad_low root=130.8128 spread=.012 partials=1:.07,1.5:.052
 ```
 
-This gives PAD texture targets a reusable source authority without claiming
-exact PADsynth FFT/wavetable generation. `root`, `spread`, and `partials` are
-authoring-time graph shape, not runtime controls.
+This gives PAD texture targets a reusable source authority without inflating the
+voice graph. It is still not a claim of exact PADsynth FFT/bandwidth parity:
+`root`, `spread`, and `partials` are authoring-time table shape, not runtime
+controls.
 
 Sources:
 
