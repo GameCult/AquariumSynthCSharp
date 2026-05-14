@@ -399,6 +399,13 @@ public sealed class Dx7ReferenceParityTests
         var effectiveMidiNote = Math.Clamp(60 + voice.Transpose - 24, 0, 127);
         builder.AppendLine($"    freq={F(graphFrequency)}");
         builder.AppendLine($"    gain={F(graphGain)}");
+        var pitchLfoDepth = Dx7SysEx.PitchLfoDepth(voice.Lfo);
+        if (pitchLfoDepth > 0)
+        {
+            builder.AppendLine($"    vibrato={F(pitchLfoDepth)}");
+            builder.AppendLine($"    vibrato_hz={F(Dx7SysEx.LfoFrequencyHz(voice.Lfo))}");
+            builder.AppendLine($"    vibrato_delay={F(Dx7SysEx.LfoDelaySeconds(voice.Lfo))}");
+        }
         builder.AppendLine();
 
         foreach (var op in voice.Operators.OrderByDescending(op => op.Number))

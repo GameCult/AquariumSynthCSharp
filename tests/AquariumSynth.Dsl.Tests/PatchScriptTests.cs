@@ -305,12 +305,13 @@ public sealed class PatchScriptTests
     public void ReadableOperatorGraphSyntaxParsesRoutesCarriersAndEnvelopes()
     {
         var patch = PatchScript.Parse("""
-            opgraph name=pair freq=220 gain=.2
+            opgraph name=pair freq=220 gain=.2 vibrato=.004 vibrato_hz=6 vibrato_delay=.2
             operator name=op2 ratio=2 level=.8 env=ad:.01:.2
             operator name=op1 ratio=1 level=1 env=adsr:.02:.1:.65:.3
             route from=op2 to=op1 index=1.4
             carrier name=op1
             """);
+        var export = FaustEmitter.Emit(patch);
 
         var graph = Assert.Single(patch.OperatorGraphs);
         var op2 = graph.Operators.Single(op => op.Id == 2);
@@ -319,6 +320,9 @@ public sealed class PatchScriptTests
         Assert.Equal("pair", graph.Name);
         Assert.Equal([1], graph.Carriers);
         Assert.Single(graph.Edges);
+        Assert.Equal(.004f, graph.VibratoDepth, 5);
+        Assert.Equal(6, graph.VibratoHz);
+        Assert.Equal(.2f, graph.VibratoDelaySeconds, 5);
         Assert.Equal(.01f, op2.Envelope.AttackSeconds, 5);
         Assert.Equal(.2f, op2.Envelope.DecaySeconds, 5);
         Assert.Equal(.02f, op1.Envelope.AttackSeconds, 5);
@@ -326,6 +330,8 @@ public sealed class PatchScriptTests
         Assert.Equal(.65f, op1.Envelope.SustainLevel, 5);
         Assert.Equal(.3f, op1.Envelope.ReleaseSeconds, 5);
         Assert.Equal(.21f, op2.Note.GateSeconds, 5);
+        Assert.Contains("lfo_sin(6, 0.0)", export.Source);
+        Assert.Contains("clip01(age / max(0.0001, 0.2))", export.Source);
     }
 
     [Fact]

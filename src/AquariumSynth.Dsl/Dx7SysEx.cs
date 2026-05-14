@@ -241,6 +241,30 @@ public static class Dx7SysEx
         return 1;
     }
 
+    public static float LfoFrequencyHz(Dx7Lfo lfo)
+    {
+        var speed = Math.Clamp(lfo.Speed, 0, 99) / 99f;
+        return 0.1f + 40f * speed * speed;
+    }
+
+    public static float LfoDelaySeconds(Dx7Lfo lfo) =>
+        Math.Clamp(lfo.Delay, 0, 99) / 99f * 0.7f;
+
+    public static float PitchLfoDepth(Dx7Lfo lfo)
+    {
+        if (lfo.PitchModulationDepth <= 0 || lfo.PitchModulationSensitivity <= 0)
+        {
+            return 0;
+        }
+
+        return Math.Clamp(
+            lfo.PitchModulationDepth / 99f *
+            lfo.PitchModulationSensitivity / 7f *
+            0.08f,
+            0,
+            0.08f);
+    }
+
     public static float OperatorFrequencyRatio(Dx7Operator op, int midiNote = 60, float baseFrequencyHz = 261.62558f)
     {
         if (op.FrequencyMode == Dx7FrequencyMode.Fixed)

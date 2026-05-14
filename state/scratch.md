@@ -15,6 +15,22 @@ Doctrine update:
 
 Completed this slice:
 
+- Addressed the remaining `ANLGSYN 1` beat as DX7 pitch-LFO pressure, not
+  amplitude-LFO pressure. Raw `analog1.syx` bytes show `AMD=71` but every
+  operator has `AMS=0`; the active path is `PMD=32`, `PMS=1`, sine LFO speed
+  `38`, and delay `33`.
+- Added first-class operator-graph vibrato syntax:
+  `opgraph ... vibrato=<depth> vibrato_hz=<hz> vibrato_delay=<seconds>`.
+  Faust lowering modulates the graph frequency with a faded LFO onset instead
+  of a hard delay gate.
+- Lowered DX7 pitch LFO for the public-domain probe through that graph vibrato
+  surface. Latest `ANLGSYN 1` metrics with the beat present: score `.697885`,
+  log-mel `.19496867`, envelope `.15124573`, zero-crossing `.9430519`.
+- Tested and cut the earlier operator-tremolo direction for this target. It was
+  the wrong authority because ANLGSYN's operator `AMS` values are all zero.
+
+Previous slice:
+
 - Reframed the latest ear report as envelope pressure, not harmonic pressure:
   `{ Mooger }` needs a more aggressive attack contour; `MELLOWSOLO` needed a
   smoother captured tail; `RES SYNTH1` still has a phase-like attack-modulation

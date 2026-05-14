@@ -419,6 +419,21 @@ public sealed class Dx7SysExTests
         Assert.True(approximation.Envelope.Level3 >= 0.9f);
     }
 
+    [Fact]
+    public void MapsPitchLfoIntoGraphVibrato()
+    {
+        var data = InitVoice("ANLFO", algorithm: 2, feedback: 7);
+        data[137] = 38;
+        data[138] = 33;
+        data[139] = 32;
+        data[143] = 1;
+        var voice = Dx7SysEx.ParseVoice(data);
+
+        Assert.InRange(Dx7SysEx.LfoFrequencyHz(voice.Lfo), 5.9f, 6.0f);
+        Assert.InRange(Dx7SysEx.LfoDelaySeconds(voice.Lfo), .23f, .24f);
+        Assert.InRange(Dx7SysEx.PitchLfoDepth(voice.Lfo), .0036f, .0037f);
+    }
+
     private static byte[] InitVoice(string name, int algorithm, int feedback)
     {
         var data = new byte[Dx7SysEx.VoiceEditBufferLength];

@@ -347,7 +347,16 @@ public static class FaustEmitter
             source.AppendLine($"{name}_note_freq = hslider(\"/{name}/note/frequency\", {F(graph.Note.FrequencyHz)}, 20, 20000, 0.01) : si.smoo;");
             source.AppendLine($"{name}_note_gate = button(\"/{name}/note/gate\");");
         }
-        source.AppendLine($"{name}_freq = {graphNoteFreq};");
+        var graphVibratoDepth = parameters.Expression($"{graphPath}/pitch/vibrato", graph.VibratoDepth);
+        var graphVibratoHz = parameters.Expression($"{graphPath}/pitch/vibrato_hz", graph.VibratoHz);
+        var graphVibratoDelay = parameters.Expression($"{graphPath}/pitch/vibrato_delay", graph.VibratoDelaySeconds);
+        var hasGraphVibrato = graph.VibratoDepth > 0 && graph.VibratoHz > 0 ||
+                              parameters.IsBound($"{graphPath}/pitch/vibrato") ||
+                              parameters.IsBound($"{graphPath}/pitch/vibrato_hz");
+        var graphPitchMod = hasGraphVibrato
+            ? $" * max(0.0, 1.0 + clip01(age / max(0.0001, {graphVibratoDelay})) * {graphVibratoDepth} * lfo_sin({graphVibratoHz}, 0.0))"
+            : "";
+        source.AppendLine($"{name}_freq = {graphNoteFreq}{graphPitchMod};");
         foreach (var op in ordered)
         {
             var opName = $"{name}_op_{op.Id}";

@@ -150,6 +150,14 @@ math is still fake in the places that matter perceptually.
      peak at `0.92`. This leaves `Piano Bass` unchanged, improves `RES SYNTH1`,
      and keeps `ANLGSYN 1` judged primarily by log-mel plus sustained high-band
      evidence rather than aggregate score.
+   - The remaining `ANLGSYN 1` beat comes from DX7 pitch LFO, not amplitude
+     LFO: the patch has `AMD=71` but all operators have `AMS=0`, while
+     `PMD=32`, `PMS=1`, sine LFO speed `38`, and delay `33` are active. The
+     operator graph now owns graph-level vibrato and lowers this to
+     `vibrato=0.003694`, `vibrato_hz=5.993276`, and a faded
+     `vibrato_delay=0.233333`. A hard delay gate was tested and cut because it
+     pushed log-mel just over the gate; fade-in preserves the beat without
+     adding an onset discontinuity.
    - Removing ROM COM carrier boosts made the community harmonics closer by
      ear but much quieter. Restoring loudness with graph gain keeps the improved
      balance: `{ Mooger }` uses `gain=0.75`, `Piano Bass` uses `gain=0.72`,

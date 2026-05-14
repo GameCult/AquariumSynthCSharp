@@ -156,7 +156,10 @@ public sealed record OperatorGraph(
     IReadOnlyList<OperatorEdge> Edges,
     IReadOnlyList<int> Carriers,
     Note Note = null!,
-    float Gain = 0.2f)
+    float Gain = 0.2f,
+    float VibratoDepth = 0,
+    float VibratoHz = 0,
+    float VibratoDelaySeconds = 0)
 {
     public Note Note { get; init; } = Note ?? new();
 }

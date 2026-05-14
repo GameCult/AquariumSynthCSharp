@@ -339,16 +339,19 @@ public static class PatchScript
                 : operators.Select(op => op.Id).ToList();
 
             AddValidatedOperatorGraph(line, new OperatorGraph(
-                GetAny(fields, ["name", "n"], $"opgraph{graphIndex}"),
-                GetBoundFloat(fields, line, 440, $"{graphPath}/freq", "freq", "frequency", "f"),
-                operators,
-                edges,
-                carriers,
-                new Note(
+                Name: GetAny(fields, ["name", "n"], $"opgraph{graphIndex}"),
+                FrequencyHz: GetBoundFloat(fields, line, 440, $"{graphPath}/freq", "freq", "frequency", "f"),
+                Operators: operators,
+                Edges: edges,
+                Carriers: carriers,
+                Note: new Note(
                     GetBoundFloat(fields, line, 440, $"{graphPath}/note/frequency", "freq", "frequency", "f"),
                     GetBoundFloat(fields, line, 0.1f, $"{graphPath}/note/gate", "gate", "hold", "duration"),
                     ParseNoteSource(GetAny(fields, ["note_source", "source"], "oneshot"), line)),
-                GetBoundFloat(fields, line, 0.2f, $"{graphPath}/gain", "gain", "g")));
+                Gain: GetBoundFloat(fields, line, 0.2f, $"{graphPath}/gain", "gain", "g"),
+                VibratoDepth: GetBoundFloat(fields, line, 0, $"{graphPath}/pitch/vibrato", "vibrato", "vib"),
+                VibratoHz: GetBoundFloat(fields, line, 0, $"{graphPath}/pitch/vibrato_hz", "vibrato_hz", "vib_hz"),
+                VibratoDelaySeconds: GetBoundFloat(fields, line, 0, $"{graphPath}/pitch/vibrato_delay", "vibrato_delay", "vib_delay")));
         }
 
         private void StartOperatorGraph(IReadOnlyDictionary<string, string> fields, int line)
@@ -371,7 +374,10 @@ public static class PatchScript
                     GetBoundFloat(fields, line, 440, $"{graphPath}/note/frequency", "freq", "frequency", "f"),
                     GetBoundFloat(fields, line, 0.1f, $"{graphPath}/note/gate", "gate", "hold", "duration"),
                     ParseNoteSource(GetAny(fields, ["note_source", "source"], "oneshot"), line)),
-                GetBoundFloat(fields, line, 0.2f, $"{graphPath}/gain", "gain", "g"));
+                GetBoundFloat(fields, line, 0.2f, $"{graphPath}/gain", "gain", "g"),
+                GetBoundFloat(fields, line, 0, $"{graphPath}/pitch/vibrato", "vibrato", "vib"),
+                GetBoundFloat(fields, line, 0, $"{graphPath}/pitch/vibrato_hz", "vibrato_hz", "vib_hz"),
+                GetBoundFloat(fields, line, 0, $"{graphPath}/pitch/vibrato_delay", "vibrato_delay", "vib_delay"));
         }
 
         private void AddOperator(IReadOnlyDictionary<string, string> fields, int line)
@@ -390,13 +396,13 @@ public static class PatchScript
                     GetBoundFloat(fields, line, graph.Note.GateSeconds, $"{operatorPath}/note/gate", "gate", "hold", "duration"));
 
             graph.Operators.Add(new OperatorNode(
-                id,
-                GetBoundFloat(fields, line, 1, $"{operatorPath}/ratio", "ratio", "r"),
-                GetBoundFloat(fields, line, 1, $"{operatorPath}/level", "level", "l"),
-                GetBoundFloat(fields, line, 0, $"{operatorPath}/feedback", "feedback", "fb"),
-                graph.Note with { GateSeconds = envelopeSpec.GateSeconds },
-                envelopeSpec.Envelope,
-                envelopeSpec.RateLevelEnvelope));
+                Id: id,
+                Ratio: GetBoundFloat(fields, line, 1, $"{operatorPath}/ratio", "ratio", "r"),
+                Level: GetBoundFloat(fields, line, 1, $"{operatorPath}/level", "level", "l"),
+                Feedback: GetBoundFloat(fields, line, 0, $"{operatorPath}/feedback", "feedback", "fb"),
+                Note: graph.Note with { GateSeconds = envelopeSpec.GateSeconds },
+                Envelope: envelopeSpec.Envelope,
+                RateLevelEnvelope: envelopeSpec.RateLevelEnvelope));
         }
 
         private void AddOperatorRoute(IReadOnlyDictionary<string, string> fields, int line)
@@ -428,7 +434,10 @@ public static class PatchScript
                 graph.Edges,
                 graph.Carriers.Count > 0 ? graph.Carriers : graph.Operators.Select(op => op.Id).ToList(),
                 graph.Note,
-                graph.Gain));
+                graph.Gain,
+                graph.VibratoDepth,
+                graph.VibratoHz,
+                graph.VibratoDelaySeconds));
         }
 
         private void AddValidatedOperatorGraph(int line, OperatorGraph graph)
@@ -549,12 +558,12 @@ public static class PatchScript
                     }
 
                     return new OperatorNode(
-                        ParseInt(pieces[0], line),
-                        ParseFloat(pieces[1], line),
-                        ParseFloat(pieces[2], line),
-                        pieces.Length >= 4 ? ParseFloat(pieces[3], line) : 0,
-                        pieces.Length >= 6 ? new Note(GateSeconds: ParseFloat(pieces[4], line)) : new Note(),
-                        pieces.Length >= 6 ? new Envelope(ReleaseSeconds: ParseFloat(pieces[5], line)) : new Envelope());
+                        Id: ParseInt(pieces[0], line),
+                        Ratio: ParseFloat(pieces[1], line),
+                        Level: ParseFloat(pieces[2], line),
+                        Feedback: pieces.Length >= 4 ? ParseFloat(pieces[3], line) : 0,
+                        Note: pieces.Length >= 6 ? new Note(GateSeconds: ParseFloat(pieces[4], line)) : new Note(),
+                        Envelope: pieces.Length >= 6 ? new Envelope(ReleaseSeconds: ParseFloat(pieces[5], line)) : new Envelope());
                 })
                 .ToList();
 
@@ -756,7 +765,10 @@ public static class PatchScript
             string Name,
             float FrequencyHz,
             Note Note,
-            float Gain)
+            float Gain,
+            float VibratoDepth,
+            float VibratoHz,
+            float VibratoDelaySeconds)
         {
             public List<OperatorNode> Operators { get; } = [];
             public List<OperatorEdge> Edges { get; } = [];
