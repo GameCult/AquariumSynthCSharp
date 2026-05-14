@@ -1,0 +1,13 @@
+﻿# blip
+# Family: sfxr
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+voice
+    wave=sine
+    freq=78.2334
+    gain=0.22
+    sustain=0.03832199546
+    decay=0.01451247166
+    hpf=0.1
+    drive=0.12

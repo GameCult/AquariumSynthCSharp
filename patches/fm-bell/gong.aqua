@@ -1,0 +1,8 @@
+﻿# gong
+# Family: fm-bell
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+defaults wave=sine attack=0.003 sustain=0.08 decay=1.6 lpf=0.82 drive=0.1
+voice freq=196 gain=0.24 fm=2.414 fm_index=7.2 fm_decay=0.9
+voice freq=311 gain=0.12 fm=3.73 fm_index=4.1 fm_decay=0.7

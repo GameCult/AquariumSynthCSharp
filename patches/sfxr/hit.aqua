@@ -1,0 +1,15 @@
+﻿# hit
+# Family: sfxr
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+voice
+    wave=noise
+    freq=51.4206
+    gain=0.22
+    sustain=0.00566893424
+    decay=0.09070294785
+    pitch_ramp=1.050624
+    hpf=0.12
+    noise=0.35
+    drive=0.12

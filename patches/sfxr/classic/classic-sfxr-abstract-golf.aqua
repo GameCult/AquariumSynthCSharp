@@ -1,0 +1,86 @@
+﻿# Classic SFXR Abstract Golf
+# Family: sfxr/classic
+# Source: BuiltInScripts.ClassicSfxrAbstractGolfScript
+# Notes: Compressed SFXR-derived multi-sound golf fixture.
+
+defaults gain=0.22 drive=0.12
+template name=Noise
+    wave=noise
+    noise=0.35
+
+voice
+    wave=square
+    freq=148.7934
+    gain=0.319
+    sustain=0.01451247166
+    decay=0.1306122449
+    sustain_level=0.6896552
+    drive=0.201
+    arp_delay=0.081844
+    arp_mult=1.116121255
+
+voice
+    wave=saw
+    freq=229.0554
+    sustain=0.08185941043
+    decay=0.07346938776
+    pitch_ramp=0.703836
+    duty=0.31
+    duty_ramp=0.056
+    hpf=0.04
+    phaser=0.0001458
+    phaser_ramp=-0.000504
+
+patch repeat=0.174744
+voice
+    use=Noise
+    freq=20
+    gain=0.3344
+    sustain=0.1907029478
+    decay=0.293877551
+    sustain_level=0.6578947
+    pitch_ramp=0.0320625
+    phaser=-0.0008712
+    phaser_ramp=-0.00035
+    vibrato=0.11
+    vibrato_hz=3.4112
+    drive=0.2136
+    tremolo=0.0264
+    tremolo_hz=13.04
+
+patch repeat=0.11315
+voice
+    wave=sine
+    freq=57.5946
+    sustain=0.1306122449
+    decay=0.1777777778
+    pitch_ramp=-0.208544
+    vibrato=0.09
+    vibrato_hz=3.9602
+    tremolo=0.0216
+    tremolo_hz=13.94
+
+voice
+    use=Noise
+    freq=51.4206
+    sustain=0.00566893424
+    decay=0.09070294785
+    pitch_ramp=1.050624
+    hpf=0.12
+
+voice
+    wave=square
+    freq=78.2334
+    sustain=0.1097505669
+    decay=0.07346938776
+    pitch_ramp=-0.101156
+    duty=0.38
+    lpf=0.72
+    hpf=0.05
+
+voice
+    wave=sine
+    freq=78.2334
+    sustain=0.03832199546
+    decay=0.01451247166
+    hpf=0.1

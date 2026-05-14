@@ -1,0 +1,26 @@
+﻿# snare
+# Family: 808
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+defaults drive=0.12
+template name=Noise
+    wave=noise
+    noise=0.85
+    hpf=0.45
+    lpf=0.55
+
+voice
+    wave=sine
+    freq=180
+    gain=0.08
+    sustain=0.02
+    decay=0.12
+    pitch_ramp=-1.2
+
+voice
+    use=Noise
+    freq=140
+    gain=0.55
+    sustain=0.035
+    decay=0.2

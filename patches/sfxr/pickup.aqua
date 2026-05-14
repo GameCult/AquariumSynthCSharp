@@ -1,0 +1,15 @@
+﻿# pickup
+# Family: sfxr
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+voice
+    wave=square
+    freq=148.7934
+    gain=0.319
+    sustain=0.01451247166
+    decay=0.1306122449
+    sustain_level=0.6896552
+    drive=0.201
+    arp_delay=0.081844
+    arp_mult=1.116121255

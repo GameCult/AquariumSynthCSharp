@@ -1,0 +1,27 @@
+﻿# portal-chirp
+# Family: bfxr
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+defaults
+    wave=saw
+    freq=320
+    gain=0.14
+    sustain=0.09
+    decay=0.28
+    pitch_ramp=0.85
+    duty=0.38
+    hpf=0.08
+    lpf=0.72
+    drive=0.16
+    fold=0.08
+
+mod name=waver
+    wave=sine
+    hz=9
+    pitch=0.018
+    duty=0.06
+    lpf=0.08
+
+voice
+voice wave=square freq=640 gain=0.05 duty=0.44

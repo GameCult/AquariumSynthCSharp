@@ -1,0 +1,20 @@
+﻿# hat
+# Family: 808
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+defaults hpf=0.9 lpf=0.24 drive=0.05
+voice
+    wave=noise
+    freq=9000
+    gain=0.16
+    sustain=0.006
+    decay=0.055
+    noise=1
+
+voice
+    wave=square
+    freq=6800
+    gain=0.045
+    sustain=0.005
+    decay=0.04

@@ -1,0 +1,33 @@
+﻿# growl
+# Family: wobble-bass
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+defaults
+    wave=saw
+    freq=44
+    gain=0.2
+    sustain=0.7
+    decay=0.3
+    lpf=0.28
+    hpf=0.01
+    drive=0.42
+    fold=0.18
+    fm=1.5
+    fm_index=1.2
+    fm_decay=0.45
+    noise=0.05
+
+mod name=wobble
+    hz=6
+    wave=sine
+    gain=0.32
+    lpf=0.55
+    pitch=0.035
+    drive=0.28
+    fold=0.22
+    noise=0.08
+    fm_index=2.2
+
+voice
+voice wave=square freq=88 gain=0.09 duty=0.36

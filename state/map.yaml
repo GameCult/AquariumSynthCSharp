@@ -12,6 +12,7 @@ surfaces:
   spine: state/spine.yaml
   solution: AquariumSynthCSharp.slnx
   library: src/AquariumSynth.Dsl
+  patch_library: patches
   tests: tests/AquariumSynth.Dsl.Tests
   reference_roadmap: docs/reference-synth-roadmap.md
   dx7_public_domain_fixtures: tests/AquariumSynth.Dsl.Tests/Fixtures/Dx7/PublicDomain
@@ -44,6 +45,7 @@ boundaries:
   dev_only:
     - public-domain DX7 SysEx fixtures
     - dexed-py reference renderer
+    - structured .aqua patch library
 checks:
   default: dotnet test
   package: dotnet pack src/AquariumSynth.Dsl/AquariumSynth.Dsl.csproj -c Release

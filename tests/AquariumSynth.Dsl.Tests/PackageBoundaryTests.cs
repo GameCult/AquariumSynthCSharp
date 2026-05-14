@@ -26,6 +26,8 @@ public sealed class PackageBoundaryTests
             Assert.Contains("README.md", entries);
             Assert.DoesNotContain(entries, entry => entry.StartsWith("tests/", StringComparison.OrdinalIgnoreCase));
             Assert.DoesNotContain(entries, entry => entry.StartsWith("Fixtures/", StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(entries, entry => entry.StartsWith("patches/", StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(entries, entry => entry.EndsWith(".aqua", StringComparison.OrdinalIgnoreCase));
             Assert.DoesNotContain(entries, entry => entry.EndsWith(".syx", StringComparison.OrdinalIgnoreCase));
             Assert.DoesNotContain(entries, entry => entry.EndsWith(".py", StringComparison.OrdinalIgnoreCase));
         }

@@ -1,0 +1,37 @@
+﻿# glass-creature
+# Family: advanced
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+patch
+    gain=0.52
+    soft_clip=true
+
+defaults
+    wave=triangle
+    attack=0.002
+    sustain=0.18
+    decay=1.05
+    lpf=0.92
+    hpf=0.03
+    drive=0.08
+
+template name=Ping
+    fm=3.5
+    fm_index=2.8
+    fm_decay=0.5
+    vibrato=0.018
+    vibrato_hz=6.4
+
+mod name=blink
+    wave=sine
+    hz=1.8
+    pitch=0.02
+    gain=0.18
+    fm_index=0.8
+
+voice use=Ping freq=523.25 gain=0.1344 sustain_level=0.8928571
+voice use=Ping freq=659.25 gain=0.08 sustain=0.11 decay=0.84 fm=4.2
+voice use=Ping freq=783.99 gain=0.07 sustain=0.08 decay=0.72 fm_index=1.9
+voice wave=sine freq=261.63 gain=0.045 sustain=0.7 decay=1.3 fm=1.5 fm_index=0.65 fm_decay=1.2
+voice wave=noise freq=2400 gain=0.012 sustain=0.04 decay=0.55 noise=0.9 hpf=0.72 lpf=0.5

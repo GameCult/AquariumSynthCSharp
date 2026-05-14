@@ -1,0 +1,27 @@
+﻿# ui-bloom
+# Family: bfxr
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+patch repeat=0.18
+defaults
+    wave=sine
+    gain=0.1464
+    sustain=0.05
+    decay=0.5
+    sustain_level=0.8196721
+    lpf=0.78
+    drive=0.06
+
+voice
+    freq=392
+    pitch_ramp=0.18
+    arp_delay=0.08
+    arp_mult=1.25
+
+voice
+    freq=588
+    gain=0.06
+    attack=0.004
+    sustain=0.04
+    decay=0.38

@@ -1,0 +1,18 @@
+﻿# powerup
+# Family: sfxr
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+patch repeat=0.11315
+voice
+    wave=sine
+    freq=57.5946
+    gain=0.22
+    sustain=0.1306122449
+    decay=0.1777777778
+    pitch_ramp=-0.208544
+    vibrato=0.09
+    vibrato_hz=3.9602
+    drive=0.12
+    tremolo=0.0216
+    tremolo_hz=13.94

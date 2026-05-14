@@ -1,0 +1,90 @@
+﻿# Algorithm 8 bright pair
+# Family: dx7
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+patch
+    gain=0.52
+    soft_clip=true
+
+param
+    name=brightness
+    path=/macro/brightness
+    default=2.6
+    min=0
+    max=5
+    step=0.001
+    unit=index
+
+param
+    name=strike
+    path=/macro/strike
+    default=0.18
+    min=0.02
+    max=0.6
+    step=0.001
+    unit=seconds
+
+defaults
+    wave=sine
+    attack=0.001
+    sustain=0.045
+    decay=@/macro/strike
+    hpf=0.02
+    lpf=0.9
+
+opgraph
+    name=dx7_algo8_core
+    freq=330
+    gain=0.18
+
+operator name=op6
+    ratio=4
+    level=0.9
+    env=ad:0.035:0.18
+
+operator name=op5
+    ratio=3
+    level=0.82
+    env=ad:0.04:0.2
+
+operator name=op4
+    ratio=2
+    level=0.7
+    feedback=0.18
+    env=ad:0.05:0.24
+
+operator name=op3
+    ratio=2
+    level=0.6
+    env=ad:0.06:0.3
+
+operator name=op2
+    ratio=1
+    level=0.75
+    env=ad:0.045:0.2
+
+operator name=op1
+    ratio=1
+    level=0.82
+    env=adsr:0.005:0.08:0.68:0.34
+
+route from=op6 to=op5 index=1.1
+route from=op5 to=op3 index=0.9
+route from=op4 to=op3 index=0.75
+route from=op2 to=op1 index=0.85
+carrier name=op1
+carrier name=op3
+
+voice
+    freq=330
+    gain=0.04
+    fm=2
+    fm_index=@/macro/brightness
+    fm_decay=0.22
+
+voice
+    freq=660
+    gain=0.025
+    drive=0.08
+    fold=0.05

@@ -1,0 +1,179 @@
+﻿version: 1
+purpose: Development patch library for Aquarium DSL examples, parity rebuilds, and stock inspiration.
+package_boundary: Not included in AquariumSynth.Dsl.nupkg unless explicitly promoted later.
+entries:
+  - path: patches/808/clap.aqua
+    family: 808
+    name: "clap"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/808/cowbell.aqua
+    family: 808
+    name: "cowbell"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/808/hat.aqua
+    family: 808
+    name: "hat"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/808/kick.aqua
+    family: 808
+    name: "kick"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/808/snare.aqua
+    family: 808
+    name: "snare"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/808/tom.aqua
+    family: 808
+    name: "tom"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/advanced/aurora-pad.aqua
+    family: advanced
+    name: "aurora-pad"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/advanced/glass-creature.aqua
+    family: advanced
+    name: "glass-creature"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/advanced/machine-breath.aqua
+    family: advanced
+    name: "machine-breath"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/advanced/ritual-sequence.aqua
+    family: advanced
+    name: "ritual-sequence"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/bfxr/coin-spark.aqua
+    family: bfxr
+    name: "coin-spark"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/bfxr/portal-chirp.aqua
+    family: bfxr
+    name: "portal-chirp"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/bfxr/shield-pop.aqua
+    family: bfxr
+    name: "shield-pop"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/bfxr/ui-bloom.aqua
+    family: bfxr
+    name: "ui-bloom"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/dx7/algorithm-32-additive-organ.aqua
+    family: dx7
+    name: "Algorithm 32 additive organ"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/dx7/algorithm-8-bright-pair.aqua
+    family: dx7
+    name: "Algorithm 8 bright pair"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/dx7/public-domain-mc-mm-5-3.aqua
+    family: dx7
+    name: "Public-domain MC-MM 5-3"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/dx7/public-domain/prc-synth1-calibrated.aqua
+    family: dx7/public-domain
+    name: "PRC SYNTH1 calibrated"
+    source: "analog1.syx voice 17 parity probe"
+    notes: "Generated from latest calibrated DX7 lowering."
+  - path: patches/examples/language-tour.aqua
+    family: examples
+    name: "Language Tour"
+    source: "BuiltInScripts.PatchScriptExample"
+    notes: "Parser and DSL feature tour."
+  - path: patches/fm-bell/bell.aqua
+    family: fm-bell
+    name: "bell"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/fm-bell/chime.aqua
+    family: fm-bell
+    name: "chime"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/fm-bell/coin.aqua
+    family: fm-bell
+    name: "coin"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/fm-bell/gong.aqua
+    family: fm-bell
+    name: "gong"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/sfxr/blip.aqua
+    family: sfxr
+    name: "blip"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/sfxr/classic/classic-sfxr-abstract-golf.aqua
+    family: sfxr/classic
+    name: "Classic SFXR Abstract Golf"
+    source: "BuiltInScripts.ClassicSfxrAbstractGolfScript"
+    notes: "Compressed SFXR-derived multi-sound golf fixture."
+  - path: patches/sfxr/explosion.aqua
+    family: sfxr
+    name: "explosion"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/sfxr/hit.aqua
+    family: sfxr
+    name: "hit"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/sfxr/jump.aqua
+    family: sfxr
+    name: "jump"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/sfxr/laser.aqua
+    family: sfxr
+    name: "laser"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/sfxr/pickup.aqua
+    family: sfxr
+    name: "pickup"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/sfxr/powerup.aqua
+    family: sfxr
+    name: "powerup"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/wobble-bass/growl.aqua
+    family: wobble-bass
+    name: "growl"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/wobble-bass/neuro.aqua
+    family: wobble-bass
+    name: "neuro"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/wobble-bass/talker.aqua
+    family: wobble-bass
+    name: "talker"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."
+  - path: patches/wobble-bass/yoy.aqua
+    family: wobble-bass
+    name: "yoy"
+    source: "BuiltInScripts.ReferenceScripts"
+    notes: "Stock reference patch exported from the in-code catalog."

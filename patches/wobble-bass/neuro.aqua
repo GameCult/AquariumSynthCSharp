@@ -1,0 +1,33 @@
+﻿# neuro
+# Family: wobble-bass
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+defaults
+    wave=saw
+    freq=49
+    gain=0.16
+    sustain=0.75
+    decay=0.28
+    lpf=0.25
+    hpf=0.04
+    drive=0.38
+    fold=0.24
+    fm=2.7
+    fm_index=1.5
+    fm_decay=0.35
+    noise=0.04
+
+mod name=wobble
+    hz=7
+    wave=hold
+    gain=0.28
+    lpf=0.52
+    pitch=0.04
+    drive=0.25
+    fold=0.3
+    noise=0.1
+    fm_index=2.8
+
+voice
+voice wave=triangle freq=147 gain=0.06

@@ -1,0 +1,44 @@
+﻿# aurora-pad
+# Family: advanced
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+patch
+    gain=0.58
+    soft_clip=true
+
+defaults
+    wave=sine
+    attack=0.018
+    sustain=1.15
+    decay=1.6
+    lpf=0.86
+    hpf=0.018
+    drive=0.05
+
+template name=GlassPartial
+    fm=2.414
+    fm_index=1.4
+    fm_decay=0.8
+    formants=420:80:0.25,1180:180:0.75,2450:360:0.42
+    formant_mix=0.18
+
+mod name=tide
+    wave=sine
+    hz=0.21
+    gain=0.08
+    pitch=0.012
+    lpf=0.09
+    formant_mix=0.16
+    fm_index=0.35
+
+mod name=shiver
+    wave=triangle
+    hz=4.6
+    pitch=0.004
+    drive=0.035
+
+voice use=GlassPartial freq=220 gain=0.12
+voice use=GlassPartial freq=330 gain=0.08 fm=3.01 fm_index=0.9
+voice use=GlassPartial freq=440 gain=0.06 fm=1.618 fm_index=0.7 formant_mix=0.26
+voice wave=noise freq=1600 gain=0.018 sustain=1.4 decay=2.0 noise=0.72 hpf=0.62 lpf=0.38

@@ -1,0 +1,29 @@
+﻿# shield-pop
+# Family: bfxr
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+defaults
+    wave=triangle
+    gain=0.264
+    sustain=0.04
+    decay=0.36
+    sustain_level=0.7575758
+    lpf=0.68
+    hpf=0.03
+    drive=0.12
+
+voice
+    freq=260
+    pitch_ramp=-0.75
+    vibrato=0.04
+    vibrato_hz=7.2
+
+voice
+    wave=noise
+    freq=900
+    gain=0.05
+    sustain=0.018
+    decay=0.16
+    noise=0.7
+    hpf=0.4

@@ -1,0 +1,22 @@
+﻿# explosion
+# Family: sfxr
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+patch repeat=0.174744
+voice
+    wave=noise
+    freq=20
+    gain=0.3344
+    sustain=0.1907029478
+    decay=0.293877551
+    sustain_level=0.6578947
+    pitch_ramp=0.0320625
+    phaser=-0.0008712
+    phaser_ramp=-0.00035
+    vibrato=0.11
+    vibrato_hz=3.4112
+    noise=0.35
+    drive=0.2136
+    tremolo=0.0264
+    tremolo_hz=13.04

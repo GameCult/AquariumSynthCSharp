@@ -197,6 +197,26 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
+    public void PatchLibraryScriptsParseAndExportFaust()
+    {
+        var libraryRoot = Path.Combine(RepositoryRoot(), "patches");
+        var files = Directory.GetFiles(libraryRoot, "*.aqua", SearchOption.AllDirectories);
+
+        Assert.NotEmpty(files);
+        foreach (var file in files)
+        {
+            var script = File.ReadAllText(file);
+            var patch = PatchScript.Parse(script);
+            var export = FaustEmitter.Emit(
+                patch,
+                new FaustExportOptions(Path.GetFileNameWithoutExtension(file).Replace('-', '_')));
+
+            Assert.True(patch.Voices.Count > 0 || patch.OperatorGraphs.Count > 0, file);
+            Assert.Contains("process =", export.Source);
+        }
+    }
+
+    [Fact]
     public void AdvancedReferenceScriptsExerciseLayeredPatchFeatures()
     {
         foreach (var (name, script) in BuiltInScripts.AdvancedReferenceScripts)
@@ -598,5 +618,16 @@ public sealed class PatchScriptTests
 
         Assert.True(render.Samples.Length > 1000, render.Stderr);
         Assert.True(render.Samples.Max(MathF.Abs) > 0.001f, render.Stderr);
+    }
+
+    private static string RepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AquariumSynthCSharp.slnx")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.FullName ?? throw new InvalidOperationException("could not find repository root");
     }
 }

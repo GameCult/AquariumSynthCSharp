@@ -1,0 +1,37 @@
+﻿# ritual-sequence
+# Family: advanced
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+patch
+    gain=0.62
+    repeat=0.42
+    soft_clip=true
+
+defaults
+    wave=sine
+    gain=0.1534
+    attack=0.001
+    sustain=0.045
+    decay=0.5
+    sustain_level=0.8474576
+    lpf=0.82
+    hpf=0.035
+    drive=0.1
+
+template name=Step
+    fm=2
+    fm_index=1.8
+    fm_decay=0.32
+    arp_delay=0.065
+    arp_mult=1.4983
+
+bus name=cycle
+    wave=triangle
+    hz=2.38
+    to=gain:0.2,pitch:0.018,lpf:0.12,fm_index:0.75
+
+voice use=Step freq=196
+voice use=Step freq=293.66 gain=0.09 sustain=0.035 decay=0.38 arp_mult=1.3348
+voice use=Step freq=392 gain=0.07 sustain=0.028 decay=0.32 arp_mult=1.2599
+voice wave=noise freq=3100 gain=0.025 sustain=0.018 decay=0.16 noise=1 hpf=0.68 lpf=0.46

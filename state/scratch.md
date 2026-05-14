@@ -15,6 +15,23 @@ Doctrine update:
 
 Completed this slice:
 
+- Added a structured `.aqua` patch library under `patches/` with:
+  `examples/`, `sfxr/`, `bfxr/`, `808/`, `fm-bell/`, `wobble-bass/`,
+  `dx7/`, and `advanced/`.
+- Added `patches/library.yaml` as the machine-readable index and
+  `patches/README.md` as the folder contract. The library is development
+  source material for stock, reference rebuilds, calibration probes, and patch
+  inspiration, not a shipped package surface.
+- Exported the existing built-in/reference catalog into `.aqua` files and added
+  the calibrated `PRC SYNTH1` hard DX7 candidate at
+  `patches/dx7/public-domain/prc-synth1-calibrated.aqua`.
+- Added a test contract: every `.aqua` under `patches/` must parse through
+  `PatchScript.Parse` and export Faust, while package-boundary tests keep
+  `patches/` and `.aqua` files out of the NuGet package.
+- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 67 passed.
+
+Previous slice:
+
 - Increased `Dx7SysEx.SummedOperatorModulationRouteIndex` from `1.6` to `6.0`.
   This targets the missing harsh stacked-modulation brightness without adding a
   generic drive/overdrive knob. The independent project-authored algorithm-8

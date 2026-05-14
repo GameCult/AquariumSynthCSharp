@@ -1,0 +1,14 @@
+﻿# tom
+# Family: 808
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+defaults wave=sine gain=0.704 drive=0.12
+voice
+    freq=115
+    sustain=0.055
+    decay=0.34
+    sustain_level=0.78125
+    pitch_ramp=-1.45
+    min_freq=62
+    lpf=0.78

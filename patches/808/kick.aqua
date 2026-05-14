@@ -1,0 +1,14 @@
+﻿# kick
+# Family: 808
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+defaults wave=sine gain=1.32 drive=0.18
+voice
+    freq=58
+    sustain=0.045
+    decay=0.42
+    sustain_level=0.6060606
+    pitch_ramp=-3.8
+    min_freq=32
+    lpf=0.85

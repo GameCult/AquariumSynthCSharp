@@ -1,0 +1,31 @@
+﻿# yoy
+# Family: wobble-bass
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+defaults
+    wave=square
+    freq=62
+    gain=0.16
+    sustain=0.65
+    decay=0.22
+    lpf=0.3
+    hpf=0.03
+    drive=0.25
+    fm=3
+    fm_index=0.7
+    fm_decay=0.5
+    formants=400:80:0.6,900:120:1,2100:260:0.4
+    formant_mix=0.28
+
+mod name=wobble
+    hz=5
+    wave=square
+    gain=0.5
+    lpf=0.5
+    formant_mix=0.45
+    pitch=0.025
+    duty=0.08
+
+voice
+voice wave=saw freq=124 gain=0.07

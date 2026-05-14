@@ -1,0 +1,33 @@
+﻿# talker
+# Family: wobble-bass
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+defaults
+    wave=saw
+    freq=55
+    gain=0.18
+    sustain=0.8
+    decay=0.25
+    lpf=0.34
+    hpf=0.02
+    drive=0.3
+    fold=0.08
+    fm=2
+    fm_index=0.8
+    fm_decay=0.7
+    formants=520:90:0.7,1250:170:1,2600:320:0.45
+    formant_mix=0.35
+
+mod name=wobble
+    hz=4
+    wave=triangle
+    gain=0.42
+    lpf=0.48
+    formant_mix=0.38
+    fm_index=1.6
+    drive=0.2
+    fold=0.14
+
+voice
+voice freq=110 gain=0.08 duty=0.42

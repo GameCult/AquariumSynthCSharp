@@ -1,0 +1,8 @@
+﻿# coin
+# Family: fm-bell
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+defaults wave=sine attack=0 sustain=0.02 decay=0.45 hpf=0.04 drive=0.08
+voice freq=1200 gain=0.18 fm=5 fm_index=3.4 fm_decay=0.18
+voice freq=1800 gain=0.09 fm=7 fm_index=1.8 fm_decay=0.12

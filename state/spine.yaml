@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-14T12:39:00+01:00
+updated: 2026-05-14T13:08:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -19,6 +19,7 @@ current_mechanism:
   operator_graph_model: src/AquariumSynth.Dsl/Model.cs
   analysis: src/AquariumSynth.Dsl/AudioAnalysis.cs
   built_ins: src/AquariumSynth.Dsl/BuiltInScripts.cs
+  patch_library: patches
   dx7_references: src/AquariumSynth.Dsl/Dx7SysEx.cs
   dx7_reference_fixtures: tests/AquariumSynth.Dsl.Tests/Fixtures/Dx7/PublicDomain
   dx7_reference_renderer_tests: tests/AquariumSynth.Dsl.Tests/Dx7ReferenceParityTests.cs
@@ -61,6 +62,7 @@ live_invariants:
   - Recompile only for graph shape changes; vary declared parameters through the hosted DSP control API.
   - Reference fixtures must preserve provenance, license status, source hash, and feature pressure.
   - Public-domain reference fixtures and dexed-py helpers are test/development material only; the NuGet package must ship only AquariumSynth.Dsl.
+  - Structured `.aqua` stock lives under `patches/` as development source material. Every library patch must parse/export, and the patch library must stay out of the NuGet package unless intentionally promoted.
   - Project-authored Dexed patches may be generated inside tests for calibration; do not ship them in the NuGet package or treat them as runtime dependencies.
   - Listening WAV artifacts belong under ignored `artifacts/`; keep them out of NuGet and commits unless explicitly promoted as fixtures.
   - Do not consume external synth targets that cannot be backed by parity tests. Parsing is inventory; reproducing behavior through terse, readable Aquarium DSL is the proof.
@@ -132,6 +134,15 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-14
+    summary: >
+      Added a structured development patch library under `patches/` with a
+      machine-readable `library.yaml`, README, and `.aqua` files exported from
+      existing stock/reference catalogs plus the calibrated PRC SYNTH1 parity
+      candidate. Added tests so every library `.aqua` parses and exports Faust,
+      while package-boundary tests assert `patches/` and `.aqua` files do not
+      ship in the AquariumSynth.Dsl NuGet package.
+    verification: "dotnet test AquariumSynthCSharp.slnx --no-restore: 67 passed"
   - date: 2026-05-14
     summary: >
       Increased `Dx7SysEx.SummedOperatorModulationRouteIndex` from 1.6 to 6.0

@@ -1,0 +1,12 @@
+﻿# bell
+# Family: fm-bell
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+defaults wave=sine gain=0.24 attack=0.002 sustain=0.04 decay=1.2 lpf=0.9
+template name=Overtone
+    fm=4.1
+    fm_decay=0.55
+
+voice use=Overtone freq=440 fm_index=5.8
+voice use=Overtone freq=880 gain=0.08 fm_index=2.4

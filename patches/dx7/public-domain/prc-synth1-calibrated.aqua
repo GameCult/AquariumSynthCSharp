@@ -1,0 +1,51 @@
+﻿# PRC SYNTH1 calibrated
+# Family: dx7/public-domain
+# Source: analog1.syx voice 17 parity probe, generated from calibrated DX7 lowering
+# Notes: Hard DX7 parity target that forced applied EG, summed route, feedback, detune, and COM calibration.
+
+patch
+    gain=1.4
+    soft_clip=false
+
+opgraph
+    name=dx7_prc_synth1_probe
+    freq=261.6256
+    gain=0.25
+
+operator name=op6
+    ratio=7.983435
+    level=0.125
+    env=rl rates=0.001451,0.296962,0.424308,0.549977 levels=0.413879,0.399165,0.370614,0 curves=lin,exp,exp,exp gate=0.85
+
+operator name=op5
+    ratio=1
+    level=0.32421
+    env=rl rates=0.001451,0.296962,0.424308,0.549977 levels=0.413879,0.241589,0.109464,0 curves=lin,exp,exp,exp gate=0.85
+
+operator name=op4
+    ratio=0.501384
+    level=0.917004
+    feedback=0.19
+    env=rl rates=0.001451,0.296962,0.424308,0.549977 levels=0.413879,0.353601,0.276106,0 curves=lin,exp,exp,exp gate=0.85
+
+operator name=op3
+    ratio=0.499655
+    level=3
+    env=rl rates=0.001451,0.296962,0.424308,0.549977 levels=0.984375,1,1,0 curves=lin,exp,exp,exp gate=0.85
+
+operator name=op2
+    ratio=0.501384
+    level=0.545254
+    env=rl rates=0.011383,0.293515,0.41932,0.549977 levels=0.981531,0.842813,0.660018,0 curves=lin,exp,exp,exp gate=0.85
+
+operator name=op1
+    ratio=0.500346
+    level=3
+    env=rl rates=0.001451,0.296962,0.424308,0.549977 levels=0.984375,1,1,0 curves=lin,exp,exp,exp gate=0.85
+
+route from=op6 to=op5 index=6
+route from=op4 to=op3 index=6
+route from=op5 to=op3 index=6
+route from=op2 to=op1 index=6.275
+carrier name=op1
+carrier name=op3

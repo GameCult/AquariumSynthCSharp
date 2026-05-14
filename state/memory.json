@@ -18,6 +18,7 @@
       "test-only dexed-py reference renderer",
       "test-only project-authored Dexed patch renderer",
       "ignored listening WAV parity artifacts",
+      "structured development .aqua patch library",
       "thresholded DX7 rendered parity test",
       "reference rebuild catalog",
       "DX7 SysEx structural parsing",
@@ -89,8 +90,8 @@
     "binding_rule": "Parameter binding uses field-site references such as `lpf=@/macro/brightness` and `/opgraphs/0/operators/2/level`; the field owns meaning and the parameter owns the runtime value. Avoid target-routing semantics unless a new graph authority is deliberately mapped."
   },
   "last_verified": {
-    "command": "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore",
-    "result": "66 passed; PRC log-mel 0.13874426, envelope distance 0.067291506, zero-crossing 0.95325506, score 0.7546445 after summed route scale 6.0",
-    "commit": "pending DX7 summed route scale"
+    "command": "dotnet test AquariumSynthCSharp.slnx --no-restore",
+    "result": "67 passed; structured patch library parses/exports and remains excluded from AquariumSynth.Dsl.nupkg",
+    "commit": "pending patch library"
   }
 }

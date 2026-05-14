@@ -1,0 +1,18 @@
+﻿# laser
+# Family: sfxr
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+voice
+    wave=saw
+    freq=229.0554
+    gain=0.22
+    sustain=0.08185941043
+    decay=0.07346938776
+    pitch_ramp=0.703836
+    duty=0.31
+    duty_ramp=0.056
+    hpf=0.04
+    phaser=0.0001458
+    phaser_ramp=-0.000504
+    drive=0.12

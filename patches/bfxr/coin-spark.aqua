@@ -1,0 +1,26 @@
+﻿# coin-spark
+# Family: bfxr
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+defaults
+    wave=sine
+    gain=0.18
+    attack=0
+    sustain=0.022
+    decay=0.42
+    hpf=0.05
+    drive=0.08
+
+voice
+    freq=1180
+    fm=5
+    fm_index=3.2
+    fm_decay=0.16
+
+voice
+    freq=1770
+    gain=0.09
+    fm=7
+    fm_index=1.7
+    fm_decay=0.11

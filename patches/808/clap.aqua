@@ -1,0 +1,17 @@
+﻿# clap
+# Family: 808
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+defaults
+    wave=noise
+    noise=0.95
+    hpf=0.55
+    lpf=0.42
+    gain=0.22
+    decay=0.11
+    drive=0.1
+
+voice freq=1800 sustain=0.018 phaser=0.004
+voice freq=2200 sustain=0.022 phaser=0.008
+voice freq=2600 sustain=0.028 phaser=0.012

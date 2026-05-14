@@ -1,0 +1,46 @@
+﻿# Language Tour
+# Family: examples
+# Source: BuiltInScripts.PatchScriptExample
+# Notes: Parser and DSL feature tour.
+
+# Commands can span lines. A field-only line belongs to the command above it.
+patch
+    gain=0.7
+    soft_clip=true
+
+mod name=wobble
+    wave=sine
+    hz=5
+    pitch=0.01
+    formant_mix=0.08
+
+bus name=shimmer
+    wave=triangle
+    hz=2
+    to=gain:0.08,lpf:-0.04,formant_mix:0.12
+
+voice
+    wave=sine
+    freq=220
+    gain=0.12
+    attack=0.002
+    sustain=0.03
+    decay=0.2
+    vibrato=0.02
+    vibrato_hz=5
+    formants=620:90:1,1040:150:0.8
+    formant_mix=0.45
+
+voice
+    wave=triangle
+    freq=440
+    gain=0.04
+    sustain=0.02
+    decay=0.18
+    lpf=0.7
+    hpf=0.02
+
+sfxr
+    preset=laser
+    mutate_seed=9
+    mutate=0.01

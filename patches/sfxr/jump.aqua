@@ -1,0 +1,16 @@
+﻿# jump
+# Family: sfxr
+# Source: BuiltInScripts.ReferenceScripts
+# Notes: Stock reference patch exported from the in-code catalog.
+
+voice
+    wave=square
+    freq=78.2334
+    gain=0.22
+    sustain=0.1097505669
+    decay=0.07346938776
+    pitch_ramp=-0.101156
+    duty=0.38
+    lpf=0.72
+    hpf=0.05
+    drive=0.12
