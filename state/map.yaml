@@ -16,6 +16,7 @@ surfaces:
   tests: tests/AquariumSynth.Dsl.Tests
   reference_roadmap: docs/reference-synth-roadmap.md
   dx7_public_domain_fixtures: tests/AquariumSynth.Dsl.Tests/Fixtures/Dx7/PublicDomain
+  zyn_project_fixtures: tests/AquariumSynth.Dsl.Tests/Fixtures/ZynAddSubFX/ProjectAuthored
   package: AquariumSynth.Dsl 0.1.0-aquarium.1
 modules:
   model: src/AquariumSynth.Dsl/Model.cs
@@ -23,6 +24,7 @@ modules:
   faust: src/AquariumSynth.Dsl/FaustExport.cs
   faust_rendering: src/AquariumSynth.Dsl/FaustExport.cs
   dx7_reference_render_tests: tests/AquariumSynth.Dsl.Tests/Dx7ReferenceParityTests.cs
+  zyn_reference_reader: src/AquariumSynth.Dsl/ZynInstrument.cs
   package_boundary_tests: tests/AquariumSynth.Dsl.Tests/PackageBoundaryTests.cs
   sfxr: src/AquariumSynth.Dsl/SfxrParams.cs
   analysis: src/AquariumSynth.Dsl/AudioAnalysis.cs
@@ -44,6 +46,7 @@ boundaries:
     - Faust source generation, target-code generation, and candidate rendering
   dev_only:
     - public-domain DX7 SysEx fixtures
+    - project-authored ZynAddSubFX .xiz fixtures
     - dexed-py reference renderer
     - structured .aqua patch library
 checks:

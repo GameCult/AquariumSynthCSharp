@@ -112,8 +112,18 @@ Pressure on Aquarium DSL:
 First deliverable:
 
 - Parse a small set of Zyn instrument XML files into a neutral reference model.
+  The first parser/classifier slice exists for project-authored `.xiz`
+  fixtures and supports plain XML plus gzip-compressed XML.
 - Classify features used by each instrument before trying to synthesize them.
+  The current classifier identifies active ADD/SUB/PAD engines, enabled kit
+  items, layering, envelopes, free envelopes, LFOs, filters, formants, and
+  effects.
 - Rebuild one additive lead, one PAD texture, and one formant/vocal patch.
+
+Do not vendor the upstream Zyn instrument-bank submodule until its preset
+license/provenance is explicit enough for this repo. Use project-authored
+fixtures for parser shape and only promote external fixtures with clean source
+notes.
 
 Sources:
 

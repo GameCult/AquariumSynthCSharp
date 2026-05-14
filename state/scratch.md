@@ -15,6 +15,22 @@ Doctrine update:
 
 Completed this slice:
 
+- Started the ZynAddSubFX phase and stopped treating DX7 as the active trench.
+- Added `ZynInstrumentReader` for `.xiz`-shaped XML. It reads plain XML and
+  gzip-compressed XML, extracts instrument metadata and kit items, and emits
+  neutral `ReferencePatch` features.
+- Added project-authored Zyn fixtures under
+  `tests/AquariumSynth.Dsl.Tests/Fixtures/ZynAddSubFX/ProjectAuthored` instead
+  of vendoring upstream preset-bank files with unclear root provenance.
+- Current Zyn classifier detects active ADD/SUB/PAD engines, enabled kit items,
+  layering, envelopes, free envelopes, LFOs, filters, formant filters, and
+  effects. This is inventory for choosing rebuild targets, not translation yet.
+- Verified with bundled Python/dexed-py still wired:
+  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  81 passed.
+
+Previous slice:
+
 - Addressed the remaining `ANLGSYN 1` beat as DX7 pitch-LFO pressure, not
   amplitude-LFO pressure. Raw `analog1.syx` bytes show `AMD=71` but every
   operator has `AMS=0`; the active path is `PMD=32`, `PMS=1`, sine LFO speed

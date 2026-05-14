@@ -29,6 +29,7 @@ public sealed class PackageBoundaryTests
             Assert.DoesNotContain(entries, entry => entry.StartsWith("patches/", StringComparison.OrdinalIgnoreCase));
             Assert.DoesNotContain(entries, entry => entry.EndsWith(".aqua", StringComparison.OrdinalIgnoreCase));
             Assert.DoesNotContain(entries, entry => entry.EndsWith(".syx", StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(entries, entry => entry.EndsWith(".xiz", StringComparison.OrdinalIgnoreCase));
             Assert.DoesNotContain(entries, entry => entry.EndsWith(".py", StringComparison.OrdinalIgnoreCase));
         }
         finally

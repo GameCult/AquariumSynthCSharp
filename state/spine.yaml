@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-14T14:51:00+01:00
+updated: 2026-05-14T19:45:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -23,6 +23,8 @@ current_mechanism:
   dx7_references: src/AquariumSynth.Dsl/Dx7SysEx.cs
   dx7_reference_fixtures: tests/AquariumSynth.Dsl.Tests/Fixtures/Dx7/PublicDomain
   dx7_reference_renderer_tests: tests/AquariumSynth.Dsl.Tests/Dx7ReferenceParityTests.cs
+  zyn_reference_reader: src/AquariumSynth.Dsl/ZynInstrument.cs
+  zyn_project_fixtures: tests/AquariumSynth.Dsl.Tests/Fixtures/ZynAddSubFX/ProjectAuthored
   reference_rebuilds: src/AquariumSynth.Dsl/ReferenceRebuilds.cs
   tests: tests/AquariumSynth.Dsl.Tests/PatchScriptTests.cs
   doctrine: docs/audio-doctrine.md
@@ -69,6 +71,7 @@ live_invariants:
   - Recompile only for graph shape changes; vary declared parameters through the hosted DSP control API.
   - Reference fixtures must preserve provenance, license status, source hash, and feature pressure.
   - Public-domain reference fixtures and dexed-py helpers are test/development material only; the NuGet package must ship only AquariumSynth.Dsl.
+  - ZynAddSubFX import starts as feature extraction, not translation. Use project-authored `.xiz` fixtures until external preset-bank license/provenance is explicit.
   - Structured `.aqua` stock lives under `patches/` as development source material. Every library patch must parse/export, and the patch library must stay out of the NuGet package unless intentionally promoted.
   - Project-authored Dexed patches may be generated inside tests for calibration; do not ship them in the NuGet package or treat them as runtime dependencies.
   - Harsh calibration probes belong in tests and ignored artifacts, not in the patch library unless they are musically useful stock.
@@ -90,9 +93,10 @@ reference_targets:
     priority: 2
     purpose: "Additive, subtractive, PAD, formant, kit, and layered-instrument pressure test."
     source: "https://github.com/zynaddsubfx/zynaddsubfx"
+    status: "Initial ZynInstrumentReader reads plain or gzip-compressed .xiz XML from project-authored fixtures and classifies active ADD/SUB/PAD engines, enabled kit items, layering, envelopes, free envelopes, LFOs, filters, formants, and effects as ReferencePatch features."
     first_slice:
-      - "Parse selected instrument XML files into neutral reference records."
-      - "Classify additive, PAD, formant, and effect usage before translation."
+      - "Choose the first three Aquarium rebuild targets from the project-authored additive lead, PAD texture, and vocal/formant layer fixtures."
+      - "Design the smallest readable Aquarium DSL patches that express those categories, then decide which missing abstractions are real."
   faust:
     priority: 3
     purpose: "General DSP graph topology pressure test."
@@ -119,22 +123,13 @@ reference_targets:
 
 next_agent_start_here:
   recommended_first_task: >
-    Listen to the latest generated PRC SYNTH1 WAVs under
-    `artifacts/parity/dx7-prc-synth1`. Continue the ladder in
-    `docs/dx7-calibration-plan.md` with envelope level curve calibration.
-    Single-carrier amplitude, isolated
-    two-op modulation index, feedback, ratio detune, voice transpose,
-    fixed-frequency operators, ROM COM compensation cut, operator key/rate
-    scaling, and topology-aware route lowering are now fitted or mapped;
-    a project-authored algorithm-8 stack test now backs the summed route scale
-    outside PRC. Curved applied-envelope lowering plus stronger summed/cascaded
-    route scale now gives PRC the same character with closer harsh stacked
-    modulation. Split project-authored algorithm-8 cascade and summed-pair
-    probes now back the 6.0 summed/cascaded route scale. Next pressure is
-    residual community harmonic mismatch, especially `MELLOWSOLO`, plus
-    missing LFO/operator attack behavior on `ANLGSYN 1`. The community gate
-    now includes `{ Mooger }`, fixed `Piano Bass`, `RES SYNTH1`, and
-    `ANLGSYN 1`; `MELLOWSOLO` is a pressure artifact test, not passing parity.
+    Continue the ZynAddSubFX phase. The first parser/classifier slice exists in
+    `src/AquariumSynth.Dsl/ZynInstrument.cs` with project-authored fixtures
+    under `tests/AquariumSynth.Dsl.Tests/Fixtures/ZynAddSubFX/ProjectAuthored`.
+    Next pressure is to rebuild one additive lead, one PAD texture, and one
+    vocal/formant layer in readable Aquarium DSL, then name the missing
+    abstractions instead of translating Zyn internals blindly. Leave DX7 alone
+    unless a regression test fails.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -147,6 +142,17 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-14
+    summary: >
+      Started the ZynAddSubFX phase after closing the current DX7 community
+      batch. Added `ZynInstrumentReader` for `.xiz`-shaped XML, including
+      gzip-compressed XML support, and project-authored Zyn fixtures for an
+      additive lead, PAD texture, and vocal/formant layer. The classifier emits
+      neutral `ReferencePatch` features for active ADD/SUB/PAD engines, enabled
+      kit items, layering, envelopes, free envelopes, LFOs, filters, formants,
+      and effects. Upstream Zyn bank files were inspected but not vendored
+      because preset provenance was not explicit enough for this first slice.
+    verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore: 81 passed"
   - date: 2026-05-14
     summary: >
       Reframed the latest community listening as envelope pressure rather than
