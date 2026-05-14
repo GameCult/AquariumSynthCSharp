@@ -83,6 +83,70 @@ public sealed class ZynInstrumentTests
         AssertFeature(instrument, "engine_pad", "0");
     }
 
+    [Fact]
+    public void ToleratesLeadingWhitespaceBeforeXmlDeclaration()
+    {
+        var instrument = ZynInstrumentReader.Parse(Encoding.UTF8.GetBytes("""
+
+              <?xml version="1.0" encoding="UTF-8"?>
+              <ZynAddSubFX-data>
+                <INSTRUMENT>
+                  <INFO><string name="name">Loose XML</string></INFO>
+                  <INSTRUMENT_KIT>
+                    <INSTRUMENT_KIT_ITEM id="0">
+                      <par_bool name="enabled" value="yes"/>
+                      <par_bool name="add_enabled" value="yes"/>
+                    </INSTRUMENT_KIT_ITEM>
+                  </INSTRUMENT_KIT>
+                </INSTRUMENT>
+              </ZynAddSubFX-data>
+            """));
+
+        Assert.Equal("Loose XML", instrument.Name);
+        AssertFeature(instrument, "engine_add", "1");
+    }
+
+    [Fact]
+    public void CountsOnlyActualFormantFilterBlocks()
+    {
+        var instrument = ZynInstrumentReader.Parse(Encoding.UTF8.GetBytes("""
+            <ZynAddSubFX-data>
+              <INSTRUMENT>
+                <INFO><string name="name">Formant Counting</string></INFO>
+                <INSTRUMENT_KIT>
+                  <INSTRUMENT_KIT_ITEM id="0">
+                    <par_bool name="enabled" value="yes"/>
+                    <par_bool name="add_enabled" value="yes"/>
+                    <ADD_SYNTH_PARAMETERS>
+                      <FILTER_PARAMETERS>
+                        <FORMANT_FILTER>
+                          <par name="num_formants" value="3"/>
+                          <VOWEL id="0"><FORMANT id="0"/><FORMANT id="1"/></VOWEL>
+                        </FORMANT_FILTER>
+                      </FILTER_PARAMETERS>
+                    </ADD_SYNTH_PARAMETERS>
+                  </INSTRUMENT_KIT_ITEM>
+                </INSTRUMENT_KIT>
+              </INSTRUMENT>
+            </ZynAddSubFX-data>
+            """));
+
+        AssertFeature(instrument, "formant_filter_count", "1");
+    }
+
+    [Fact]
+    public void SurveyRanksWorstFeaturePressure()
+    {
+        var root = Path.Combine(AppContext.BaseDirectory, "Fixtures", "ZynAddSubFX", "ProjectAuthored");
+
+        var survey = ZynInstrumentSurvey.RankDirectory(root, take: 3);
+
+        Assert.Equal(3, survey.Count);
+        Assert.Equal("vocal-layer.xiz", survey[0].Path);
+        Assert.True(survey[0].ComplexityScore > survey[^1].ComplexityScore);
+        Assert.Contains(survey[0].Features, feature => feature.Name == "formant_filter_count" && feature.Value == "1");
+    }
+
     private static void AssertFeature(ZynInstrument instrument, string name, string value) =>
         Assert.Contains(instrument.Features(), feature => feature.Name == name && feature.Value == value);
 

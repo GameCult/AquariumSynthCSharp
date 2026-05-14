@@ -20,6 +20,9 @@
             </AMPLITUDE_ENVELOPE>
           </AMPLITUDE_PARAMETERS>
           <FILTER_PARAMETERS>
+            <FILTER>
+              <par name="category" value="2"/>
+            </FILTER>
             <par name="category" value="2"/>
           </FILTER_PARAMETERS>
         </PAD_SYNTH_PARAMETERS>

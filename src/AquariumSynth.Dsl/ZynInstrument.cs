@@ -64,6 +64,12 @@ public sealed record ZynKitItem(
     int FormantFilterCount,
     int EffectCount);
 
+public sealed record ZynInstrumentSurveyItem(
+    string Path,
+    string Name,
+    int ComplexityScore,
+    IReadOnlyList<ReferenceFeature> Features);
+
 public enum ZynEngine
 {
     AddSynth,
@@ -78,8 +84,7 @@ public static class ZynInstrumentReader
 
     public static ZynInstrument Parse(ReadOnlySpan<byte> bytes)
     {
-        using var xml = OpenXmlStream(bytes);
-        var document = XDocument.Load(xml, LoadOptions.None);
+        var document = XDocument.Parse(XmlText(bytes).TrimStart(), LoadOptions.None);
         var instrument = document.Descendants("INSTRUMENT").FirstOrDefault()
             ?? throw new ArgumentException("Zyn instrument XML is missing INSTRUMENT");
         var info = instrument.Element("INFO");
@@ -115,12 +120,12 @@ public static class ZynInstrumentReader
                 .Count(element => element.Name.LocalName.EndsWith("_ENVELOPE", StringComparison.OrdinalIgnoreCase) &&
                                   BoolParam(element, "free_mode")),
             LfoCount: CountElements(item, name => name.EndsWith("_LFO", StringComparison.OrdinalIgnoreCase)),
-            FilterCount: CountElements(item, name => name.Contains("FILTER", StringComparison.OrdinalIgnoreCase)),
-            FormantFilterCount: CountElements(item, name => name.Contains("FORMANT", StringComparison.OrdinalIgnoreCase)),
+            FilterCount: CountElements(item, name => name.Equals("FILTER", StringComparison.OrdinalIgnoreCase)),
+            FormantFilterCount: CountElements(item, name => name.Equals("FORMANT_FILTER", StringComparison.OrdinalIgnoreCase)),
             EffectCount: CountElements(item, name => name.Contains("EFFECT", StringComparison.OrdinalIgnoreCase)));
     }
 
-    private static MemoryStream OpenXmlStream(ReadOnlySpan<byte> bytes)
+    private static string XmlText(ReadOnlySpan<byte> bytes)
     {
         if (bytes.Length >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b)
         {
@@ -128,11 +133,10 @@ public static class ZynInstrumentReader
             using var gzip = new GZipStream(compressed, CompressionMode.Decompress);
             var decompressed = new MemoryStream();
             gzip.CopyTo(decompressed);
-            decompressed.Position = 0;
-            return decompressed;
+            return System.Text.Encoding.UTF8.GetString(decompressed.ToArray());
         }
 
-        return new MemoryStream(bytes.ToArray());
+        return System.Text.Encoding.UTF8.GetString(bytes);
     }
 
     private static int CountElements(XElement root, Func<string, bool> predicate) =>
@@ -166,4 +170,45 @@ public static class ZynInstrumentReader
 
     private static string? AttributeValue(XElement element, string name) =>
         element.Attribute(name)?.Value;
+}
+
+public static class ZynInstrumentSurvey
+{
+    public static IReadOnlyList<ZynInstrumentSurveyItem> RankDirectory(string root, int take = 25)
+    {
+        return Directory.GetFiles(root, "*.xiz", SearchOption.AllDirectories)
+            .Select(file =>
+            {
+                var instrument = ZynInstrumentReader.ParseFile(file);
+                var features = instrument.Features();
+                return new ZynInstrumentSurveyItem(
+                    Path.GetRelativePath(root, file),
+                    instrument.Name,
+                    ComplexityScore(features),
+                    features);
+            })
+            .OrderByDescending(item => item.ComplexityScore)
+            .ThenBy(item => item.Path, StringComparer.OrdinalIgnoreCase)
+            .Take(take)
+            .ToList();
+    }
+
+    public static int ComplexityScore(IReadOnlyList<ReferenceFeature> features)
+    {
+        var byName = features.ToDictionary(feature => feature.Name, feature => feature.Value, StringComparer.OrdinalIgnoreCase);
+        var layered = byName.GetValueOrDefault("layered_instrument") == "yes" ? 8 : 0;
+        return Int("enabled_kit_items") * 4 +
+               layered +
+               Int("engine_add") * 4 +
+               Int("engine_sub") * 4 +
+               Int("engine_pad") * 7 +
+               Int("envelope_count") +
+               Int("free_envelope_count") * 4 +
+               Int("lfo_count") * 2 +
+               Int("filter_count") * 2 +
+               Int("formant_filter_count") * 8 +
+               Int("effect_count") * 3;
+
+        int Int(string name) => int.TryParse(byName.GetValueOrDefault(name), out var value) ? value : 0;
+    }
 }

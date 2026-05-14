@@ -29,6 +29,7 @@ current_mechanism:
   tests: tests/AquariumSynth.Dsl.Tests/PatchScriptTests.cs
   doctrine: docs/audio-doctrine.md
   dx7_calibration_plan: docs/dx7-calibration-plan.md
+  zyn_pressure_survey: docs/zynaddsubfx-pressure-survey.md
   roadmap: docs/reference-synth-roadmap.md
   parameter_contracts: src/AquariumSynth.Dsl/Model.cs
 
@@ -93,9 +94,9 @@ reference_targets:
     priority: 2
     purpose: "Additive, subtractive, PAD, formant, kit, and layered-instrument pressure test."
     source: "https://github.com/zynaddsubfx/zynaddsubfx"
-    status: "Initial ZynInstrumentReader reads plain or gzip-compressed .xiz XML from project-authored fixtures and classifies active ADD/SUB/PAD engines, enabled kit items, layering, envelopes, free envelopes, LFOs, filters, formants, and effects as ReferencePatch features. First Aquarium rebuilds exist for additive lead, PAD texture, and vocal/formant layer."
+    status: "Initial ZynInstrumentReader reads plain or gzip-compressed .xiz XML from project-authored fixtures and classifies active ADD/SUB/PAD engines, enabled kit items, layering, envelopes, free envelopes, LFOs, filters, formants, and effects as ReferencePatch features. First Aquarium rebuilds exist for additive lead, PAD texture, and vocal/formant layer. A non-vendored upstream bank survey parsed 1358/1358 .xiz files and identified named kit/layer routing as the next likely owner abstraction."
     first_slice:
-      - "Choose the first Zyn abstraction to promote only if repeated rebuilds justify it: additive harmonic bank, PAD spectral source, free envelope, named layer routing, or richer formant morphing."
+      - "Map named kit/layer routing first; the upstream worst-case survey says it is the owner needed before additive harmonic bank, PAD spectral source, free envelope, or richer formant morphing syntax."
       - "Do not add all of them at once."
   faust:
     priority: 3
@@ -126,11 +127,11 @@ next_agent_start_here:
     Continue the ZynAddSubFX phase. The first parser/classifier slice exists in
     `src/AquariumSynth.Dsl/ZynInstrument.cs` with project-authored fixtures
     under `tests/AquariumSynth.Dsl.Tests/Fixtures/ZynAddSubFX/ProjectAuthored`.
-    Next pressure is to choose one Zyn abstraction candidate from the first
-    rebuild evidence: additive harmonic bank, PAD spectral source, free
-    envelope, named layer routing, or richer formant morphing. Promote only one
-    after mapping ownership and tests. Leave DX7 alone unless a regression test
-    fails.
+    Next pressure is to map named kit/layer routing from the Zyn survey evidence
+    in `docs/zynaddsubfx-pressure-survey.md`. The worst upstream targets combine
+    many enabled kit items and engines, so layer authority should come before
+    syntax golf for additive banks, PAD source generation, free envelopes, or
+    formant morphing. Leave DX7 alone unless a regression test fails.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -143,6 +144,19 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-14
+    summary: >
+      Hardened the Zyn reader against the real upstream instrument bank and
+      added `ZynInstrumentSurvey`. The reader now tolerates leading whitespace
+      before XML declarations and counts actual `FILTER`/`FORMANT_FILTER`
+      blocks instead of internal formant/vowel nodes. A non-vendored scan of
+      `zynaddsubfx/instruments` commit `e9f64a9` parsed 1358/1358 `.xiz`
+      files. The top pressure target is `olivers-100/0032-Drum Kit.xiz`, with
+      16 enabled kit items, mixed ADD/SUB/PAD engines, 106 envelopes, 25 free
+      envelopes, 73 LFOs, 37 filters, and 3 formant filters. The survey points
+      to named kit/layer routing as the next owner abstraction before syntax
+      golf.
+    verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore: 86 passed"
   - date: 2026-05-14
     summary: >
       Added first Zyn-style Aquarium rebuilds for the project-authored additive

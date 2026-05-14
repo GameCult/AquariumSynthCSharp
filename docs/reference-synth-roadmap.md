@@ -129,6 +129,11 @@ license/provenance is explicit enough for this repo. Use project-authored
 fixtures for parser shape and only promote external fixtures with clean source
 notes.
 
+The current external-bank pressure survey is in
+[zynaddsubfx-pressure-survey.md](zynaddsubfx-pressure-survey.md). Its strongest
+signal is that named kit/layer routing should probably precede syntax golf for
+PAD, additive banks, or formant motion.
+
 Sources:
 
 - [ZynAddSubFX](https://github.com/zynaddsubfx/zynaddsubfx)

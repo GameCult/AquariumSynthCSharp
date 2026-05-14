@@ -81,9 +81,9 @@
     "next": "Use the now-validated algorithm-8 route scale, transpose lowering, and fixed-frequency lowering as fixed inputs while isolating remaining community-voice timbre mismatch, then expand to broader public-domain banks."
   },
   "zyn_reference_path": {
-    "status": "Initial ZynInstrumentReader parses plain XML and gzip-compressed .xiz-shaped XML from project-authored fixtures into ZynInstrument records and ReferencePatch features. First Zyn-style Aquarium rebuilds exist for additive lead, PAD texture, and vocal/formant layer.",
-    "lesson": "Start Zyn as structural classification, not translation. Upstream Zyn presets live in a separate bank submodule and should not be vendored until license/provenance is explicit. The current classifier identifies active ADD/SUB/PAD engines, enabled kit items, layering, envelopes, free envelopes, LFOs, filters, formants, and effects so rebuild targets can pressure Aquarium's DSL without pretending parser success is expressivity. The first rebuilds show Aquarium can sketch these fixtures with existing voices/macros/formants/noise, but the missing abstractions are additive harmonic-bank syntax, PAD/spectral source generation, free envelopes for normal voices, named kit/layer routing with per-layer effect sends, and richer formant/vowel morphing.",
-    "next": "Choose one Zyn abstraction candidate to promote only after mapping ownership and tests; do not add the whole shopping list at once."
+    "status": "Initial ZynInstrumentReader parses plain XML and gzip-compressed .xiz-shaped XML from project-authored fixtures into ZynInstrument records and ReferencePatch features. First Zyn-style Aquarium rebuilds exist for additive lead, PAD texture, and vocal/formant layer. `ZynInstrumentSurvey` can rank .xiz directories by feature pressure.",
+    "lesson": "Start Zyn as structural classification, not translation. Upstream Zyn presets live in a separate bank submodule and should not be vendored until license/provenance is explicit. The hardened reader now parses the observed upstream instrument bank at commit e9f64a9: 1358/1358 .xiz files. The worst target is `olivers-100/0032-Drum Kit.xiz`, with 16 enabled kit items, mixed ADD/SUB/PAD engines, 106 envelopes, 25 free envelopes, 73 LFOs, 37 filters, and 3 formant filters. The first rebuilds show Aquarium can sketch small Zyn fixtures with existing voices/macros/formants/noise, but the upstream survey says named kit/layer routing is the owner abstraction needed before syntax golf for additive harmonic banks, PAD/spectral source generation, free envelopes, or richer formant/vowel morphing.",
+    "next": "Map named kit/layer routing first; do not add additive/PAD/free-envelope/formant syntax until layer authority is clear."
   },
   "note_and_envelope_model": {
     "rule": "Notes own frequency, gate duration, and host/MIDI source. Envelopes own ADSR level shape.",
@@ -98,7 +98,7 @@
   },
   "last_verified": {
     "command": "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore",
-    "result": "83 passed; Zyn rebuild catalog added without regressing DX7 parity",
-    "commit": "pending Zyn rebuild catalog"
+    "result": "86 passed; Zyn worst-case survey added without regressing DX7 parity",
+    "commit": "pending Zyn pressure survey"
   }
 }

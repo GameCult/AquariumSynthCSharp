@@ -15,6 +15,25 @@ Doctrine update:
 
 Completed this slice:
 
+- Hardened `ZynInstrumentReader` against the real upstream Zyn instrument bank:
+  it now tolerates leading whitespace before XML declarations and counts only
+  actual `FORMANT_FILTER`/`FILTER` blocks instead of all internal formant/vowel
+  nodes.
+- Added `ZynInstrumentSurvey` to rank `.xiz` directories by feature pressure.
+  The non-vendored upstream bank scan parsed `1358/1358` files at
+  `zynaddsubfx/instruments` commit `e9f64a9`.
+- Added `docs/zynaddsubfx-pressure-survey.md`. Worst observed target:
+  `olivers-100/0032-Drum Kit.xiz` with 16 enabled kit items, mixed ADD/SUB/PAD
+  engines, 106 envelopes, 25 free envelopes, 73 LFOs, 37 filters, and 3 formant
+  filters.
+- Survey conclusion: named kit/layer routing should probably precede syntax
+  golf for additive banks, PAD sources, or formant motion.
+- Verified with bundled Python/dexed-py still wired:
+  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  86 passed.
+
+Previous slice:
+
 - Added first Zyn-style Aquarium rebuilds for the project-authored additive
   lead, PAD texture, and vocal/formant layer fixtures. They live in
   `BuiltInScripts` and `ReferenceRebuildCatalog.ZynRebuilds`.
