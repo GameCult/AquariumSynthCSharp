@@ -275,6 +275,48 @@ public static class Dx7SysEx
             "Approximation: DX7 EG uses four rate/level segments; Aquarium staged envelopes preserve the intermediate target levels.");
     }
 
+    public static Dx7RateLevelEnvelopeApproximation ApproximateAppliedRateLevelEnvelope(
+        Dx7Envelope envelope,
+        float gateSeconds,
+        float durationSeconds = 1.4f,
+        int sampleRate = 44100)
+    {
+        var trace = TraceInterpolatedEnvelope(
+            envelope,
+            gateSeconds,
+            Math.Max(durationSeconds, gateSeconds + 0.55f),
+            sampleRate: sampleRate);
+        var firstStage2 = FirstStageIndex(trace, 2);
+        var firstStage3 = FirstStageIndex(trace, 3);
+
+        var peakSample = Math.Min(63, trace.Count - 1);
+        var level2Sample = firstStage2 >= 0 ? firstStage2 : Math.Min(peakSample + 64, trace.Count - 1);
+        var sustainSample = Math.Clamp(firstStage3 >= 0 ? firstStage3 : (int)(gateSeconds * sampleRate), 0, trace.Count - 1);
+
+        var r1 = Math.Max(64f / sampleRate, trace[peakSample].TimeSeconds);
+        var r2 = Math.Max(64f / sampleRate, trace[level2Sample].TimeSeconds - r1);
+        var r3 = Math.Max(64f / sampleRate, trace[sustainSample].TimeSeconds - r1 - r2);
+        var release = Math.Max(0.02f, Math.Min(0.6f, trace[^1].TimeSeconds - gateSeconds));
+
+        const float fullLevelGainNormalization = 0.5f;
+        return new Dx7RateLevelEnvelopeApproximation(
+            new RateLevelEnvelope(
+                r1,
+                trace[peakSample].Gain * fullLevelGainNormalization,
+                r2,
+                trace[level2Sample].Gain * fullLevelGainNormalization,
+                r3,
+                trace[sustainSample].Gain * fullLevelGainNormalization,
+                release,
+                0f,
+                RateLevelCurve.Linear,
+                RateLevelCurve.Exponential,
+                RateLevelCurve.Exponential,
+                RateLevelCurve.Exponential),
+            gateSeconds,
+            "Approximation: DX7 applied EG gain sampled per 64-sample block and normalized for Aquarium operator-level scaling.");
+    }
+
     public static IReadOnlyList<Dx7EnvelopeTracePoint> TraceEnvelope(
         Dx7Envelope envelope,
         float gateSeconds,
@@ -332,6 +374,16 @@ public static class Dx7SysEx
         }
 
         return points;
+    }
+
+    private static int FirstStageIndex(IReadOnlyList<Dx7EnvelopeTracePoint> trace, int stage)
+    {
+        for (var i = 0; i < trace.Count; i++)
+        {
+            if (trace[i].Stage == stage) return i;
+        }
+
+        return -1;
     }
 
     public static Dx7VoiceBank ParseBank(ReadOnlySpan<byte> bytes)

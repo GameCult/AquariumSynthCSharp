@@ -339,6 +339,28 @@ public sealed class Dx7SysExTests
         Assert.InRange(trace[(int)(0.2f * 44100)].Gain, 0.12f, 0.14f);
     }
 
+    [Fact]
+    public void ApproximatesDx7AppliedEnvelopeAsCurvedRateLevelEnvelope()
+    {
+        var approximation = Dx7SysEx.ApproximateAppliedRateLevelEnvelope(
+            new Dx7Envelope(
+                Rate1: 98,
+                Rate2: 64,
+                Rate3: 48,
+                Rate4: 55,
+                Level1: 99,
+                Level2: 76,
+                Level3: 43,
+                Level4: 0),
+            gateSeconds: 0.75f);
+
+        Assert.InRange(approximation.Envelope.Rate1Seconds, 0.0014f, 0.0015f);
+        Assert.InRange(approximation.Envelope.Level1, 0.99f, 1.01f);
+        Assert.Equal(RateLevelCurve.Exponential, approximation.Envelope.Curve2);
+        Assert.Contains("curves=lin,exp,exp,exp", approximation.ToScriptSpec());
+        Assert.Contains("64-sample block", approximation.Notes);
+    }
+
     private static byte[] InitVoice(string name, int algorithm, int feedback)
     {
         var data = new byte[Dx7SysEx.VoiceEditBufferLength];

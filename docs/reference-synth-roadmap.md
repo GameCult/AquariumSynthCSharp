@@ -79,15 +79,15 @@ First deliverable:
   rendering exist, and `analog1.syx` voice 13 has the first thresholded parity
   rebuild. The next pressure is a harder voice that actually needs audible
   operator routing rather than a sine-like behavioral match. Staged operator
-  envelopes now exist as readable `env=rl rates=... levels=...` declarations;
-  direct DX7 rate/level lowering on `PRC SYNTH1` still fails hard enough to
-  make EG timing/gain calibration the live pressure. The hard PRC probe now
-  writes ignored listening artifacts under `artifacts/parity/dx7-prc-synth1`
-  so metrics and ears can steer the next calibration pass together. Listening
-  showed aggregate score was a weak judge for this target, so the hard PRC
-  probe now gates primarily on log-mel distance; remaining mismatch points at
-  DX7 output/index scaling and algorithm output compensation rather than a
-  missing authoring syntax. The calibration ladder lives in
+  envelopes now exist as readable `env=rl rates=... levels=...` declarations
+  with per-segment curves. Direct DX7 rate/level lowering on `PRC SYNTH1`
+  forced EG timing/gain calibration; the current applied-envelope lowering
+  improves log-mel and envelope distance but exposes worse zero-crossing/phase
+  behavior. The hard PRC probe writes ignored listening artifacts under
+  `artifacts/parity/dx7-prc-synth1` so metrics and ears can steer the next
+  calibration pass together. Listening showed aggregate score was a weak judge
+  for this target, so the hard PRC probe gates primarily on log-mel distance.
+  The calibration ladder lives in
   [dx7-calibration-plan.md](dx7-calibration-plan.md) and should be followed
   before more PRC-specific tuning.
 

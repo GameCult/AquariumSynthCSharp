@@ -15,6 +15,15 @@ Doctrine update:
 
 Completed this slice:
 
+- Added `Dx7SysEx.ApproximateAppliedRateLevelEnvelope`, which traces the
+  Dexed-style block-interpolated applied EG gain and lowers it into Aquarium's
+  curved staged envelope surface, normalized so operator output level remains a
+  separate authority.
+- Retried hard `PRC SYNTH1` with the applied-envelope lowering. Latest focused
+  run: log-mel `0.21931955` (was `0.24476814`), envelope distance
+  `0.10271241` (was `0.43700194`), RMS ratio `1.0003664`, score `0.5026183`.
+  Zero-crossing ratio got worse at `0.28642866`, so oscillator/phase behavior
+  is the next exposed mismatch.
 - Extended staged operator envelopes with per-segment curves:
   `curves=lin,exp,exp,lin`. Linear remains the default, and levels can now
   express deliberate transient overshoot above `1` instead of clipping away

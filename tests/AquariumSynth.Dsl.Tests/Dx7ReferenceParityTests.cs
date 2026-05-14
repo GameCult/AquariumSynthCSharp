@@ -101,9 +101,10 @@ public sealed class Dx7ReferenceParityTests
         var script = Dx7VoiceProbeScript(
             voice,
             graphName: "dx7_prc_synth1_probe",
-            graphGain: 0.39f,
+            graphGain: 0.235f,
             envelopeScale: 0.62f,
-            gateSeconds: null);
+            gateSeconds: null,
+            useAppliedEnvelope: true);
         var candidateSource = FaustEmitter.EmitScript(script);
         var candidate = await FaustCompiler.RenderAsync(
             candidateSource.Source,
@@ -128,8 +129,10 @@ public sealed class Dx7ReferenceParityTests
             script,
             comparison);
 
-        Assert.True(comparison.LogMelDistance <= 0.255f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
-        Assert.True(comparison.Score >= 0.40f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
+        Assert.True(comparison.LogMelDistance <= 0.225f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
+        Assert.True(comparison.EnvelopeDistance <= 0.12f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
+        Assert.InRange(comparison.RmsRatio, 0.95f, 1.05f);
+        Assert.True(comparison.Score >= 0.50f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
     }
 
     [Fact]
@@ -261,7 +264,8 @@ public sealed class Dx7ReferenceParityTests
         string graphName,
         float graphGain,
         float envelopeScale,
-        float? gateSeconds)
+        float? gateSeconds,
+        bool useAppliedEnvelope = false)
     {
         var topology = Dx7SysEx.AlgorithmTopology(voice.Algorithm);
         var builder = new StringBuilder();
@@ -286,7 +290,10 @@ public sealed class Dx7ReferenceParityTests
             {
                 builder.AppendLine($"    feedback={F(Dx7SysEx.OperatorFeedbackAmount(voice.Feedback))}");
             }
-            builder.AppendLine($"    {ScaledEnvelope(Dx7SysEx.ApproximateRateLevelEnvelope(op.Envelope), envelopeScale, gateSeconds).ToScriptSpec()}");
+            var envelope = useAppliedEnvelope
+                ? Dx7SysEx.ApproximateAppliedRateLevelEnvelope(op.Envelope, gateSeconds ?? 0.85f)
+                : ScaledEnvelope(Dx7SysEx.ApproximateRateLevelEnvelope(op.Envelope), envelopeScale, gateSeconds);
+            builder.AppendLine($"    {envelope.ToScriptSpec()}");
             builder.AppendLine();
         }
 

@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-14T05:42:00+01:00
+updated: 2026-05-14T12:39:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -57,6 +57,7 @@ live_invariants:
   - DX7 rate/level envelopes may lower to staged operator envelopes or labeled ADSR approximations, but exact DX7 EG timing/gain calibration remains missing pressure.
   - DX7 envelope trace evidence now lives in `Dx7SysEx.TraceEnvelope`, `Dx7SysEx.TraceInterpolatedEnvelope`, and `artifacts/parity/dx7-envelope-trace/egstep.csv`; Dexed-style audio uses block-interpolated applied gain, not the raw EG state alone.
   - Do not add an `env=dx7` runtime surface until it matches Dexed plugin audio with the block-interpolated gain model, not only the raw trace helper.
+  - DX7 applied envelope lowering now lives in `Dx7SysEx.ApproximateAppliedRateLevelEnvelope`; it normalizes traced applied gain so operator output level remains a separate authority.
   - Recompile only for graph shape changes; vary declared parameters through the hosted DSP control API.
   - Reference fixtures must preserve provenance, license status, source hash, and feature pressure.
   - Public-domain reference fixtures and dexed-py helpers are test/development material only; the NuGet package must ship only AquariumSynth.Dsl.
@@ -115,10 +116,10 @@ next_agent_start_here:
     two-op modulation index, feedback, ratio detune, ROM COM output
     compensation, and topology-aware route lowering are now fitted or mapped;
     a project-authored algorithm-8 stack test now backs the summed route scale
-    outside PRC. The attempted exponential EG level curve was cut because it
-    still failed PRC log-mel. Use `Dx7SysEx.TraceEnvelope`,
-    `Dx7SysEx.TraceInterpolatedEnvelope`, and the `dx7-envelope-trace` artifact
-    to design the next envelope model.
+    outside PRC. Curved applied-envelope lowering now improves the hard PRC
+    log-mel and envelope metrics, but zero-crossing/phase behavior is worse.
+    Next pressure is oscillator/phase behavior or a project-authored envelope
+    sweep that can separate contour wins from timbre damage.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -131,6 +132,16 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-14
+    summary: >
+      Added `Dx7SysEx.ApproximateAppliedRateLevelEnvelope` and used it in the
+      hard PRC SYNTH1 probe. The helper traces Dexed-style block-interpolated
+      applied EG gain, normalizes it against Aquarium operator-output scaling,
+      and emits curved `env=rl` syntax. PRC log-mel improved from 0.24476814 to
+      0.21931955 and envelope distance from 0.43700194 to 0.10271241, with RMS
+      ratio near unity. Zero-crossing ratio worsened to 0.28642866, so parity
+      is still not solved.
+    verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore --filter \"PublicDomainDx7PrcSynth1WritesListeningWavsWhenInstalled|ProjectAuthoredDx7AlgorithmEightSummedStackMeetsParityWhenInstalled|ApproximatesDx7AppliedEnvelopeAsCurvedRateLevelEnvelope|TracesDx7EnvelopeAppliedBlockInterpolatedGain\": passed"
   - date: 2026-05-14
     summary: >
       Added per-segment curves to staged operator envelopes. `env=rl` remains
