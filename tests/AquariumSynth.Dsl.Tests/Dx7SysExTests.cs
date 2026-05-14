@@ -271,6 +271,14 @@ public sealed class Dx7SysExTests
     }
 
     [Fact]
+    public void AppliesDx7VoiceTransposeToRenderedNoteFrequency()
+    {
+        Assert.InRange(Dx7SysEx.NoteFrequencyHz(midiNote: 60, transpose: 24), 261.62f, 261.63f);
+        Assert.InRange(Dx7SysEx.NoteFrequencyHz(midiNote: 60, transpose: 12), 130.81f, 130.82f);
+        Assert.InRange(Dx7SysEx.NoteFrequencyHz(midiNote: 60, transpose: 36), 523.25f, 523.26f);
+    }
+
+    [Fact]
     public void ApproximatesDx7RateLevelEnvelopeAsStagedEnvelope()
     {
         var approximation = Dx7SysEx.ApproximateRateLevelEnvelope(new Dx7Envelope(

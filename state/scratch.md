@@ -15,6 +15,23 @@ Doctrine update:
 
 Completed this slice:
 
+- Fixed the `Piano Bass` octave bug. The parsed voice has `transpose=12`; the
+  old generated Aquarium script hardcoded `freq=261.6256`, so it rendered an
+  octave too high. `Dx7SysEx.NoteFrequencyHz(midiNote, transpose)` now treats
+  transpose `24` as neutral and transpose `12` as one octave down.
+- `Dx7VoiceProbeScript` now uses the voice transpose for graph frequency and
+  for the detune note basis. Fresh `Piano Bass` artifact emits `freq=130.8128`.
+- Narrowed the community parity gate to the two voices we can currently defend:
+  `{ Mooger }` and fixed `Piano Bass`. `ANLGSYN 1`, `RES SYNTH1`, `DX1 LEAD B`,
+  and `MELLOWSOLO` remain pressure, not passing parity.
+- Fixed `Piano Bass` metrics: log-mel `.16180529`, envelope `.13544041`,
+  zero-crossing `.905511`, score `.64267576`.
+- Verified with bundled Python/dexed-py:
+  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  71 passed.
+
+Previous slice:
+
 - Added `PublicDomainDx7AnalogCommunityVoicesMeetBroadRenderedParityWhenInstalled`,
   which renders actual public-domain `analog1.syx` community voices through
   Dexed and the current Aquarium DX7 lowering. Kept four broad parity voices:

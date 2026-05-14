@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-14T14:09:00+01:00
+updated: 2026-05-14T14:24:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -49,6 +49,7 @@ live_invariants:
   - DX7 isolated two-operator modulation uses Aquarium route index `6.275` for full-level modulators; do not apply that blindly to cascaded stacks before algorithm output compensation is modeled.
   - DX7 feedback lowers through `Dx7SysEx.OperatorFeedbackAmount`; do not restore PRC-local `feedback * constant` folklore.
   - DX7 ratio-mode detune lowers through `Dx7SysEx.OperatorFrequencyRatio`; do not silently drop detune from operator graph scripts.
+  - DX7 voice transpose lowers through `Dx7SysEx.NoteFrequencyHz`; transpose 24 is neutral, 12 is one octave down. Do not hardcode `freq=261.6256` for imported voices.
   - DX7 algorithm output compensation lowers through ROM `COM` values relative to the algorithm-32 six-output baseline; do not restore PRC-local carrier scale tables.
   - DX7 route lowering is topology-aware: isolated direct branches use `OperatorModulationRouteIndex` (`6.275`); summed edges and direct edges feeding summed modulation use `SummedOperatorModulationRouteIndex` (`6.0`).
   - `SummedOperatorModulationRouteIndex` is backed by the hard PRC target, a project-authored algorithm-8 stack probe, and split cascade/summed-pair probes; do not restore the older under-bright `1.6` scale.
@@ -124,7 +125,9 @@ next_agent_start_here:
     modulation. Split project-authored algorithm-8 cascade and summed-pair
     probes now back the 6.0 summed/cascaded route scale. Next pressure is
     residual PRC high-air/timbre mismatch and high zero-crossing mismatch on
-    broader public-domain community voices before broad import.
+    broader public-domain community voices before broad import. The community
+    gate is currently only `{ Mooger }` and fixed `Piano Bass`; do not describe
+    the other analog1.syx survey voices as passing.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -137,6 +140,18 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-14
+    summary: >
+      Fixed DX7 voice transpose lowering after listening caught `Piano Bass`
+      rendering an octave too high. Added `Dx7SysEx.NoteFrequencyHz`, where
+      transpose 24 is neutral and transpose 12 lowers MIDI note 60 to
+      130.8128 Hz. `Dx7VoiceProbeScript` now uses the voice transpose for graph
+      frequency and detune note basis. Narrowed the community parity gate to
+      the two defensible voices, `{ Mooger }` and `Piano Bass`; `ANLGSYN 1`,
+      `RES SYNTH1`, `DX1 LEAD B`, and `MELLOWSOLO` remain pressure, not passing
+      parity. Fixed `Piano Bass` improves to log-mel 0.16180529, envelope
+      0.13544041, zero-crossing 0.905511, and score 0.64267576.
+    verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore: 71 passed"
   - date: 2026-05-14
     summary: >
       Added a rendered public-domain community DX7 parity test against four

@@ -258,6 +258,12 @@ public static class Dx7SysEx
         return coarse * fine * RatioModeDetuneFactor(op.Detune, midiNote);
     }
 
+    public static float NoteFrequencyHz(int midiNote = 60, int transpose = 24)
+    {
+        var effectiveNote = Math.Clamp(midiNote + transpose - 24, 0, 127);
+        return 440f * MathF.Pow(2, (effectiveNote - 69) / 12f);
+    }
+
     public static Dx7RateLevelEnvelopeApproximation ApproximateRateLevelEnvelope(Dx7Envelope envelope)
     {
         var l1 = Level(envelope.Level1);

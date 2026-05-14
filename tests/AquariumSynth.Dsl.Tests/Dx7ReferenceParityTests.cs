@@ -137,14 +137,12 @@ public sealed class Dx7ReferenceParityTests
     }
 
     [Fact]
-    public async Task PublicDomainDx7AnalogCommunityVoicesMeetBroadRenderedParityWhenInstalled()
+    public async Task PublicDomainDx7MoogerAndPianoBassMeetRenderedParityWhenInstalled()
     {
         var cases = new[]
         {
-            new CommunityDx7VoiceCase(7, "ANLGSYN 1", 0.65f, 1.0f, 0.25f),
             new CommunityDx7VoiceCase(19, "{ Mooger }", 0.65f, 1.0f, 0.25f),
-            new CommunityDx7VoiceCase(22, "Piano Bass", 0.45f, 0.8f, 0.25f),
-            new CommunityDx7VoiceCase(31, "RES SYNTH1", 0.65f, 1.0f, 0.25f)
+            new CommunityDx7VoiceCase(22, "Piano Bass", 0.45f, 0.8f, 0.25f)
         };
 
         var comparisons = new List<(CommunityDx7VoiceCase Case, AudioComparison Comparison, string ArtifactDir)>();
@@ -166,9 +164,10 @@ public sealed class Dx7ReferenceParityTests
                 $"{ParityReport(item.Comparison)}{Environment.NewLine}" +
                 $"artifacts: {item.ArtifactDir}"));
 
-        Assert.All(comparisons, item => Assert.True(item.Comparison.LogMelDistance <= 0.3f, report));
-        Assert.All(comparisons, item => Assert.True(item.Comparison.EnvelopeDistance <= 0.16f, report));
-        Assert.All(comparisons, item => Assert.True(item.Comparison.Score >= 0.5f, report));
+        Assert.All(comparisons, item => Assert.True(item.Comparison.LogMelDistance <= 0.25f, report));
+        Assert.All(comparisons, item => Assert.True(item.Comparison.EnvelopeDistance <= 0.14f, report));
+        Assert.All(comparisons, item => Assert.InRange(item.Comparison.ZeroCrossingRatio, 0.8f, 1.1f));
+        Assert.All(comparisons, item => Assert.True(item.Comparison.Score >= 0.6f, report));
     }
 
     [Fact]
@@ -355,7 +354,7 @@ public sealed class Dx7ReferenceParityTests
         builder.AppendLine();
         builder.AppendLine("opgraph");
         builder.AppendLine($"    name={graphName}");
-        builder.AppendLine("    freq=261.6256");
+        builder.AppendLine($"    freq={F(Dx7SysEx.NoteFrequencyHz(midiNote: 60, voice.Transpose))}");
         builder.AppendLine($"    gain={F(graphGain)}");
         builder.AppendLine();
 
@@ -364,7 +363,7 @@ public sealed class Dx7ReferenceParityTests
             var level = Dx7SysEx.ApproximateOperatorLevel(op).LinearLevel *
                         Dx7SysEx.OperatorOutputCompensation(topology, op.Number);
             builder.AppendLine($"operator name=op{op.Number}");
-            builder.AppendLine($"    ratio={F(Dx7SysEx.OperatorFrequencyRatio(op))}");
+            builder.AppendLine($"    ratio={F(Dx7SysEx.OperatorFrequencyRatio(op, midiNote: Math.Clamp(60 + voice.Transpose - 24, 0, 127)))}");
             builder.AppendLine($"    level={F(level)}");
             if (topology.SelfFeedbackOperators.Contains(op.Number))
             {

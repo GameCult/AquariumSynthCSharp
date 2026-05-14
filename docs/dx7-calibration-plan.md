@@ -109,15 +109,21 @@ math is still fake in the places that matter perceptually.
 9. **Community voice survey**
    - Use public-domain community SysEx fixtures as broader behavioral probes
      after each isolated calibration rung.
-   - `analog1.syx` from Musical Artifacts artifact 152 now has a broad rendered
-     parity test for four actual community voices: `ANLGSYN 1`, `{ Mooger }`,
-     `Piano Bass`, and `RES SYNTH1`. The test writes listening artifacts under
-     `artifacts/parity/dx7-community-analog1/` and gates log-mel at `<= 0.3`,
-     envelope distance at `<= 0.16`, and score at `>= 0.5`.
-   - A first survey also tried `DX1 LEAD B` and `MELLOWSOLO`; they were left
-     out of the passing gate because their log-mel/zero-crossing mismatch is
-     larger. Keep those failures as pressure for oscillator phase, feedback,
-     and transient detail rather than padding the test with weak thresholds.
+   - `analog1.syx` from Musical Artifacts artifact 152 now has a rendered
+     parity test for the community voices `{ Mooger }` and `Piano Bass`. The
+     test writes listening artifacts under
+     `artifacts/parity/dx7-community-analog1/` and gates log-mel at `<= 0.25`,
+     envelope distance at `<= 0.14`, zero-crossing ratio in `0.8..1.1`, and
+     score at `>= 0.6`.
+   - `Piano Bass` exposed a real pitch bug: the candidate ignored the DX7 voice
+     transpose byte, so `transpose=12` rendered one octave too high. Aquarium
+     now uses `Dx7SysEx.NoteFrequencyHz(midiNote, transpose)`, where `24` is
+     neutral.
+   - A first survey also tried `DX1 LEAD B`, `ANLGSYN 1`, `MELLOWSOLO`, and
+     `RES SYNTH1`; they were left out of the passing gate because listening and
+     log-mel/zero-crossing evidence do not justify calling them parity yet.
+     Keep those failures as pressure for oscillator phase, feedback, and
+     transient detail rather than padding the test with weak thresholds.
 
 ## Rejected Path
 
