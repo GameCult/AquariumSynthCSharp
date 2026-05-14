@@ -101,7 +101,7 @@ public sealed class Dx7ReferenceParityTests
         var script = Dx7VoiceProbeScript(
             voice,
             graphName: "dx7_prc_synth1_probe",
-            graphGain: 0.309f,
+            graphGain: 0.25f,
             envelopeScale: 0.62f,
             gateSeconds: null,
             useAppliedEnvelope: true);
@@ -129,11 +129,11 @@ public sealed class Dx7ReferenceParityTests
             script,
             comparison);
 
-        Assert.True(comparison.LogMelDistance <= 0.18f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
-        Assert.True(comparison.EnvelopeDistance <= 0.14f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
+        Assert.True(comparison.LogMelDistance <= 0.145f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
+        Assert.True(comparison.EnvelopeDistance <= 0.08f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
         Assert.InRange(comparison.RmsRatio, 0.95f, 1.05f);
         Assert.True(comparison.ZeroCrossingRatio >= 0.75f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
-        Assert.True(comparison.Score >= 0.64f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
+        Assert.True(comparison.Score >= 0.75f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
     }
 
     [Fact]

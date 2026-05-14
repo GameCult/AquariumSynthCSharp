@@ -246,8 +246,8 @@ public sealed class Dx7SysExTests
             edge.TargetOperator == 5);
 
         Assert.Equal(Dx7SysEx.OperatorModulationRouteIndex, Dx7SysEx.OperatorRouteIndex(topology, direct));
-        Assert.Equal(2.4f, Dx7SysEx.OperatorRouteIndex(topology, summed));
-        Assert.Equal(2.4f, Dx7SysEx.OperatorRouteIndex(topology, cascaded));
+        Assert.Equal(6.0f, Dx7SysEx.OperatorRouteIndex(topology, summed));
+        Assert.Equal(6.0f, Dx7SysEx.OperatorRouteIndex(topology, cascaded));
     }
 
     [Fact]

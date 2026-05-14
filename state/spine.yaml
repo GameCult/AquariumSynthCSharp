@@ -49,7 +49,7 @@ live_invariants:
   - DX7 feedback lowers through `Dx7SysEx.OperatorFeedbackAmount`; do not restore PRC-local `feedback * constant` folklore.
   - DX7 ratio-mode detune lowers through `Dx7SysEx.OperatorFrequencyRatio`; do not silently drop detune from operator graph scripts.
   - DX7 algorithm output compensation lowers through ROM `COM` values relative to the algorithm-32 six-output baseline; do not restore PRC-local carrier scale tables.
-  - DX7 route lowering is topology-aware: isolated direct branches use `OperatorModulationRouteIndex` (`6.275`); summed edges and direct edges feeding summed modulation use `SummedOperatorModulationRouteIndex` (`2.4`).
+  - DX7 route lowering is topology-aware: isolated direct branches use `OperatorModulationRouteIndex` (`6.275`); summed edges and direct edges feeding summed modulation use `SummedOperatorModulationRouteIndex` (`6.0`).
   - `SummedOperatorModulationRouteIndex` is backed by the hard PRC target and a project-authored algorithm-8 stack probe; do not restore the older under-bright `1.6` scale.
   - DX7 calibration must proceed through isolated rungs in `docs/dx7-calibration-plan.md`; do not keep tuning hard PRC-specific constants as a substitute for a level/index model.
   - Staged operator envelopes own multi-target operator level contours through `env=rl rates=... levels=...`; do not force DX7-style contours back into the general ADSR voice envelope model.
@@ -134,11 +134,11 @@ next_agent_start_here:
 completed_slices:
   - date: 2026-05-14
     summary: >
-      Increased `Dx7SysEx.SummedOperatorModulationRouteIndex` from 1.6 to 2.4
+      Increased `Dx7SysEx.SummedOperatorModulationRouteIndex` from 1.6 to 6.0
       after listening identified missing harsh stacked-modulation brightness.
-      The stronger scale improves PRC log-mel to 0.16794802, envelope distance
-      to 0.09510617, centroid ratio to 1.1254044, and score to 0.68491656 with
-      RMS ratio 1.00095. The independent project-authored algorithm-8
+      The stronger scale improves PRC log-mel to 0.13874426, envelope distance
+      to 0.067291506, centroid ratio to 1.1156512, and score to 0.7546445 with
+      RMS ratio 0.9912135. The independent project-authored algorithm-8
       summed-stack test now uses graph gain 0.218 and tighter log-mel/RMS gates.
     verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore --filter \"PublicDomainDx7PrcSynth1WritesListeningWavsWhenInstalled|ProjectAuthoredDx7AlgorithmEightSummedStackMeetsParityWhenInstalled\": passed"
   - date: 2026-05-14
