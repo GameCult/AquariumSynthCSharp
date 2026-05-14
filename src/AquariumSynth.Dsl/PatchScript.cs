@@ -201,7 +201,7 @@ public static class PatchScript
                 throw new PatchScriptException(line, $"unknown layer `{layerName}`");
             }
 
-            var rootFrequency = GetFloat(fields, line, 440, "root", "base", "freq", "frequency");
+            var rootFrequency = GetFloat(fields, line, 440, "root", "base", "basefreq", "table_freq", "table_frequency");
             if (rootFrequency <= 0)
             {
                 throw new PatchScriptException(line, "spectral root frequency must be greater than zero");
@@ -225,8 +225,9 @@ public static class PatchScript
                 "layer",
                 "root",
                 "base",
-                "freq",
-                "frequency",
+                "basefreq",
+                "table_freq",
+                "table_frequency",
                 "spread",
                 "width",
                 "detune",
@@ -234,7 +235,10 @@ public static class PatchScript
                 "bank",
                 "tones");
             treatmentFields["layer"] = layerName;
-            treatmentFields["freq"] = F(rootFrequency);
+            if (!HasAny(treatmentFields, "freq", "frequency", "f"))
+            {
+                treatmentFields["freq"] = F(rootFrequency);
+            }
             var treatment = ParseVoice(
                 ExpandVoiceFields(treatmentFields, line),
                 SpectralPath(_spectralBanks.Count),
@@ -1144,6 +1148,9 @@ public static class PatchScript
         value = "";
         return false;
     }
+
+    private static bool HasAny(IReadOnlyDictionary<string, string> fields, params string[] keys) =>
+        keys.Select(CanonicalField).Any(fields.ContainsKey);
 
     private static float GetFloat(IReadOnlyDictionary<string, string> fields, int line, float fallback, params string[] keys) =>
         TryGetAny(fields, keys, out var value) ? ParseFloat(value, line) : fallback;

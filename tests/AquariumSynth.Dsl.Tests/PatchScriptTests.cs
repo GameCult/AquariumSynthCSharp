@@ -412,6 +412,19 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
+    public void SpectralBankSeparatesTableRootFromPlaybackFrequency()
+    {
+        var patch = PatchScript.Parse("""
+            layer name=pad engine=pad gain=.08
+            spectrum layer=pad root=77.7813 freq=261.6256 spread=0 partials=1:.08
+            """);
+
+        var bank = Assert.Single(patch.SpectralBanks);
+        Assert.Equal(77.7813f, bank.RootFrequencyHz, 4);
+        Assert.Equal(261.6256f, bank.Treatment.Note.FrequencyHz, 4);
+    }
+
+    [Fact]
     public void SpectralBankSyntaxRejectsUnknownLayerOrBadSpread()
     {
         Assert.Throws<PatchScriptException>(() =>
