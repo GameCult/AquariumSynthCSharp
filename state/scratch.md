@@ -15,6 +15,22 @@ Doctrine update:
 
 Completed this slice:
 
+- Retuned DX7 max-feedback lowering for `ANLGSYN 1`. Route-index sweeps did not
+  materially improve the missing high-band buzz; hotter feedback did.
+- Changed only feedback value `7` from `.66` to `2.2`. Feedback value `5`
+  remains `.19`, so the hard PRC target keeps its existing feedback amount.
+- Fresh `ANLGSYN 1` with `feedback=2.2`: log-mel `.17553389`, envelope
+  `.16478956`, zero-crossing `.90904`, centroid `.9519112`, score `.6448498`.
+  This improves spectral buzz while making envelope/RMS less tidy.
+- Band evidence versus the previous fixed-frequency candidate:
+  - 1.2-2.5 kHz candidate/reference energy: `.008 -> .656`
+  - 2.5-5 kHz candidate/reference energy: near zero -> `.321`
+- Verified with bundled Python/dexed-py:
+  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  73 passed.
+
+Previous slice:
+
 - Fixed DX7 fixed-frequency operator lowering after `ANLGSYN 1` exposed the
   missing buzzing modulation. The old lowering treated fixed mode as a fake
   note ratio, so fixed carriers op1/op3 became `0.5` ratio against the graph

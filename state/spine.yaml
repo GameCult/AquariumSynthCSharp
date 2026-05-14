@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-14T14:40:00+01:00
+updated: 2026-05-14T14:51:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -47,7 +47,7 @@ live_invariants:
   - DX7 operator output level approximation belongs in reference import/rebuild helpers, not the generic DSL model.
   - DX7 carrier output amplitude follows the measured `2^((outputLevel - 99) / 8)` curve; do not restore the old internal-level proxy.
   - DX7 isolated two-operator modulation uses Aquarium route index `6.275` for full-level modulators; do not apply that blindly to cascaded stacks before algorithm output compensation is modeled.
-  - DX7 feedback lowers through `Dx7SysEx.OperatorFeedbackAmount`; do not restore PRC-local `feedback * constant` folklore.
+  - DX7 feedback lowers through `Dx7SysEx.OperatorFeedbackAmount`; feedback value 5 remains 0.19 for PRC, while feedback value 7 is much hotter at 2.2 to restore community-patch buzz. Do not restore PRC-local `feedback * constant` folklore.
   - DX7 ratio-mode detune lowers through `Dx7SysEx.OperatorFrequencyRatio`; do not silently drop detune from operator graph scripts.
   - DX7 voice transpose lowers through `Dx7SysEx.NoteFrequencyHz`; transpose 24 is neutral, 12 is one octave down. Do not hardcode `freq=261.6256` for imported voices.
   - DX7 fixed-frequency operators lower through `Dx7SysEx.FixedOperatorFrequencyHz` as absolute Hz divided by the graph base frequency; do not treat fixed mode as a note ratio.
@@ -142,6 +142,19 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-14
+    summary: >
+      Retuned DX7 max-feedback lowering after listening found `ANLGSYN 1` still
+      sounded like `woooh` instead of Dexed's buzzier `deeeh`. Route-index
+      sweeps did not help; increasing only DX7 feedback value 7 from 0.66 to
+      2.2 restored high-band energy while leaving feedback value 5, and
+      therefore PRC's feedback amount, unchanged. For `ANLGSYN 1`, log-mel
+      improves from 0.19427659 to 0.17553389 and centroid ratio from 0.9182808
+      to 0.9519112. Band evidence: 1.2-2.5 kHz candidate/reference energy
+      rises from 0.8% to 65.6%, and 2.5-5 kHz from near zero to 32.1%.
+      Envelope/RMS are still imperfect, so this is a timbre correction rather
+      than the final word on ANLGSYN.
+    verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore: 73 passed"
   - date: 2026-05-14
     summary: >
       Fixed DX7 fixed-frequency operator lowering after listening caught

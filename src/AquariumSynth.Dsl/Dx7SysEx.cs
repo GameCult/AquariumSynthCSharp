@@ -865,7 +865,7 @@ public static class Dx7SysEx
 
     private static readonly float[] FeedbackAmounts =
     [
-        0f, 0.01f, 0.02f, 0.05f, 0.10f, 0.19f, 0.38f, 0.66f
+        0f, 0.01f, 0.02f, 0.05f, 0.10f, 0.19f, 0.38f, 2.2f
     ];
 
     private static readonly int[] LevelLookup =

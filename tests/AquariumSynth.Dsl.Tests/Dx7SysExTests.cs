@@ -255,7 +255,7 @@ public sealed class Dx7SysExTests
     {
         Assert.Equal(0, Dx7SysEx.OperatorFeedbackAmount(0));
         Assert.Equal(0.19f, Dx7SysEx.OperatorFeedbackAmount(5));
-        Assert.Equal(0.66f, Dx7SysEx.OperatorFeedbackAmount(7));
+        Assert.Equal(2.2f, Dx7SysEx.OperatorFeedbackAmount(7));
     }
 
     [Fact]

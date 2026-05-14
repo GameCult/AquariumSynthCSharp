@@ -125,6 +125,11 @@ math is still fake in the places that matter perceptually.
      Hz by the graph base frequency. This restores the low fixed-frequency
      carrier/modulation buzz for op1/op3 instead of flattening the voice into
      the wrong drone.
+   - `ANLGSYN 1` also exposed that the previous max-feedback value was too tame
+     for audible community patches. DX7 feedback value `7` now lowers to
+     Aquarium feedback `2.2`, while feedback value `5` remains at `0.19` for
+     the hard PRC target. The hotter value restores much more of the 1.2-5 kHz
+     buzzing-harmonic band, with envelope/RMS still imperfect.
    - A first survey also tried `DX1 LEAD B`, `MELLOWSOLO`, and `RES SYNTH1`;
      they were left out of the passing gate because listening and
      log-mel/zero-crossing evidence do not justify calling them parity yet.
