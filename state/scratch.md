@@ -15,6 +15,23 @@ Doctrine update:
 
 Completed this slice:
 
+- Reframed the latest ear report as envelope pressure, not harmonic pressure:
+  `{ Mooger }` needs a more aggressive attack contour; `MELLOWSOLO` needed a
+  smoother captured tail; `RES SYNTH1` still has a phase-like attack-modulation
+  issue even though oscillator sync is enabled.
+- Extended only the `MELLOWSOLO` pressure render from `1.0s` to `1.25s` so the
+  existing `0.6s` release after a `0.65s` gate is not chopped by the artifact
+  boundary. Latest pressure metrics improve to score `.5722256`, log-mel
+  `.3472474`, RMS `.9883968`.
+- Tested and cut a global traced-release-duration change. It shortened releases
+  too aggressively and broke PRC, `Piano Bass`, `RES SYNTH1`, and `ANLGSYN 1`;
+  release duration remains part of the broader DX7 envelope model pressure.
+- Verified with bundled Python/dexed-py:
+  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  76 passed.
+
+Previous slice:
+
 - Listening split the latest community set again: `Piano Bass` is currently the
   anchor and should not be disturbed; `ANLGSYN 1` and `RES SYNTH1` were blowing
   out into drone at the modulator peak; `{ Mooger }` and `MELLOWSOLO` still

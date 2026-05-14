@@ -63,7 +63,9 @@ live_invariants:
   - Do not add an `env=dx7` runtime surface until it matches Dexed plugin audio with the block-interpolated gain model, not only the raw trace helper.
   - DX7 applied envelope lowering now lives in `Dx7SysEx.ApproximateAppliedRateLevelEnvelope`; it normalizes traced applied gain so operator output level remains a separate authority.
   - Current DX7 analog1 algorithm-2 lowering caps non-carrier applied-envelope Level1 at 0.92 to avoid modulator peak blowout; treat this as pressure on exact DX7 EG/output modeling, not as permission to add broad peak clamps.
+  - `MELLOWSOLO` is a pressure artifact, not passing parity; its render window is 1.25s so the candidate release tail is not cut at the artifact boundary.
   - Do not reduce summed route scale merely because an edge has three sources; a Mooger fan-in route experiment worsened evidence and was cut.
+  - Do not replace applied-envelope release with a naive traced threshold duration; it shortened releases too aggressively and broke broader DX7 parity.
   - Recompile only for graph shape changes; vary declared parameters through the hosted DSP control API.
   - Reference fixtures must preserve provenance, license status, source hash, and feature pressure.
   - Public-domain reference fixtures and dexed-py helpers are test/development material only; the NuGet package must ship only AquariumSynth.Dsl.
@@ -145,6 +147,17 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-14
+    summary: >
+      Reframed the latest community listening as envelope pressure rather than
+      harmonic pressure. `{ Mooger }` needs a more aggressive attack contour;
+      `RES SYNTH1` still has a phase-like attack-modulation issue even though
+      oscillator sync is enabled; `MELLOWSOLO` needed its pressure artifact to
+      capture the release tail. Extended only `MELLOWSOLO` from a 1.0s render
+      to 1.25s, improving pressure log-mel to 0.3472474 and score to 0.5722256.
+      Tested and cut a global traced-release-duration change because it broke
+      PRC, `Piano Bass`, `RES SYNTH1`, and `ANLGSYN 1`.
+    verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore: 76 passed"
   - date: 2026-05-14
     summary: >
       Added scoped modulator peak headroom after listening found `ANLGSYN 1`

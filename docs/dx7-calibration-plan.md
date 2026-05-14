@@ -157,9 +157,10 @@ math is still fake in the places that matter perceptually.
    - `DX1 LEAD B` and `MELLOWSOLO` also sounded harmonically closer with COM
      disabled and graph gain restored, but they still fail the current numeric
      parity gates. `MELLOWSOLO` now has a pressure artifact test that writes
-     listening WAVs without claiming parity. Keep them as pressure for branch
-     emphasis, envelope detail, and LFO/operator attack behavior, not as
-     passing stock.
+     listening WAVs without claiming parity. Its pressure render is `1.25s`
+     so the candidate release is not cut off at the artifact boundary. Keep
+     these voices as pressure for branch emphasis, envelope detail, and
+     LFO/operator attack behavior, not as passing stock.
 
 ## Rejected Path
 
@@ -169,3 +170,7 @@ is the exam, not the textbook.
 Do not lower the summed route scale merely because a patch has three sources in
 one summed branch. A `5.25`/`5.75` fan-in route experiment made `{ Mooger }`
 less coherent by metric and did not isolate the overtone-emphasis problem.
+
+Do not replace the applied-envelope release with a naive traced threshold
+duration. That experiment shortened releases too aggressively and broke PRC,
+`Piano Bass`, `RES SYNTH1`, and `ANLGSYN 1`.

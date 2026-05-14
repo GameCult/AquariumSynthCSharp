@@ -197,7 +197,7 @@ public sealed class Dx7ReferenceParityTests
     public async Task PublicDomainDx7MellowSoloWritesPressureWavsWhenInstalled()
     {
         var result = await RenderAndComparePublicDomainDx7VoiceAsync(
-            new CommunityDx7VoiceCase(14, "MELLOWSOLO", 0.65f, 1.0f, 0.65f));
+            new CommunityDx7VoiceCase(14, "MELLOWSOLO", 0.65f, 1.25f, 0.65f));
 
         if (result is null)
         {
