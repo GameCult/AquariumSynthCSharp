@@ -152,15 +152,16 @@ public sealed class Dx7ReferenceParityTests
         builder.AppendLine("opgraph");
         builder.AppendLine("    name=dx7_prc_synth1_probe");
         builder.AppendLine("    freq=261.6256");
-        builder.AppendLine("    gain=0.55");
+        builder.AppendLine("    gain=0.39");
         builder.AppendLine();
 
         foreach (var op in voice.Operators.OrderByDescending(op => op.Number))
         {
-            var level = Dx7SysEx.ApproximateOperatorLevel(op).LinearLevel * CarrierLevelScale(op.Number);
+            var level = Dx7SysEx.ApproximateOperatorLevel(op).LinearLevel *
+                        Dx7SysEx.OperatorOutputCompensation(topology, op.Number);
             var envelope = ScaledEnvelope(Dx7SysEx.ApproximateRateLevelEnvelope(op.Envelope), 0.62f);
             builder.AppendLine($"operator name=op{op.Number}");
-            builder.AppendLine($"    ratio={F(Dx7Ratio(op))}");
+            builder.AppendLine($"    ratio={F(Dx7SysEx.OperatorFrequencyRatio(op))}");
             builder.AppendLine($"    level={F(level)}");
             if (topology.SelfFeedbackOperators.Contains(op.Number))
             {
@@ -186,32 +187,11 @@ public sealed class Dx7ReferenceParityTests
         return builder.ToString();
     }
 
-    private static float Dx7Ratio(Dx7Operator op)
-    {
-        if (op.FrequencyMode == Dx7FrequencyMode.Fixed)
-        {
-            return Math.Max(0.5f, op.FrequencyCoarse);
-        }
-
-        var coarse = op.FrequencyCoarse == 0 ? 0.5f : op.FrequencyCoarse;
-        return coarse * (1 + op.FrequencyFine / 100f);
-    }
-
-    private static float CarrierLevelScale(int operatorNumber) => operatorNumber switch
-    {
-        6 => 0.3f,
-        5 => 0.55f,
-        4 => 0.6f,
-        3 => 2.5f,
-        2 => 0.8f,
-        _ => 1
-    };
-
     private static float PrcSynth1RouteIndex(int sourceOperator, int targetOperator) => (sourceOperator, targetOperator) switch
     {
         (2, 1) => Dx7SysEx.OperatorModulationRouteIndex,
-        // Cascaded stacks still need algorithm output compensation; do not apply the isolated two-op scale blindly.
-        _ => 0.7f
+        // Hard-target probe scar: cascaded stacks need dedicated summed-modulator calibration.
+        _ => 1.6f
     };
 
     private static Dx7RateLevelEnvelopeApproximation ScaledEnvelope(Dx7RateLevelEnvelopeApproximation approximation, float scale)

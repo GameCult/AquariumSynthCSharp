@@ -45,17 +45,30 @@ math is still fake in the places that matter perceptually.
    - Render one self-feedback operator across DX7 feedback values.
    - Fit feedback amount separately from route/index scaling.
 
-4. **Envelope level curve**
+4. **Ratio detune**
+   - Lower DX7 ratio-mode detune into Aquarium operator ratios.
+   - Keep detune as frequency behavior, not a modulation or chorus feature.
+
+5. **Algorithm output compensation**
+   - Use ROM `COM` values to balance carriers before any PRC-specific branch
+     boosting.
+   - `COM` stores the output count minus one. Because Aquarium's carrier
+     amplitude curve was fitted against algorithm 32's six-output baseline,
+     carriers scale by `6 / (COM + 1)` during DX7 lowering.
+   - Replace manual carrier scale constants with algorithm-derived lowering.
+
+6. **Envelope level curve**
    - Render fixed-output operators with varied DX7 EG levels and rates.
    - Fit the rate/level envelope amplitude curve instead of assuming
      `level / 99`.
 
-5. **Algorithm output compensation**
-   - Use algorithm topology/ROM compensation to balance carriers before any
-     PRC-specific branch boosting.
-   - Replace manual carrier scale constants with algorithm-derived lowering.
+7. **Summed/cascaded modulation**
+   - Render project-authored algorithm-8 stacks that isolate `6 -> 5 -> 3`
+     and `4 + 5 -> 3`.
+   - Replace the hard `PRC SYNTH1` cascaded-route probe constant with a fitted
+     summed-modulator route rule.
 
-6. **Hard target replay**
+8. **Hard target replay**
    - Re-run `PRC SYNTH1`.
    - Keep the log-mel gate and listening artifacts.
    - Raise thresholds only when the calibrated lowering improves for the right

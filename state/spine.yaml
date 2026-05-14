@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-14T04:13:00+01:00
+updated: 2026-05-14T04:26:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -47,6 +47,9 @@ live_invariants:
   - DX7 carrier output amplitude follows the measured `2^((outputLevel - 99) / 8)` curve; do not restore the old internal-level proxy.
   - DX7 isolated two-operator modulation uses Aquarium route index `6.275` for full-level modulators; do not apply that blindly to cascaded stacks before algorithm output compensation is modeled.
   - DX7 feedback lowers through `Dx7SysEx.OperatorFeedbackAmount`; do not restore PRC-local `feedback * constant` folklore.
+  - DX7 ratio-mode detune lowers through `Dx7SysEx.OperatorFrequencyRatio`; do not silently drop detune from operator graph scripts.
+  - DX7 algorithm output compensation lowers through ROM `COM` values relative to the algorithm-32 six-output baseline; do not restore PRC-local carrier scale tables.
+  - The PRC cascaded-route value is a fenced hard-target probe scar, not a core DX7 fact. Replace it with a summed-modulator calibration rung before broad DX7 import.
   - DX7 calibration must proceed through isolated rungs in `docs/dx7-calibration-plan.md`; do not keep tuning hard PRC-specific constants as a substitute for a level/index model.
   - Staged operator envelopes own multi-target operator level contours through `env=rl rates=... levels=...`; do not force DX7-style contours back into the general ADSR voice envelope model.
   - DX7 rate/level envelopes may lower to staged operator envelopes or labeled ADSR approximations, but exact DX7 EG timing/gain calibration remains missing pressure.
@@ -64,7 +67,7 @@ reference_targets:
     priority: 1
     purpose: "Structured FM/operator graph pressure test."
     source: "https://github.com/asb2m10/dexed"
-    status: "DX7 SysEx parser, public-domain SysEx fixture, dexed-py reference rendering, first thresholded rendered parity test for analog1.syx voice 13, hard PRC SYNTH1 probe with listening WAV artifacts and log-mel <= 0.255, renderable delayed operator feedback, DX7 effective operator-level approximation, staged operator envelopes, algorithm topology extraction, envelope-to-ADSR approximation, two Aquarium DSL rebuild attempts, first-class operator graph support, and Aquarium candidate rendering through Faust-generated C# exist."
+    status: "DX7 SysEx parser, public-domain SysEx fixture, dexed-py reference rendering, first thresholded rendered parity test for analog1.syx voice 13, hard PRC SYNTH1 probe with listening WAV artifacts and log-mel <= 0.255, renderable delayed operator feedback, DX7 effective operator-level approximation, measured carrier output amplitude, isolated route index, feedback table, ratio detune lowering, ROM COM output compensation, staged operator envelopes, algorithm topology extraction, envelope-to-ADSR approximation, two Aquarium DSL rebuild attempts, first-class operator graph support, and Aquarium candidate rendering through Faust-generated C# exist."
     first_slice:
       - "Add a harder public-domain DX7 parity target that audibly needs operator routing."
   zynaddsubfx:
@@ -101,10 +104,12 @@ reference_targets:
 next_agent_start_here:
   recommended_first_task: >
     Listen to the latest generated PRC SYNTH1 WAVs under
-    Continue the ladder in `docs/dx7-calibration-plan.md` with envelope level
-    curve and algorithm output compensation. Single-carrier amplitude, isolated
-    two-op modulation index, and feedback are now fitted; cascaded PRC stacks
-    still need a real compensation model.
+    `artifacts/parity/dx7-prc-synth1`. Continue the ladder in
+    `docs/dx7-calibration-plan.md` with envelope level curve and
+    summed/cascaded modulation calibration. Single-carrier amplitude, isolated
+    two-op modulation index, feedback, ratio detune, and ROM COM output
+    compensation are now fitted or mapped; the PRC cascaded-route constant
+    still needs a real summed-modulator model.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -117,6 +122,15 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-14
+    summary: >
+      Added DX7 ratio-mode detune and algorithm output compensation to central
+      lowering. `Dx7SysEx.OperatorFrequencyRatio` preserves detune in operator
+      graph ratios, and `Dx7SysEx.OperatorOutputCompensation` maps ROM `COM`
+      output counts relative to the algorithm-32 six-output amplitude baseline.
+      The PRC probe no longer carries a manual carrier-level scale table; its
+      remaining cascaded-route value is fenced as a hard-target probe scar.
+    verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore --filter \"Dx7SysExTests|PublicDomainDx7PrcSynth1WritesListeningWavsWhenInstalled\": passed"
   - date: 2026-05-14
     summary: >
       Completed the DX7 feedback calibration rung. Isolated feedback sweeps fit

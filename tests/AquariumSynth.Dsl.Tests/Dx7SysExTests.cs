@@ -151,6 +151,18 @@ public sealed class Dx7SysExTests
     }
 
     [Fact]
+    public void MapsDx7AlgorithmOutputCompensationRelativeToAlgorithmThirtyTwo()
+    {
+        var algorithm8 = Dx7SysEx.AlgorithmTopology(8);
+        var algorithm32 = Dx7SysEx.AlgorithmTopology(32);
+
+        Assert.Equal(3, Dx7SysEx.OperatorOutputCompensation(algorithm8, 1));
+        Assert.Equal(3, Dx7SysEx.OperatorOutputCompensation(algorithm8, 3));
+        Assert.Equal(1, Dx7SysEx.OperatorOutputCompensation(algorithm8, 2));
+        Assert.Equal(1, Dx7SysEx.OperatorOutputCompensation(algorithm32, 1));
+    }
+
+    [Fact]
     public void ApproximatesDx7RateLevelEnvelopeAsAdsr()
     {
         var approximation = Dx7SysEx.ApproximateEnvelope(new Dx7Envelope(
@@ -225,6 +237,18 @@ public sealed class Dx7SysExTests
     }
 
     [Fact]
+    public void AppliesDx7RatioModeDetuneToOperatorFrequency()
+    {
+        var centered = InitOperator(frequencyCoarse: 1, detune: 7);
+        var sharp = InitOperator(frequencyCoarse: 1, detune: 14);
+        var flat = InitOperator(frequencyCoarse: 1, detune: 0);
+
+        Assert.Equal(1, Dx7SysEx.OperatorFrequencyRatio(centered, midiNote: 60));
+        Assert.InRange(Dx7SysEx.OperatorFrequencyRatio(sharp, midiNote: 60), 1.0048f, 1.0049f);
+        Assert.InRange(Dx7SysEx.OperatorFrequencyRatio(flat, midiNote: 60), 0.9951f, 0.9952f);
+    }
+
+    [Fact]
     public void ApproximatesDx7RateLevelEnvelopeAsStagedEnvelope()
     {
         var approximation = Dx7SysEx.ApproximateRateLevelEnvelope(new Dx7Envelope(
@@ -286,6 +310,28 @@ public sealed class Dx7SysExTests
         for (var i = 0; i < paddedName.Length; i++) data[145 + i] = (byte)paddedName[i];
         return data;
     }
+
+    private static Dx7Operator InitOperator(
+        int frequencyCoarse,
+        int frequencyFine = 0,
+        int detune = 7,
+        Dx7FrequencyMode frequencyMode = Dx7FrequencyMode.Ratio) =>
+        new(
+            Number: 1,
+            Envelope: new Dx7Envelope(99, 99, 99, 99, 99, 99, 99, 0),
+            BreakPoint: 39,
+            LeftDepth: 0,
+            RightDepth: 0,
+            LeftCurve: 0,
+            RightCurve: 0,
+            RateScaling: 0,
+            AmplitudeModulationSensitivity: 0,
+            KeyVelocitySensitivity: 0,
+            OutputLevel: 99,
+            FrequencyMode: frequencyMode,
+            FrequencyCoarse: frequencyCoarse,
+            FrequencyFine: frequencyFine,
+            Detune: detune);
 
     private static byte[] PackVoice(byte[] edit)
     {

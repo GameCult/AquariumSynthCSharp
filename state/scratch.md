@@ -15,6 +15,21 @@ Doctrine update:
 
 Completed this slice:
 
+- Added the ratio-detune and algorithm-output-compensation rungs to the DX7
+  lowering. `Dx7SysEx.OperatorFrequencyRatio` now applies ratio-mode detune
+  from the Dexed/DX7 note formula, and `Dx7SysEx.OperatorOutputCompensation`
+  maps ROM `COM` values relative to the algorithm-32 six-output baseline.
+- The PRC probe no longer has a carrier-level scale table. It still has a
+  fenced cascaded-route constant (`1.6`) for the `op6/op5/op4 -> op3` stack;
+  that is now named as the next calibration target, not promoted into core
+  lowering.
+- Latest PRC run with detune, COM compensation, graph gain `.39`, and the
+  fenced cascaded-route probe: log-mel `0.24476814`, score `0.5708394`, RMS
+  ratio `1.0108943`, zero-crossing ratio `0.7931764`, centroid ratio
+  `1.1131053`.
+
+Previous slice:
+
 - Completed the feedback calibration rung. Isolated Dexed feedback sweeps fit a
   nonlinear Aquarium feedback table: `0, .01, .02, .05, .10, .19, .38, .66`
   for DX7 feedback values `0..7`.

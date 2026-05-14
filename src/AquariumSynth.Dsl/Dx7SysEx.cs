@@ -218,6 +218,28 @@ public static class Dx7SysEx
     public static float OperatorFeedbackAmount(int feedback) =>
         FeedbackAmounts[Math.Clamp(feedback, 0, FeedbackAmounts.Length - 1)];
 
+    public static float OperatorOutputCompensation(Dx7AlgorithmTopology topology, int operatorNumber)
+    {
+        var outputStep = topology.RomSteps.FirstOrDefault(step =>
+            step.TargetOperator == operatorNumber &&
+            step.OutputCompensation > 0);
+        return outputStep is null
+            ? 1
+            : 6f / (outputStep.OutputCompensation + 1);
+    }
+
+    public static float OperatorFrequencyRatio(Dx7Operator op, int midiNote = 60)
+    {
+        if (op.FrequencyMode == Dx7FrequencyMode.Fixed)
+        {
+            return Math.Max(0.5f, op.FrequencyCoarse);
+        }
+
+        var coarse = op.FrequencyCoarse == 0 ? 0.5f : op.FrequencyCoarse;
+        var fine = 1 + op.FrequencyFine / 100f;
+        return coarse * fine * RatioModeDetuneFactor(op.Detune, midiNote);
+    }
+
     public static Dx7RateLevelEnvelopeApproximation ApproximateRateLevelEnvelope(Dx7Envelope envelope)
     {
         var l1 = Level(envelope.Level1);
@@ -450,6 +472,13 @@ public static class Dx7SysEx
     }
 
     private static float Level(int value) => Math.Clamp(value, 0, 99) / 99f;
+
+    private static float RatioModeDetuneFactor(int detune, int midiNote)
+    {
+        var logFrequency = MathF.Log2(440f) + (midiNote - 69) / 12f;
+        var detuneRatio = 0.0209f * MathF.Exp(-0.396f * logFrequency) / 7f;
+        return MathF.Pow(2, detuneRatio * logFrequency * (Math.Clamp(detune, 0, 14) - 7));
+    }
 
     private static int ScaleVelocity(int velocity, int sensitivity)
     {
