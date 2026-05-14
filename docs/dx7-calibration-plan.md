@@ -144,6 +144,12 @@ math is still fake in the places that matter perceptually.
      preserves a higher sustain floor for max-feedback source operators and
      gates `ANLGSYN 1` with a sustained 2.5-5 kHz band-energy check so the
      old drifting version cannot pass by global log-mel score alone.
+   - Later listening caught `ANLGSYN 1` and `RES SYNTH1` blowing out into a
+     drone at the modulator peak. Until Aquarium has a more exact DX7 EG/output
+     model, algorithm-2 non-carrier applied envelopes cap only the first staged
+     peak at `0.92`. This leaves `Piano Bass` unchanged, improves `RES SYNTH1`,
+     and keeps `ANLGSYN 1` judged primarily by log-mel plus sustained high-band
+     evidence rather than aggregate score.
    - Removing ROM COM carrier boosts made the community harmonics closer by
      ear but much quieter. Restoring loudness with graph gain keeps the improved
      balance: `{ Mooger }` uses `gain=0.75`, `Piano Bass` uses `gain=0.72`,
@@ -159,3 +165,7 @@ math is still fake in the places that matter perceptually.
 
 Do not keep tuning `PRC SYNTH1` with branch-specific magic constants. That patch
 is the exam, not the textbook.
+
+Do not lower the summed route scale merely because a patch has three sources in
+one summed branch. A `5.25`/`5.75` fan-in route experiment made `{ Mooger }`
+less coherent by metric and did not isolate the overtone-emphasis problem.

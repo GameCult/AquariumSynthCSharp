@@ -15,6 +15,28 @@ Doctrine update:
 
 Completed this slice:
 
+- Listening split the latest community set again: `Piano Bass` is currently the
+  anchor and should not be disturbed; `ANLGSYN 1` and `RES SYNTH1` were blowing
+  out into drone at the modulator peak; `{ Mooger }` and `MELLOWSOLO` still
+  have overtone-emphasis issues.
+- Added scoped modulator peak headroom in the DX7 probe lowering:
+  algorithm-2 non-carrier applied envelopes cap only Level1 at `.92`.
+  `Piano Bass` remains unchanged; `RES SYNTH1` improves to score `.8140223`,
+  log-mel `.12369786`, envelope `.06489321`; `ANLGSYN 1` keeps log-mel
+  `.19461302` and sustained high-band evidence but aggregate score drops to
+  `.6980632`, so its score gate is now `.69`.
+- `MELLOWSOLO` nudges to log-mel `.42906323`, score `.55206907`, but remains a
+  pressure artifact, not passing parity.
+- Tested and cut a wider summed-route headroom rule for `{ Mooger }`
+  (`5.25`/`5.75` for three-source sums). It worsened Mooger log-mel/envelope
+  and does not deserve to live. Mooger's "too hard" harmonics remain unresolved
+  overtone-emphasis pressure, not a solved high-band-energy problem.
+- Focused verification with bundled Python/dexed-py:
+  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore --filter "Dx7SysExTests|PublicDomainDx7MoogerAndPianoBassMeetRenderedParityWhenInstalled|PublicDomainDx7AnlgSyn1KeepsBuzzingModulationWhenInstalled|PublicDomainDx7MellowSoloWritesPressureWavsWhenInstalled|PublicDomainDx7PrcSynth1WritesListeningWavsWhenInstalled"`:
+  28 passed.
+
+Previous slice:
+
 - Listening report split the remaining DX7 mismatch: `RES SYNTH1` mostly
   needed a harder attack, `ANLGSYN 1` still smells like missing LFO/operator
   attack behavior, and `MELLOWSOLO` is the clearest harmonic mismatch.

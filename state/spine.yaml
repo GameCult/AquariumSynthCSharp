@@ -62,6 +62,8 @@ live_invariants:
   - DX7 envelope trace evidence now lives in `Dx7SysEx.TraceEnvelope`, `Dx7SysEx.TraceInterpolatedEnvelope`, and `artifacts/parity/dx7-envelope-trace/egstep.csv`; Dexed-style audio uses block-interpolated applied gain, not the raw EG state alone.
   - Do not add an `env=dx7` runtime surface until it matches Dexed plugin audio with the block-interpolated gain model, not only the raw trace helper.
   - DX7 applied envelope lowering now lives in `Dx7SysEx.ApproximateAppliedRateLevelEnvelope`; it normalizes traced applied gain so operator output level remains a separate authority.
+  - Current DX7 analog1 algorithm-2 lowering caps non-carrier applied-envelope Level1 at 0.92 to avoid modulator peak blowout; treat this as pressure on exact DX7 EG/output modeling, not as permission to add broad peak clamps.
+  - Do not reduce summed route scale merely because an edge has three sources; a Mooger fan-in route experiment worsened evidence and was cut.
   - Recompile only for graph shape changes; vary declared parameters through the hosted DSP control API.
   - Reference fixtures must preserve provenance, license status, source hash, and feature pressure.
   - Public-domain reference fixtures and dexed-py helpers are test/development material only; the NuGet package must ship only AquariumSynth.Dsl.
@@ -143,6 +145,20 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-14
+    summary: >
+      Added scoped modulator peak headroom after listening found `ANLGSYN 1`
+      and `RES SYNTH1` blowing out into a drone at the modulator peak while
+      `Piano Bass` was spot on. The DX7 probe lowering now caps only
+      algorithm-2 non-carrier applied-envelope Level1 at 0.92. Latest focused
+      metrics: `RES SYNTH1` score 0.8140223, log-mel 0.12369786, envelope
+      0.06489321; `Piano Bass` unchanged at score 0.7910121, log-mel
+      0.13413505; `ANLGSYN 1` score 0.6980632, log-mel 0.19461302, sustained
+      high-band still above gate; `MELLOWSOLO` score 0.55206907, log-mel
+      0.42906323. Tested and cut a three-source summed-route headroom rule for
+      `{ Mooger }`; it worsened Mooger metrics and did not isolate the overtone
+      issue.
+    verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore --filter Dx7... focused pass: 28 passed"
   - date: 2026-05-14
     summary: >
       Lowered DX7 operator key-scaling and rate-scaling against the effective
