@@ -286,12 +286,10 @@ public static class Dx7SysEx
             gateSeconds,
             Math.Max(durationSeconds, gateSeconds + 0.55f),
             sampleRate: sampleRate);
-        var firstStage2 = FirstStageIndex(trace, 2);
-        var firstStage3 = FirstStageIndex(trace, 3);
-
-        var peakSample = Math.Min(63, trace.Count - 1);
-        var level2Sample = firstStage2 >= 0 ? firstStage2 : Math.Min(peakSample + 64, trace.Count - 1);
-        var sustainSample = Math.Clamp(firstStage3 >= 0 ? firstStage3 : (int)(gateSeconds * sampleRate), 0, trace.Count - 1);
+        var gateSample = Math.Clamp((int)MathF.Round(gateSeconds * sampleRate), 0, trace.Count - 1);
+        var peakSample = FirstPeakIndex(trace, gateSample);
+        var level2Sample = SplitIndex(peakSample, gateSample, 0.35f);
+        var sustainSample = SplitIndex(peakSample, gateSample, 0.85f);
 
         var r1 = Math.Max(64f / sampleRate, trace[peakSample].TimeSeconds);
         var r2 = Math.Max(64f / sampleRate, trace[level2Sample].TimeSeconds - r1);
@@ -376,14 +374,28 @@ public static class Dx7SysEx
         return points;
     }
 
-    private static int FirstStageIndex(IReadOnlyList<Dx7EnvelopeTracePoint> trace, int stage)
+    private static int FirstPeakIndex(IReadOnlyList<Dx7EnvelopeTracePoint> trace, int gateSample)
     {
-        for (var i = 0; i < trace.Count; i++)
+        var last = Math.Clamp(gateSample, 0, trace.Count - 1);
+        var peak = 0f;
+        for (var i = 0; i <= last; i++)
         {
-            if (trace[i].Stage == stage) return i;
+            peak = Math.Max(peak, trace[i].Gain);
         }
 
-        return -1;
+        var threshold = peak * 0.98f;
+        for (var i = 0; i <= last; i++)
+        {
+            if (trace[i].Gain >= threshold) return i;
+        }
+
+        return last;
+    }
+
+    private static int SplitIndex(int start, int end, float fraction)
+    {
+        if (end <= start) return start;
+        return start + Math.Clamp((int)MathF.Round((end - start) * Math.Clamp(fraction, 0, 1)), 0, end - start);
     }
 
     public static Dx7VoiceBank ParseBank(ReadOnlySpan<byte> bytes)

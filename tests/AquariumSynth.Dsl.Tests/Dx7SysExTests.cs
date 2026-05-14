@@ -355,7 +355,7 @@ public sealed class Dx7SysExTests
             gateSeconds: 0.75f);
 
         Assert.InRange(approximation.Envelope.Rate1Seconds, 0.0014f, 0.0015f);
-        Assert.InRange(approximation.Envelope.Level1, 0.99f, 1.01f);
+        Assert.InRange(approximation.Envelope.Level1, 0.98f, 1.01f);
         Assert.Equal(RateLevelCurve.Exponential, approximation.Envelope.Curve2);
         Assert.Contains("curves=lin,exp,exp,exp", approximation.ToScriptSpec());
         Assert.Contains("64-sample block", approximation.Notes);

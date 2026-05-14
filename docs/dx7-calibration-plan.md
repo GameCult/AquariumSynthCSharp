@@ -78,9 +78,9 @@ math is still fake in the places that matter perceptually.
    - `Dx7SysEx.ApproximateAppliedRateLevelEnvelope` lowers a DX7 EG into a
      curved staged contour by tracing Dexed-style block-interpolated applied
      gain and normalizing it against Aquarium's separate operator-output level.
-     On `PRC SYNTH1`, this improves log-mel from `0.24476814` to `0.21931955`
-     and envelope distance from `0.43700194` to `0.10271241`; zero-crossing
-     remains bad, so oscillator/phase behavior is still open pressure.
+     On `PRC SYNTH1`, this improves log-mel from `0.24476814` to `0.17186502`,
+     envelope distance from `0.43700194` to `0.13057204`, and zero-crossing
+     ratio from `0.7931764` to `0.7815517` while keeping RMS at unity.
 
 7. **Summed/cascaded modulation**
    - Render project-authored algorithm-8 stacks that isolate `6 -> 5 -> 3`
@@ -96,8 +96,9 @@ math is still fake in the places that matter perceptually.
    - Keep the log-mel gate and listening artifacts.
    - Raise thresholds only when the calibrated lowering improves for the right
      reason.
-   - Current curved-envelope replay gates log-mel at `<= 0.225`, envelope
-     distance at `<= 0.12`, RMS ratio near unity, and score at `>= 0.50`.
+   - Current curved-envelope replay gates log-mel at `<= 0.18`, envelope
+     distance at `<= 0.14`, zero-crossing at `>= 0.75`, RMS ratio near unity,
+     and score at `>= 0.64`.
 
 ## Rejected Path
 

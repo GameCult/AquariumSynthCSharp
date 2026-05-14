@@ -20,10 +20,13 @@ Completed this slice:
   curved staged envelope surface, normalized so operator output level remains a
   separate authority.
 - Retried hard `PRC SYNTH1` with the applied-envelope lowering. Latest focused
-  run: log-mel `0.21931955` (was `0.24476814`), envelope distance
-  `0.10271241` (was `0.43700194`), RMS ratio `1.0003664`, score `0.5026183`.
-  Zero-crossing ratio got worse at `0.28642866`, so oscillator/phase behavior
-  is the next exposed mismatch.
+  run after fixing the peak picker: log-mel `0.17186502` (was `0.24476814`),
+  envelope distance `0.13057204` (was `0.43700194`), RMS ratio `1.0000212`,
+  zero-crossing ratio `0.7815517`, score `0.6501268`.
+- Listening note resolved: the prior applied-envelope lowering made op2 rise
+  late (`0.014 -> 0.613`), causing the odd end lilt. The helper now finds the
+  first near-peak before gate, so op2 hits early and decays
+  (`0.981 -> 0.843 -> 0.660`) like the traced DX7 applied gain.
 - Extended staged operator envelopes with per-segment curves:
   `curves=lin,exp,exp,lin`. Linear remains the default, and levels can now
   express deliberate transient overshoot above `1` instead of clipping away
