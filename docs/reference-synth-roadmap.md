@@ -120,9 +120,10 @@ First deliverable:
   effects.
 - Rebuild one additive lead, one PAD texture, and one formant/vocal patch. The
   first rebuild catalog entries now parse/export and record the first Zyn
-  missing abstractions: additive harmonic-bank syntax, PAD-style spectral
-  source generation, free envelopes for normal voices, named kit/layer routing,
-  and richer formant/vowel morphing.
+  missing abstractions. Named layers and additive harmonic-bank syntax now
+  exist; PAD-style spectral source generation, free envelopes for normal
+  voices, fuller kit/effect routing, and richer formant/vowel morphing remain
+  pressure.
 
 Do not vendor the upstream Zyn instrument-bank submodule until its preset
 license/provenance is explicit enough for this repo. Use project-authored
@@ -139,6 +140,13 @@ engine tags, optional MIDI key range metadata, default gain, and an effect-send
 label while lowering to ordinary Aquarium voices. It is intentionally only an
 ownership/routing scaffold for now; it does not add PAD synthesis, free
 envelopes, or effect buses by stealth.
+
+The second response is `harmonics`: additive layers can declare ratio/gain
+partial banks such as `harmonics layer=body root=220
+partials=1:.16,2:.075`. The parser preserves the bank as authored structure
+and lowers it to ordinary voices. This gives additive lead, drawbar, and future
+partial-bank targets a reusable surface without pretending to implement Zyn
+ADDsynth phase, bandwidth, or free-envelope details.
 
 Sources:
 

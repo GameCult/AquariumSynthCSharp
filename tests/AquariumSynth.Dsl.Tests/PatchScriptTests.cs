@@ -324,6 +324,40 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
+    public void HarmonicBankSyntaxExpandsNamedLayerPartials()
+    {
+        var patch = PatchScript.Parse("""
+            layer name=drawbar engine=add gain=.2 wave=sine attack=.01
+            harmonics layer=drawbar root=110 partials=1:.5,2:.25,3:.125
+            """);
+        var export = FaustEmitter.Emit(patch);
+
+        var bank = Assert.Single(patch.HarmonicBanks);
+        Assert.Equal("drawbar", bank.LayerName);
+        Assert.Equal(110, bank.RootFrequencyHz);
+        Assert.Equal(3, bank.Partials.Count);
+        Assert.Equal(3, patch.Voices.Count);
+        Assert.All(patch.Voices, voice => Assert.Equal("drawbar", voice.Layer?.Name));
+        Assert.Equal([110, 220, 330], patch.Voices.Select(voice => voice.Oscillator.FrequencyHz).ToArray());
+        Assert.Equal(.5f, patch.Voices[0].Gain, 5);
+        Assert.Equal(.25f, patch.Voices[1].Gain, 5);
+        Assert.Equal(.125f, patch.Voices[2].Gain, 5);
+        Assert.Contains("process =", export.Source);
+    }
+
+    [Fact]
+    public void HarmonicBankSyntaxRejectsUnknownLayerOrBadPartials()
+    {
+        Assert.Throws<PatchScriptException>(() =>
+            PatchScript.Parse("harmonics layer=missing root=110 partials=1:.5"));
+
+        Assert.Throws<PatchScriptException>(() => PatchScript.Parse("""
+            layer name=drawbar
+            harmonics layer=drawbar root=110 partials=1
+            """));
+    }
+
+    [Fact]
     public void Dx7Algorithm32RebuildMatchesAdditiveCarrierShape()
     {
         var rebuild = ReferenceRebuildCatalog.Dx7Rebuilds.Single(item => item.ReferenceId == "dx7/algo32-additive-organ");

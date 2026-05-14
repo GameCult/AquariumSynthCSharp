@@ -793,10 +793,8 @@ public static class BuiltInScripts
         layer name=body engine=add min_key=36 max_key=96 gain=0.16
         layer name=shine engine=add min_key=48 max_key=108 gain=0.045
 
-        voice layer=body freq=220
-        voice layer=body freq=440 gain=0.075
-        voice layer=shine freq=660
-        voice layer=shine freq=880 gain=0.025
+        harmonics layer=body root=220 partials=1:0.16,2:0.075
+        harmonics layer=shine root=220 partials=3:0.045,4:0.025
         """;
 
     public const string ZynStylePadTexture = """

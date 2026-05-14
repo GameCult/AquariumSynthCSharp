@@ -15,6 +15,21 @@ Doctrine update:
 
 Completed this slice:
 
+- Added additive harmonic-bank syntax attached to named layers:
+  `harmonics layer=body root=220 partials=1:.16,2:.075`.
+- The parser preserves each bank as `HarmonicBank`/`HarmonicPartial` model
+  data, then lowers the partials into ordinary voices so Faust output remains
+  inspectable.
+- Converted the Zyn additive lead rebuild from repeated partial voices to two
+  named banks under `body` and `shine`.
+- This is not Zyn ADDsynth parity theater. Phase, bandwidth, oscillator
+  shaping, and exact free-envelope behavior remain explicit pressure.
+- Verified with bundled Python/dexed-py still wired:
+  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  90 passed.
+
+Previous slice:
+
 - Added Zyn-driven language golf through `layer` declarations. A layer owns
   name, engine tag, optional MIDI key range metadata, default gain, and an
   effect-send label, then lowers to ordinary voices for now.

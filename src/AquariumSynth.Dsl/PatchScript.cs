@@ -35,6 +35,7 @@ public static class PatchScript
         private readonly List<PatchParameter> _parameters = [];
         private readonly List<ParameterBinding> _parameterBindings = [];
         private readonly List<PatchLayer> _layers = [];
+        private readonly List<HarmonicBank> _harmonicBanks = [];
         private readonly Dictionary<string, string> _defaults = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, Dictionary<string, string>> _layerDefaults = new(StringComparer.OrdinalIgnoreCase);
         private PendingOperatorGraph? _pendingOperatorGraph;
@@ -54,6 +55,7 @@ public static class PatchScript
             {
                 Voices = Voices,
                 Layers = _layers,
+                HarmonicBanks = _harmonicBanks,
                 OperatorGraphs = _operatorGraphs,
                 Controls = _controls,
                 Parameters = _parameters,
@@ -97,6 +99,10 @@ public static class PatchScript
                     FlushPendingOperatorGraph();
                     AddLayer(fields, line);
                     break;
+                case "harmonics":
+                    FlushPendingOperatorGraph();
+                    AddHarmonicBank(fields, line);
+                    break;
                 case "voice":
                     FlushPendingOperatorGraph();
                     Voices.Add(ParseVoice(ExpandVoiceFields(fields, line), Voices.Count, line));
@@ -131,6 +137,54 @@ public static class PatchScript
                     break;
                 default:
                     throw new PatchScriptException(line, $"unknown command `{parts[0]}`");
+            }
+        }
+
+        private void AddHarmonicBank(IReadOnlyDictionary<string, string> fields, int line)
+        {
+            var layerName = Required(fields, "layer", line);
+            if (!_layerDefaults.ContainsKey(layerName))
+            {
+                throw new PatchScriptException(line, $"unknown layer `{layerName}`");
+            }
+
+            var rootFrequency = GetBoundFloat(fields, line, 440, $"/harmonics/{_harmonicBanks.Count}/root", "root", "base", "freq", "frequency");
+            if (rootFrequency <= 0)
+            {
+                throw new PatchScriptException(line, "harmonic root frequency must be greater than zero");
+            }
+
+            var partials = ParseHarmonicPartials(
+                GetAny(fields, ["partials", "bank", "tones", "drawbars"], ""),
+                line);
+            if (partials.Count == 0)
+            {
+                throw new PatchScriptException(line, "harmonics needs at least one partial");
+            }
+
+            _harmonicBanks.Add(new HarmonicBank(layerName, rootFrequency, partials));
+
+            var sharedFields = Without(fields,
+                "layer",
+                "root",
+                "base",
+                "freq",
+                "frequency",
+                "partials",
+                "bank",
+                "tones",
+                "drawbars",
+                "gain",
+                "g");
+            foreach (var partial in partials)
+            {
+                var voiceFields = new Dictionary<string, string>(sharedFields, StringComparer.OrdinalIgnoreCase)
+                {
+                    ["layer"] = layerName,
+                    ["freq"] = F(rootFrequency * partial.Ratio),
+                    ["gain"] = F(partial.Gain)
+                };
+                Voices.Add(ParseVoice(ExpandVoiceFields(voiceFields, line), Voices.Count, line));
             }
         }
 
@@ -674,6 +728,24 @@ public static class PatchScript
         private static ParsedEnvelope AdEnvelope(float attackSeconds, float decaySeconds) =>
             new(new Envelope(attackSeconds, decaySeconds, 0, 0), attackSeconds + decaySeconds);
 
+        private static IReadOnlyList<HarmonicPartial> ParseHarmonicPartials(string value, int line)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return [];
+
+            return value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(part =>
+                {
+                    var pieces = part.Split(':', 2);
+                    if (pieces.Length != 2) throw new PatchScriptException(line, $"bad harmonic partial `{part}`");
+                    var ratio = ParseFloat(pieces[0], line);
+                    var gain = ParseFloat(pieces[1], line);
+                    if (ratio <= 0) throw new PatchScriptException(line, "harmonic partial ratio must be greater than zero");
+                    if (gain < 0) throw new PatchScriptException(line, "harmonic partial gain must be zero or greater");
+                    return new HarmonicPartial(ratio, gain);
+                })
+                .ToArray();
+        }
+
         private ParsedEnvelope ParseRateLevelEnvelope(IReadOnlyDictionary<string, string> fields, int line, string fieldPath)
         {
             var rates = ParseFloatList(Required(fields, "rates", line), line, "rates");
@@ -901,6 +973,7 @@ public static class PatchScript
         "d" or "default" or "defaults" => "defaults",
         "def" or "t" or "template" => "template",
         "layer" or "kit" => "layer",
+        "harmonics" or "partials" or "drawbars" => "harmonics",
         "v" or "voice" => "voice",
         "opgraph" or "ops" or "operators" => "opgraph",
         "operator" or "op" => "operator",

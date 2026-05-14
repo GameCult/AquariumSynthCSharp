@@ -21,17 +21,18 @@ public static class ReferenceRebuildCatalog
             "zyn/project/additive-lead",
             BuiltInScripts.ZynStyleAdditiveLead,
             [
-                new("engine_add", "1", "Represented as explicit additive sine partial voices."),
+                new("engine_add", "1", "Represented as additive sine partials under named layer authority."),
                 new("named_layers", "body,shine", "Layer declarations group partial voices under reusable ADD engine intent."),
-                new("partial_voice_count", "4", "The additive shape is represented as four explicit Aquarium partial voices."),
+                new("additive_harmonic_bank", "2 banks / 4 partials", "Harmonic-bank syntax records authored ADD partial sets before lowering to ordinary voices."),
+                new("partial_voice_count", "4", "The additive shape lowers to four Aquarium partial voices."),
                 new("envelope_count", "2", "Amplitude and pitch contour pressure maps to ADSR plus vibrato in the current patch surface."),
                 new("lfo_count", "1", "The fixture's amplitude/frequency motion is represented as patch-level vibrato/macro motion.")
             ],
             [
-                new("additive_harmonic_bank", "Zyn ADDsynth harmonic table", "Aquarium currently writes each partial as a voice; it lacks a terse harmonic-bank source."),
+                new("zyn_addsynth_oscillator_detail", "Zyn ADDsynth harmonic phase/bandwidth details", "Aquarium records harmonic ratios and gains, but not Zyn's full ADDsynth oscillator table semantics."),
                 new("zyn_free_envelope_exactness", "Zyn envelope parameter semantics", "The rebuild uses Aquarium ADSR/motion controls rather than Zyn's exact envelope timing model.")
             ],
-            "This is the easy Zyn pressure case: Aquarium can say the sound as layered partials, but the syntax is already showing the need for a compact additive harmonic-bank abstraction."),
+            "This is the easy Zyn pressure case: Aquarium can now say the sound as named harmonic banks while keeping the emitted voice graph plain enough to inspect."),
         new(
             "zyn/project-pad-texture/aquarium",
             "zynaddsubfx",

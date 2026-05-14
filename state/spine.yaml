@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-14T19:45:00+01:00
+updated: 2026-05-14T20:15:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -74,6 +74,7 @@ live_invariants:
   - Public-domain reference fixtures and dexed-py helpers are test/development material only; the NuGet package must ship only AquariumSynth.Dsl.
   - ZynAddSubFX import starts as feature extraction, not translation. Use project-authored `.xiz` fixtures until external preset-bank license/provenance is explicit.
   - Named `layer` declarations own Zyn-style kit/layer identity: engine tag, optional key range metadata, default gain, and effect-send labels. They lower to ordinary voices for now; do not smuggle PAD/free-envelope/effect behavior into them.
+  - Additive `harmonics` declarations own authored ratio/gain partial banks under named layers. They lower to ordinary voices for now; do not pretend this covers Zyn ADDsynth phase, bandwidth, oscillator shaping, or free-envelope semantics.
   - Structured `.aqua` stock lives under `patches/` as development source material. Every library patch must parse/export, and the patch library must stay out of the NuGet package unless intentionally promoted.
   - Project-authored Dexed patches may be generated inside tests for calibration; do not ship them in the NuGet package or treat them as runtime dependencies.
   - Harsh calibration probes belong in tests and ignored artifacts, not in the patch library unless they are musically useful stock.
@@ -95,10 +96,11 @@ reference_targets:
     priority: 2
     purpose: "Additive, subtractive, PAD, formant, kit, and layered-instrument pressure test."
     source: "https://github.com/zynaddsubfx/zynaddsubfx"
-    status: "Initial ZynInstrumentReader reads plain or gzip-compressed .xiz XML from project-authored fixtures and classifies active ADD/SUB/PAD engines, enabled kit items, layering, envelopes, free envelopes, LFOs, filters, formants, and effects as ReferencePatch features. First Aquarium rebuilds exist for additive lead, PAD texture, and vocal/formant layer and now use named `layer` declarations. A non-vendored upstream bank survey parsed 1358/1358 .xiz files and identified named kit/layer routing as the next likely owner abstraction."
+    status: "Initial ZynInstrumentReader reads plain or gzip-compressed .xiz XML from project-authored fixtures and classifies active ADD/SUB/PAD engines, enabled kit items, layering, envelopes, free envelopes, LFOs, filters, formants, and effects as ReferencePatch features. First Aquarium rebuilds exist for additive lead, PAD texture, and vocal/formant layer and now use named `layer` declarations. Additive rebuilds can now use `harmonics` banks attached to layers. A non-vendored upstream bank survey parsed 1358/1358 .xiz files and identified named kit/layer routing as the first owner abstraction."
     first_slice:
-      - "Use named layers as the owner before promoting additive harmonic bank, PAD spectral source, free envelope, or richer formant morphing syntax."
-      - "Do not add all of them at once."
+      - "Use named layers as the owner before promoting PAD spectral source, free envelope, or richer formant morphing syntax."
+      - "Additive harmonic banks now exist; prove any next syntax across more than one target."
+      - "Do not add all remaining pressures at once."
   faust:
     priority: 3
     purpose: "General DSP graph topology pressure test."
@@ -128,8 +130,9 @@ next_agent_start_here:
     Continue the ZynAddSubFX phase. The first parser/classifier slice exists in
     `src/AquariumSynth.Dsl/ZynInstrument.cs` with project-authored fixtures
     under `tests/AquariumSynth.Dsl.Tests/Fixtures/ZynAddSubFX/ProjectAuthored`.
-    Next pressure is to choose the next syntax that attaches to named layers:
-    additive harmonic bank, PAD spectral source, free envelope, or richer
+    Named `layer` declarations own source identity, and additive `harmonics`
+    banks now attach to those layers. Next pressure is to choose the next syntax
+    that attaches to named layers: PAD spectral source, free envelope, or richer
     formant morphing. Do one, prove it across more than one target, and leave
     DX7 alone unless a regression test fails.
   must_read:
@@ -144,6 +147,16 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-14
+    summary: >
+      Added additive harmonic-bank syntax for named layers. `harmonics
+      layer=body root=220 partials=1:.16,2:.075` records authored ratio/gain
+      partial banks in the model, then lowers them to ordinary voices for
+      inspectable Faust output. The Zyn additive lead rebuild now uses two
+      banks under `body` and `shine`, while the catalog marks harmonic-bank
+      support as matched and keeps Zyn ADDsynth phase/bandwidth/oscillator
+      detail as missing pressure.
+    verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore: 90 passed"
   - date: 2026-05-14
     summary: >
       Added the first Zyn-driven language-golf abstraction: `layer`.

@@ -194,6 +194,13 @@ public sealed record PatchLayer(
     float Gain = 1,
     string EffectSend = "");
 
+public sealed record HarmonicPartial(float Ratio, float Gain);
+
+public sealed record HarmonicBank(
+    string LayerName,
+    float RootFrequencyHz,
+    IReadOnlyList<HarmonicPartial> Partials);
+
 public sealed record ReferencePatch(
     string Id,
     string Family,
@@ -227,6 +234,7 @@ public sealed record SynthPatch
 {
     public IReadOnlyList<Voice> Voices { get; init; } = Array.Empty<Voice>();
     public IReadOnlyList<PatchLayer> Layers { get; init; } = Array.Empty<PatchLayer>();
+    public IReadOnlyList<HarmonicBank> HarmonicBanks { get; init; } = Array.Empty<HarmonicBank>();
     public IReadOnlyList<OperatorGraph> OperatorGraphs { get; init; } = Array.Empty<OperatorGraph>();
     public IReadOnlyList<ControlLane> Controls { get; init; } = Array.Empty<ControlLane>();
     public IReadOnlyList<PatchParameter> Parameters { get; init; } = Array.Empty<PatchParameter>();

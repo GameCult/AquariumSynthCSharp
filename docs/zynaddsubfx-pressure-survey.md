@@ -62,7 +62,7 @@ engines. A named layer surface would give additive banks, PAD sources, free
 envelopes, and formant motion somewhere coherent to live later. Without it, the
 next abstractions risk becoming loose fields on anonymous voices.
 
-## First Response
+## First Responses
 
 Aquarium now has a minimal `layer` command:
 
@@ -74,3 +74,15 @@ voice layer=pad_low freq=130.8128
 The layer owns source identity and metadata while current lowering still emits
 ordinary voices. This is the scaffold needed before promoting PAD sources,
 additive harmonic banks, free envelopes, or richer formant motion.
+
+Additive layers now also have a `harmonics` command:
+
+```text
+layer name=body engine=add gain=.16
+harmonics layer=body root=220 partials=1:.16,2:.075,3:.045
+```
+
+The harmonic bank records authored additive partial intent under a named layer,
+then lowers to ordinary sine voices. It does not claim Zyn ADDsynth's full
+oscillator table: phase, bandwidth, oscillator shaping, and exact free-envelope
+behavior remain separate pressure.

@@ -20,6 +20,7 @@
       "ignored listening WAV parity artifacts",
       "structured development .aqua patch library",
       "ZynAddSubFX .xiz feature extraction with project-authored fixtures",
+      "Zyn additive harmonic-bank DSL surface",
       "thresholded DX7 rendered parity test",
       "reference rebuild catalog",
       "DX7 SysEx structural parsing",
@@ -81,9 +82,9 @@
     "next": "Use the now-validated algorithm-8 route scale, transpose lowering, and fixed-frequency lowering as fixed inputs while isolating remaining community-voice timbre mismatch, then expand to broader public-domain banks."
   },
   "zyn_reference_path": {
-    "status": "Initial ZynInstrumentReader parses plain XML and gzip-compressed .xiz-shaped XML from project-authored fixtures into ZynInstrument records and ReferencePatch features. First Zyn-style Aquarium rebuilds exist for additive lead, PAD texture, and vocal/formant layer. `ZynInstrumentSurvey` can rank .xiz directories by feature pressure. Named `layer` declarations now provide the first Zyn-driven DSL abstraction.",
-    "lesson": "Start Zyn as structural classification, not translation. Upstream Zyn presets live in a separate bank submodule and should not be vendored until license/provenance is explicit. The hardened reader now parses the observed upstream instrument bank at commit e9f64a9: 1358/1358 .xiz files. The worst target is `olivers-100/0032-Drum Kit.xiz`, with 16 enabled kit items, mixed ADD/SUB/PAD engines, 106 envelopes, 25 free envelopes, 73 LFOs, 37 filters, and 3 formant filters. The first rebuilds show Aquarium can sketch small Zyn fixtures with existing voices/macros/formants/noise, and the upstream survey correctly pushed named kit/layer routing first. `layer` now owns name, engine tag, optional key range metadata, default gain, and effect-send labels while lowering to ordinary voices. It gives future additive-bank, PAD-source, free-envelope, and formant-motion syntax a coherent owner.",
-    "next": "Choose the next syntax that attaches to named layers: additive harmonic bank, PAD spectral source, free envelope, or richer formant morphing. Prove one across more than one target."
+    "status": "Initial ZynInstrumentReader parses plain XML and gzip-compressed .xiz-shaped XML from project-authored fixtures into ZynInstrument records and ReferencePatch features. First Zyn-style Aquarium rebuilds exist for additive lead, PAD texture, and vocal/formant layer. `ZynInstrumentSurvey` can rank .xiz directories by feature pressure. Named `layer` declarations provide the first Zyn-driven DSL abstraction, and additive `harmonics` banks now attach to those layers.",
+    "lesson": "Start Zyn as structural classification, not translation. Upstream Zyn presets live in a separate bank submodule and should not be vendored until license/provenance is explicit. The hardened reader now parses the observed upstream instrument bank at commit e9f64a9: 1358/1358 .xiz files. The worst target is `olivers-100/0032-Drum Kit.xiz`, with 16 enabled kit items, mixed ADD/SUB/PAD engines, 106 envelopes, 25 free envelopes, 73 LFOs, 37 filters, and 3 formant filters. The first rebuilds show Aquarium can sketch small Zyn fixtures with existing voices/macros/formants/noise, and the upstream survey correctly pushed named kit/layer routing first. `layer` owns name, engine tag, optional key range metadata, default gain, and effect-send labels while lowering to ordinary voices. `harmonics` owns authored ratio/gain partial banks under those layers and lowers them to voices for inspectable Faust output. It does not claim Zyn ADDsynth phase, bandwidth, oscillator shaping, or free-envelope semantics.",
+    "next": "Choose the next syntax that attaches to named layers: PAD spectral source, free envelope, or richer formant morphing. Prove one across more than one target."
   },
   "note_and_envelope_model": {
     "rule": "Notes own frequency, gate duration, and host/MIDI source. Envelopes own ADSR level shape.",
@@ -98,7 +99,7 @@
   },
   "last_verified": {
     "command": "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore",
-    "result": "88 passed; named layer DSL added without regressing DX7 parity",
-    "commit": "pending Zyn named layers"
+    "result": "90 passed; additive harmonic-bank DSL added without regressing DX7 parity",
+    "commit": "pending Zyn harmonic banks"
   }
 }
