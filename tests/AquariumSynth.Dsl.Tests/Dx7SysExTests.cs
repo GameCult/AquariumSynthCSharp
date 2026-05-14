@@ -292,6 +292,30 @@ public sealed class Dx7SysExTests
         Assert.Contains("intermediate target levels", approximation.Notes);
     }
 
+    [Fact]
+    public void TracesDx7EnvelopeInternalGainShape()
+    {
+        var trace = Dx7SysEx.TraceEnvelope(
+            new Dx7Envelope(
+                Rate1: 98,
+                Rate2: 64,
+                Rate3: 48,
+                Rate4: 55,
+                Level1: 99,
+                Level2: 76,
+                Level3: 43,
+                Level4: 0),
+            gateSeconds: 0.75f,
+            durationSeconds: 1.1f);
+
+        Assert.True(trace[0].Gain > 1.9f);
+        Assert.InRange(trace[(int)(0.005f * 44100)].Gain, 0.05f, 0.08f);
+        Assert.InRange(trace[(int)(0.02f * 44100)].Gain, 0.014f, 0.017f);
+        Assert.Equal(3, trace[(int)(0.2f * 44100)].Stage);
+        Assert.Equal(4, trace[(int)(0.76f * 44100)].Stage);
+        Assert.True(trace[(int)(0.9f * 44100)].Gain < 0.001f);
+    }
+
     private static byte[] InitVoice(string name, int algorithm, int feedback)
     {
         var data = new byte[Dx7SysEx.VoiceEditBufferLength];

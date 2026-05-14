@@ -58,6 +58,8 @@ public sealed record Dx7RateLevelEnvelopeApproximation(
     private static string F(float value) => value.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture);
 }
 
+public sealed record Dx7EnvelopeTracePoint(float TimeSeconds, float Gain, int Stage);
+
 public sealed record Dx7Operator(
     int Number,
     Dx7Envelope Envelope,
@@ -261,6 +263,30 @@ public static class Dx7SysEx
             new RateLevelEnvelope(r1, l1, r2, l2, r3, l3, r4, l4),
             Math.Max(r1 + r2 + r3, 0.02f),
             "Approximation: DX7 EG uses four rate/level segments; Aquarium staged envelopes preserve the intermediate target levels.");
+    }
+
+    public static IReadOnlyList<Dx7EnvelopeTracePoint> TraceEnvelope(
+        Dx7Envelope envelope,
+        float gateSeconds,
+        float durationSeconds,
+        int outputLevel = 99,
+        int sampleRate = 44100)
+    {
+        var state = Dx7EnvelopeState.Start(envelope, outputLevel, sampleRate);
+        var sampleCount = Math.Max(1, (int)MathF.Round(Math.Max(1f / sampleRate, durationSeconds) * sampleRate));
+        var gateSample = Math.Clamp((int)MathF.Round(Math.Max(0, gateSeconds) * sampleRate), 0, sampleCount);
+        var points = new List<Dx7EnvelopeTracePoint>(sampleCount);
+        for (var sample = 0; sample < sampleCount; sample++)
+        {
+            if (sample == gateSample)
+            {
+                state.KeyDown(envelope, down: false);
+            }
+            state.Advance(envelope);
+            points.Add(new Dx7EnvelopeTracePoint(sample / (float)sampleRate, state.Gain, state.Stage));
+        }
+
+        return points;
     }
 
     public static Dx7VoiceBank ParseBank(ReadOnlySpan<byte> bytes)
@@ -479,6 +505,101 @@ public static class Dx7SysEx
 
     private static float Level(int value) => Math.Clamp(value, 0, 99) / 99f;
 
+    private sealed class Dx7EnvelopeState
+    {
+        private const int JumpTarget = 1716;
+        private readonly int _sampleRate;
+        private readonly int _outputLevel;
+        private long _level;
+        private long _targetLevel;
+        private bool _rising;
+        private int _increment;
+        private bool _down = true;
+
+        private Dx7EnvelopeState(int outputLevel, int sampleRate)
+        {
+            _outputLevel = outputLevel;
+            _sampleRate = sampleRate;
+        }
+
+        public int Stage { get; private set; }
+
+        public float Gain =>
+            MathF.Pow(2, ((_level / 65536f) - (14 << 8)) / 256f);
+
+        public static Dx7EnvelopeState Start(Dx7Envelope envelope, int outputLevel, int sampleRate)
+        {
+            var state = new Dx7EnvelopeState(outputLevel, sampleRate);
+            state.AdvanceStage(envelope, 0);
+            return state;
+        }
+
+        public void KeyDown(Dx7Envelope envelope, bool down)
+        {
+            if (_down == down) return;
+            _down = down;
+            AdvanceStage(envelope, down ? 0 : 3);
+        }
+
+        public void Advance(Dx7Envelope envelope)
+        {
+            if (Stage >= 3 && !(Stage < 4 && !_down)) return;
+
+            if (_rising)
+            {
+                if (_level < ((long)JumpTarget << 16))
+                {
+                    _level = (long)JumpTarget << 16;
+                }
+                _level += (((17L << 24) - _level) >> 24) * _increment;
+                if (_level >= _targetLevel)
+                {
+                    _level = _targetLevel;
+                    AdvanceStage(envelope, Stage + 1);
+                }
+            }
+            else
+            {
+                _level -= _increment;
+                if (_level <= _targetLevel)
+                {
+                    _level = _targetLevel;
+                    AdvanceStage(envelope, Stage + 1);
+                }
+            }
+        }
+
+        private void AdvanceStage(Dx7Envelope envelope, int stage)
+        {
+            Stage = stage;
+            if (Stage >= 4) return;
+
+            var level = Stage switch
+            {
+                0 => envelope.Level1,
+                1 => envelope.Level2,
+                2 => envelope.Level3,
+                _ => envelope.Level4
+            };
+            var actual = ScaleOutLevel(level) >> 1;
+            actual = (actual << 6) + (ScaleOutLevel(_outputLevel) << 5) - 4256;
+            actual = Math.Max(16, actual);
+            _targetLevel = (long)actual << 16;
+            _rising = _targetLevel > _level;
+
+            var rate = Stage switch
+            {
+                0 => envelope.Rate1,
+                1 => envelope.Rate2,
+                2 => envelope.Rate3,
+                _ => envelope.Rate4
+            };
+            var qrate = Math.Min((Math.Clamp(rate, 0, 99) * 41) >> 6, 63);
+            var increment = (4 + (qrate & 3)) << (2 + 6 + (qrate >> 2));
+            _increment = (int)((long)increment * 44100 / Math.Max(1, _sampleRate));
+        }
+    }
+
     private static float RatioModeDetuneFactor(int detune, int midiNote)
     {
         var logFrequency = MathF.Log2(440f) + (midiNote - 69) / 12f;
@@ -515,6 +636,11 @@ public static class Dx7SysEx
             : (ExpScaleData[clampedGroup] * clampedDepth * 329) >> 15;
         return curve < 2 ? -scale : scale;
     }
+
+    private static int ScaleOutLevel(int outputLevel) =>
+        outputLevel >= 20
+            ? 28 + Math.Clamp(outputLevel, 0, 99)
+            : LevelLookup[Math.Clamp(outputLevel, 0, 19)];
 
     private static float SegmentSeconds(int rate, float distance)
     {
@@ -612,6 +738,11 @@ public static class Dx7SysEx
     private static readonly float[] FeedbackAmounts =
     [
         0f, 0.01f, 0.02f, 0.05f, 0.10f, 0.19f, 0.38f, 0.66f
+    ];
+
+    private static readonly int[] LevelLookup =
+    [
+        0, 5, 9, 13, 17, 20, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41, 42, 43, 45, 46
     ];
 
     private static readonly int[] ExpScaleData =

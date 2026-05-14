@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-14T05:00:00+01:00
+updated: 2026-05-14T05:18:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -54,6 +54,7 @@ live_invariants:
   - DX7 calibration must proceed through isolated rungs in `docs/dx7-calibration-plan.md`; do not keep tuning hard PRC-specific constants as a substitute for a level/index model.
   - Staged operator envelopes own multi-target operator level contours through `env=rl rates=... levels=...`; do not force DX7-style contours back into the general ADSR voice envelope model.
   - DX7 rate/level envelopes may lower to staged operator envelopes or labeled ADSR approximations, but exact DX7 EG timing/gain calibration remains missing pressure.
+  - DX7 envelope trace evidence now lives in `Dx7SysEx.TraceEnvelope` and `artifacts/parity/dx7-envelope-trace/egstep.csv`; do not add an `env=dx7` runtime surface until it matches Dexed plugin audio, not only the local trace helper.
   - Recompile only for graph shape changes; vary declared parameters through the hosted DSP control API.
   - Reference fixtures must preserve provenance, license status, source hash, and feature pressure.
   - Public-domain reference fixtures and dexed-py helpers are test/development material only; the NuGet package must ship only AquariumSynth.Dsl.
@@ -69,7 +70,7 @@ reference_targets:
     priority: 1
     purpose: "Structured FM/operator graph pressure test."
     source: "https://github.com/asb2m10/dexed"
-    status: "DX7 SysEx parser, public-domain SysEx fixture, dexed-py reference rendering, project-authored Dexed patch rendering, first thresholded rendered parity test for analog1.syx voice 13, hard PRC SYNTH1 probe with listening WAV artifacts and log-mel <= 0.255, project-authored algorithm-8 summed-stack parity, renderable delayed operator feedback, DX7 effective operator-level approximation, measured carrier output amplitude, isolated route index, feedback table, ratio detune lowering, ROM COM output compensation, staged operator envelopes, algorithm topology extraction, envelope-to-ADSR approximation, two Aquarium DSL rebuild attempts, first-class operator graph support, and Aquarium candidate rendering through Faust-generated C# exist."
+    status: "DX7 SysEx parser, public-domain SysEx fixture, dexed-py reference rendering, project-authored Dexed patch rendering, first thresholded rendered parity test for analog1.syx voice 13, hard PRC SYNTH1 probe with listening WAV artifacts and log-mel <= 0.255, project-authored algorithm-8 summed-stack parity, renderable delayed operator feedback, DX7 effective operator-level approximation, measured carrier output amplitude, isolated route index, feedback table, ratio detune lowering, ROM COM output compensation, staged operator envelopes, DX7 envelope tracing, algorithm topology extraction, envelope-to-ADSR approximation, two Aquarium DSL rebuild attempts, first-class operator graph support, and Aquarium candidate rendering through Faust-generated C# exist."
     first_slice:
       - "Add a harder public-domain DX7 parity target that audibly needs operator routing."
   zynaddsubfx:
@@ -113,7 +114,8 @@ next_agent_start_here:
     compensation, and topology-aware route lowering are now fitted or mapped;
     a project-authored algorithm-8 stack test now backs the summed route scale
     outside PRC. The attempted exponential EG level curve was cut because it
-    still failed PRC log-mel.
+    still failed PRC log-mel. Use `Dx7SysEx.TraceEnvelope` and the
+    `dx7-envelope-trace` artifact to design the next envelope model.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -126,6 +128,14 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-14
+    summary: >
+      Added `Dx7SysEx.TraceEnvelope` and an envelope trace comparison artifact.
+      The trace shows DX7 EG behavior that current `env=rl` cannot express:
+      an initial gain spike above 1 followed by millisecond-scale collapse to a
+      tiny sustain. A first `env=dx7` runtime lowering attempt was cut because
+      matching the local trace did not match Dexed plugin audio.
+    verification: "dotnet test AquariumSynthCSharp.slnx --no-restore --filter \"ProjectAuthoredDx7EnvelopeTraceWritesComparisonArtifact|TracesDx7EnvelopeInternalGainShape\": passed"
   - date: 2026-05-14
     summary: >
       Added test-only project-authored Dexed patch rendering and an independent

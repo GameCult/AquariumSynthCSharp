@@ -181,6 +181,43 @@ public sealed class Dx7ReferenceParityTests
         Assert.True(comparison.Score >= 0.35f, ParityReport(comparison));
     }
 
+    [Fact]
+    public void ProjectAuthoredDx7EnvelopeTraceWritesComparisonArtifact()
+    {
+        var envelope = new Dx7Envelope(
+            Rate1: 98,
+            Rate2: 64,
+            Rate3: 48,
+            Rate4: 55,
+            Level1: 99,
+            Level2: 76,
+            Level3: 43,
+            Level4: 0);
+        var dx7 = Dx7SysEx.TraceEnvelope(envelope, gateSeconds: 0.75f, durationSeconds: 1.1f);
+        var approximation = ScaledEnvelope(Dx7SysEx.ApproximateRateLevelEnvelope(envelope), 0.62f, 0.75f);
+        var aquarium = TraceRateLevelEnvelope(approximation.Envelope, approximation.GateSeconds, durationSeconds: 1.1f);
+        var artifactDir = ArtifactPath("parity", "dx7-envelope-trace");
+        Directory.CreateDirectory(artifactDir);
+        var path = Path.Combine(artifactDir, "egstep.csv");
+
+        using var writer = new StreamWriter(path);
+        writer.WriteLine("time_seconds,dx7_gain,aquarium_gain,dx7_stage");
+        for (var i = 0; i < Math.Min(dx7.Count, aquarium.Length); i += 64)
+        {
+            writer.WriteLine(string.Join(
+                ",",
+                F(dx7[i].TimeSeconds),
+                F(dx7[i].Gain),
+                F(aquarium[i]),
+                dx7[i].Stage.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        }
+
+        var shape = NormalizedDistance(
+            dx7.Select(point => point.Gain).ToArray(),
+            aquarium);
+        Assert.True(shape > 0.75f, $"expected current Aquarium envelope to visibly differ; shape distance {shape}, artifact: {path}");
+    }
+
     private static string FixturePath(params string[] parts) =>
         Path.Combine([AppContext.BaseDirectory, "Fixtures", .. parts]);
 
@@ -219,7 +256,6 @@ public sealed class Dx7ReferenceParityTests
         {
             var level = Dx7SysEx.ApproximateOperatorLevel(op).LinearLevel *
                         Dx7SysEx.OperatorOutputCompensation(topology, op.Number);
-            var envelope = ScaledEnvelope(Dx7SysEx.ApproximateRateLevelEnvelope(op.Envelope), envelopeScale, gateSeconds);
             builder.AppendLine($"operator name=op{op.Number}");
             builder.AppendLine($"    ratio={F(Dx7SysEx.OperatorFrequencyRatio(op))}");
             builder.AppendLine($"    level={F(level)}");
@@ -227,7 +263,7 @@ public sealed class Dx7ReferenceParityTests
             {
                 builder.AppendLine($"    feedback={F(Dx7SysEx.OperatorFeedbackAmount(voice.Feedback))}");
             }
-            builder.AppendLine($"    {envelope.ToScriptSpec()}");
+            builder.AppendLine($"    {ScaledEnvelope(Dx7SysEx.ApproximateRateLevelEnvelope(op.Envelope), envelopeScale, gateSeconds).ToScriptSpec()}");
             builder.AppendLine();
         }
 
@@ -306,6 +342,64 @@ public sealed class Dx7ReferenceParityTests
             Envelope = scaled,
             GateSeconds = gateSeconds ?? Math.Max((scaled.Rate1Seconds + scaled.Rate2Seconds + scaled.Rate3Seconds) * 0.68f, 0.02f)
         };
+    }
+
+    private static float[] TraceRateLevelEnvelope(RateLevelEnvelope envelope, float gateSeconds, float durationSeconds, int sampleRate = 44100)
+    {
+        var count = Math.Max(1, (int)MathF.Round(durationSeconds * sampleRate));
+        var values = new float[count];
+        for (var sample = 0; sample < values.Length; sample++)
+        {
+            var age = sample / (float)sampleRate;
+            var releaseStart = Math.Max(gateSeconds, envelope.Rate1Seconds + envelope.Rate2Seconds + envelope.Rate3Seconds);
+            values[sample] = age < envelope.Rate1Seconds
+                ? Segment(age, 0, envelope.Rate1Seconds, 0, envelope.Level1)
+                : age < envelope.Rate1Seconds + envelope.Rate2Seconds
+                    ? Segment(age, envelope.Rate1Seconds, envelope.Rate2Seconds, envelope.Level1, envelope.Level2)
+                    : age < envelope.Rate1Seconds + envelope.Rate2Seconds + envelope.Rate3Seconds
+                        ? Segment(age, envelope.Rate1Seconds + envelope.Rate2Seconds, envelope.Rate3Seconds, envelope.Level2, envelope.Level3)
+                        : age < releaseStart
+                            ? envelope.Level3
+                            : age < releaseStart + envelope.Rate4Seconds
+                                ? Segment(age, releaseStart, envelope.Rate4Seconds, envelope.Level3, envelope.Level4)
+                                : envelope.Level4;
+        }
+
+        return values;
+    }
+
+    private static float Segment(float time, float start, float duration, float from, float to)
+    {
+        var t = Math.Clamp((time - start) / Math.Max(0.0001f, duration), 0, 1);
+        return from + (to - from) * t;
+    }
+
+    private static float NormalizedDistance(IReadOnlyList<float> reference, IReadOnlyList<float> candidate)
+    {
+        var length = Math.Max(1, Math.Max(reference.Count, candidate.Count));
+        var error = 0f;
+        var scale = 0f;
+        for (var i = 0; i < length; i++)
+        {
+            var a = ResampledAt(reference, i, length);
+            var b = ResampledAt(candidate, i, length);
+            var delta = a - b;
+            error += delta * delta;
+            scale += a * a + b * b;
+        }
+
+        return MathF.Sqrt(error / Math.Max(float.Epsilon, scale));
+    }
+
+    private static float ResampledAt(IReadOnlyList<float> values, int index, int targetLength)
+    {
+        if (values.Count == 0) return 0;
+        if (values.Count == 1 || targetLength <= 1) return values[0];
+        var position = index * (values.Count - 1f) / (targetLength - 1);
+        var left = (int)MathF.Floor(position);
+        var right = Math.Min(left + 1, values.Count - 1);
+        var t = position - left;
+        return values[left] * (1 - t) + values[right] * t;
     }
 
     private static void WriteListeningArtifacts(

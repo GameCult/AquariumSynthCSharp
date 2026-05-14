@@ -15,6 +15,19 @@ Doctrine update:
 
 Completed this slice:
 
+- Added `Dx7SysEx.TraceEnvelope`, a DX7 EG microscope that follows the internal
+  rate/level state machine closely enough to expose gain and stage over time.
+- Added an envelope comparison artifact test that writes
+  `artifacts/parity/dx7-envelope-trace/egstep.csv`. The first rows show the
+  current mismatch plainly: DX7 jumps to gain `2`, falls below `.02` in about
+  9 ms, while Aquarium `env=rl` is still near `1` and linearly drifting.
+- Tried adding a first `env=dx7` runtime lowering, then cut it. The trace
+  matched the Python `graph.py` envelope but not Dexed plugin audio, so the
+  syntax was not allowed to survive. The durable result is the microscope, not
+  a half-proven model.
+
+Previous slice:
+
 - Added test-only project-authored Dexed patch rendering through
   `DexedPyRenderer.RenderPatchAsync`. It builds a `dexed.Patch` from explicit
   operator specs and renders it without adding any shipped fixture or package
