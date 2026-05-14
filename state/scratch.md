@@ -27,10 +27,9 @@ Completed this slice:
   - summed pair: log-mel `0.042429477`, score `0.870778`
   - cascade: log-mel `0.03811625`, score `0.9157809`
 - Project-authored DX7 parity tests now write listening WAVs and reports under
-  `artifacts/parity/dx7-project-authored/<probe>/`.
-- Added the split probe scripts to the patch library:
-  `patches/dx7/algorithm-8-cascade-probe.aqua` and
-  `patches/dx7/algorithm-8-summed-pair-probe.aqua`.
+  `artifacts/parity/dx7-project-authored/<probe>/`. These split probes are
+  intentionally not part of the patch library: they are useful measuring tools,
+  not pleasant or reusable stock.
 - Verified with bundled Python/dexed-py:
   `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
   69 passed.

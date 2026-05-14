@@ -144,8 +144,9 @@ completed_slices:
       listening WAV/report artifacts under `artifacts/parity/dx7-project-authored/`,
       and gate log-mel at <= 0.06. Latest real-Dexed run: combined stack
       log-mel 0.04029555/score 0.8664546, summed pair 0.042429477/0.870778,
-      cascade 0.03811625/0.9157809. Promoted the two split probe scripts into
-      `patches/dx7/` and indexed them in `patches/library.yaml`.
+      cascade 0.03811625/0.9157809. The split probes remain test/artifact
+      material rather than patch-library stock because they are calibration
+      signals, not usable sounds.
     verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore: 69 passed"
   - date: 2026-05-14
     summary: >

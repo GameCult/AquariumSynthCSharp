@@ -82,16 +82,6 @@ entries:
     name: "Algorithm 8 bright pair"
     source: "BuiltInScripts.ReferenceScripts"
     notes: "Stock reference patch exported from the in-code catalog."
-  - path: patches/dx7/algorithm-8-cascade-probe.aqua
-    family: dx7
-    name: "Algorithm 8 cascade probe"
-    source: "Project-authored Dexed parity probe"
-    notes: "Isolates 6 -> 5 -> 3 cascaded modulation."
-  - path: patches/dx7/algorithm-8-summed-pair-probe.aqua
-    family: dx7
-    name: "Algorithm 8 summed-pair probe"
-    source: "Project-authored Dexed parity probe"
-    notes: "Isolates 4 + 5 -> 3 summed modulation."
   - path: patches/dx7/public-domain-mc-mm-5-3.aqua
     family: dx7
     name: "Public-domain MC-MM 5-3"
