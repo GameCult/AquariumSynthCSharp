@@ -388,6 +388,26 @@ public sealed class Dx7SysExTests
         Assert.Contains("64-sample block", approximation.Notes);
     }
 
+    [Fact]
+    public void AppliedEnvelopeCanPreserveFeedbackSourceSustainFloor()
+    {
+        var approximation = Dx7SysEx.ApproximateAppliedRateLevelEnvelope(
+            new Dx7Envelope(
+                Rate1: 53,
+                Rate2: 46,
+                Rate3: 60,
+                Rate4: 53,
+                Level1: 98,
+                Level2: 95,
+                Level3: 95,
+                Level4: 0),
+            gateSeconds: 0.65f,
+            sustainFloor: 0.9f);
+
+        Assert.True(approximation.Envelope.Level2 >= 0.9f);
+        Assert.True(approximation.Envelope.Level3 >= 0.9f);
+    }
+
     private static byte[] InitVoice(string name, int algorithm, int feedback)
     {
         var data = new byte[Dx7SysEx.VoiceEditBufferLength];

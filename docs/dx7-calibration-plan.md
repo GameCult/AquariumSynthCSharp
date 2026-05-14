@@ -131,10 +131,14 @@ math is still fake in the places that matter perceptually.
      the hard PRC target. The hotter value restores much more of the 1.2-5 kHz
      buzzing-harmonic band, with envelope/RMS still imperfect.
    - Listening then caught that the max-feedback candidate still lost punch
-     halfway through the note. The accepted lowering now enables Aquarium's
-     existing output `soft_clip` only for voices with max DX7 feedback and a
-     self-feedback topology. That keeps the ANLGSYN buzz alive without applying
-     output nonlinearity to the hard PRC feedback-5 target.
+     halfway through the note. Output `soft_clip` helped the attack but did
+     not protect the sustained buzz by itself. The accepted lowering now
+     preserves a higher sustain floor for max-feedback source operators and
+     gates `ANLGSYN 1` with a sustained 2.5-5 kHz band-energy check so the
+     old drifting version cannot pass by global log-mel score alone.
+   - `Piano Bass` also needed its graph gain raised to match Dexed's body and
+     punch; with `gain=0.30`, its RMS ratio is near unity without changing the
+     shared summed-route scale that PRC still constrains.
    - A first survey also tried `DX1 LEAD B`, `MELLOWSOLO`, and `RES SYNTH1`;
      they were left out of the passing gate because listening and
      log-mel/zero-crossing evidence do not justify calling them parity yet.

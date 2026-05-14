@@ -142,10 +142,10 @@ public sealed class Dx7ReferenceParityTests
         var cases = new[]
         {
             new CommunityDx7VoiceCase(19, "{ Mooger }", 0.65f, 1.0f, 0.25f),
-            new CommunityDx7VoiceCase(22, "Piano Bass", 0.45f, 0.8f, 0.25f)
+            new CommunityDx7VoiceCase(22, "Piano Bass", 0.45f, 0.8f, 0.30f)
         };
 
-        var comparisons = new List<(CommunityDx7VoiceCase Case, AudioComparison Comparison, string ArtifactDir)>();
+        var comparisons = new List<CommunityDx7VoiceResult>();
         foreach (var item in cases)
         {
             var result = await RenderAndComparePublicDomainDx7VoiceAsync(item);
@@ -154,7 +154,7 @@ public sealed class Dx7ReferenceParityTests
                 return;
             }
 
-            comparisons.Add(result.Value);
+            comparisons.Add(result);
         }
 
         var report = string.Join(
@@ -181,12 +181,15 @@ public sealed class Dx7ReferenceParityTests
             return;
         }
 
-        var report = $"{ParityReport(result.Value.Comparison)}{Environment.NewLine}artifacts: {result.Value.ArtifactDir}";
+        var report = $"{ParityReport(result.Comparison)}{Environment.NewLine}" +
+                     $"sustained high-band ratio: {result.SustainedHighBandRatio}{Environment.NewLine}" +
+                     $"artifacts: {result.ArtifactDir}";
 
-        Assert.True(result.Value.Comparison.LogMelDistance <= 0.20f, report);
-        Assert.True(result.Value.Comparison.EnvelopeDistance <= 0.12f, report);
-        Assert.InRange(result.Value.Comparison.ZeroCrossingRatio, 0.8f, 1.2f);
-        Assert.True(result.Value.Comparison.Score >= 0.7f, report);
+        Assert.True(result.Comparison.LogMelDistance <= 0.20f, report);
+        Assert.True(result.Comparison.EnvelopeDistance <= 0.12f, report);
+        Assert.InRange(result.Comparison.ZeroCrossingRatio, 0.8f, 1.2f);
+        Assert.True(result.Comparison.Score >= 0.7f, report);
+        Assert.True(result.SustainedHighBandRatio >= 1.0f, report);
     }
 
     [Fact]
@@ -390,8 +393,11 @@ public sealed class Dx7ReferenceParityTests
             {
                 builder.AppendLine($"    feedback={F(Dx7SysEx.OperatorFeedbackAmount(voice.Feedback))}");
             }
+            var maxFeedbackSustainFloor = voice.Feedback >= 7 && topology.SelfFeedbackOperators.Contains(op.Number)
+                ? 0.9f
+                : 0f;
             var envelope = useAppliedEnvelope
-                ? Dx7SysEx.ApproximateAppliedRateLevelEnvelope(op.Envelope, gateSeconds ?? 0.85f)
+                ? Dx7SysEx.ApproximateAppliedRateLevelEnvelope(op.Envelope, gateSeconds ?? 0.85f, sustainFloor: maxFeedbackSustainFloor)
                 : ScaledEnvelope(Dx7SysEx.ApproximateRateLevelEnvelope(op.Envelope), envelopeScale, gateSeconds);
             builder.AppendLine($"    {envelope.ToScriptSpec()}");
             builder.AppendLine();
@@ -498,7 +504,7 @@ public sealed class Dx7ReferenceParityTests
         return comparison;
     }
 
-    private static async Task<(CommunityDx7VoiceCase Case, AudioComparison Comparison, string ArtifactDir)?> RenderAndComparePublicDomainDx7VoiceAsync(
+    private static async Task<CommunityDx7VoiceResult?> RenderAndComparePublicDomainDx7VoiceAsync(
         CommunityDx7VoiceCase item)
     {
         var bankPath = FixturePath("Dx7", "PublicDomain", "analog1.syx");
@@ -537,6 +543,14 @@ public sealed class Dx7ReferenceParityTests
 
         var comparison = new AudioAnalyzer(new AudioAnalysisConfig(SampleRate: reference.SampleRate))
             .Compare(reference.Samples, candidate.Samples);
+        var sustainedHighBandRatio = BandEnergyRatio(
+            reference.Samples,
+            candidate.Samples,
+            reference.SampleRate,
+            centerSeconds: Math.Min(item.NoteDurationSeconds * 0.78f, item.RenderDurationSeconds * 0.55f),
+            durationSeconds: 0.07f,
+            lowFrequencyHz: 2500f,
+            highFrequencyHz: 5000f);
         var artifactDir = ArtifactPath(
             "parity",
             "dx7-community-analog1",
@@ -549,7 +563,7 @@ public sealed class Dx7ReferenceParityTests
             script,
             comparison);
 
-        return (item, comparison, artifactDir);
+        return new CommunityDx7VoiceResult(item, comparison, artifactDir, sustainedHighBandRatio);
     }
 
     private static DexedOperatorSpec SilentOperator(int number) =>
@@ -579,6 +593,57 @@ public sealed class Dx7ReferenceParityTests
             Envelope = scaled,
             GateSeconds = gateSeconds ?? Math.Max((scaled.Rate1Seconds + scaled.Rate2Seconds + scaled.Rate3Seconds) * 0.68f, 0.02f)
         };
+    }
+
+    private static float BandEnergyRatio(
+        IReadOnlyList<float> reference,
+        IReadOnlyList<float> candidate,
+        int sampleRate,
+        float centerSeconds,
+        float durationSeconds,
+        float lowFrequencyHz,
+        float highFrequencyHz)
+    {
+        var referenceEnergy = BandEnergy(reference, sampleRate, centerSeconds, durationSeconds, lowFrequencyHz, highFrequencyHz);
+        var candidateEnergy = BandEnergy(candidate, sampleRate, centerSeconds, durationSeconds, lowFrequencyHz, highFrequencyHz);
+        return referenceEnergy <= 0.000000000001f ? 0f : candidateEnergy / referenceEnergy;
+    }
+
+    private static float BandEnergy(
+        IReadOnlyList<float> samples,
+        int sampleRate,
+        float centerSeconds,
+        float durationSeconds,
+        float lowFrequencyHz,
+        float highFrequencyHz)
+    {
+        var start = Math.Clamp((int)MathF.Round((centerSeconds - durationSeconds * 0.5f) * sampleRate), 0, samples.Count);
+        var end = Math.Clamp((int)MathF.Round((centerSeconds + durationSeconds * 0.5f) * sampleRate), start, samples.Count);
+        var count = end - start;
+        if (count < 64) return 0f;
+
+        var lowBin = Math.Max(1, (int)MathF.Ceiling(lowFrequencyHz * count / sampleRate));
+        var highBin = Math.Max(lowBin, (int)MathF.Floor(highFrequencyHz * count / sampleRate));
+        var energy = 0.0;
+        var bins = 0;
+        for (var bin = lowBin; bin <= highBin; bin++)
+        {
+            var real = 0.0;
+            var imaginary = 0.0;
+            for (var i = 0; i < count; i++)
+            {
+                var window = 0.5 - 0.5 * Math.Cos(2.0 * Math.PI * i / Math.Max(1, count - 1));
+                var angle = -2.0 * Math.PI * bin * i / count;
+                var value = samples[start + i] * window;
+                real += value * Math.Cos(angle);
+                imaginary += value * Math.Sin(angle);
+            }
+
+            energy += real * real + imaginary * imaginary;
+            bins++;
+        }
+
+        return bins == 0 ? 0f : (float)(energy / bins);
     }
 
     private static float[] TraceRateLevelEnvelope(RateLevelEnvelope envelope, float gateSeconds, float durationSeconds, int sampleRate = 44100)
@@ -758,6 +823,12 @@ internal sealed record CommunityDx7VoiceCase(
     float NoteDurationSeconds,
     float RenderDurationSeconds,
     float GraphGain);
+
+internal sealed record CommunityDx7VoiceResult(
+    CommunityDx7VoiceCase Case,
+    AudioComparison Comparison,
+    string ArtifactDir,
+    float SustainedHighBandRatio);
 
 internal static class DexedPyRenderer
 {

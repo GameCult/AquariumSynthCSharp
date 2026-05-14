@@ -298,7 +298,8 @@ public static class Dx7SysEx
         Dx7Envelope envelope,
         float gateSeconds,
         float durationSeconds = 1.4f,
-        int sampleRate = 44100)
+        int sampleRate = 44100,
+        float sustainFloor = 0f)
     {
         var trace = TraceInterpolatedEnvelope(
             envelope,
@@ -321,9 +322,9 @@ public static class Dx7SysEx
                 r1,
                 trace[peakSample].Gain * fullLevelGainNormalization,
                 r2,
-                trace[level2Sample].Gain * fullLevelGainNormalization,
+                MathF.Max(trace[level2Sample].Gain * fullLevelGainNormalization, sustainFloor),
                 r3,
-                trace[sustainSample].Gain * fullLevelGainNormalization,
+                MathF.Max(trace[sustainSample].Gain * fullLevelGainNormalization, sustainFloor),
                 release,
                 0f,
                 RateLevelCurve.Linear,

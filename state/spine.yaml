@@ -144,6 +144,19 @@ next_agent_start_here:
 completed_slices:
   - date: 2026-05-14
     summary: >
+      Fixed the remaining `ANLGSYN 1` drift after listening found the
+      conditional output-clip candidate still lost buzz halfway through the
+      note. `Dx7SysEx.ApproximateAppliedRateLevelEnvelope` now accepts a
+      sustain floor, and max-feedback source operators use a 0.9 floor in the
+      DX7 probe lowering so the feedback loop stays driven after the attack.
+      `ANLGSYN 1` now also gates a sustained 2.5-5 kHz band-energy ratio so
+      the old drifting version cannot pass global metrics alone. `Piano Bass`
+      graph gain moved to 0.30, bringing its RMS ratio to 0.9909909. Latest
+      `ANLGSYN 1`: score 0.7245976, log-mel 0.18460114, envelope 0.119950555,
+      zero-crossing 0.97149533.
+    verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore: 74 passed"
+  - date: 2026-05-14
+    summary: >
       Tightened the `ANLGSYN 1` parity rung after listening caught the remaining
       `deeooh` failure: the hotter feedback attack was close, but sustained
       high-band buzz collapsed midway through the note. The DX7 probe lowering

@@ -15,6 +15,26 @@ Doctrine update:
 
 Completed this slice:
 
+- Fixed the remaining `ANLGSYN 1` drift that listening caught after the
+  conditional output-clip pass. The old candidate still lost 2.5-5 kHz energy
+  midway through the note.
+- Added `sustainFloor` to `Dx7SysEx.ApproximateAppliedRateLevelEnvelope` and
+  uses a `.9` floor for max-feedback source operators in the DX7 probe
+  lowering. This keeps the self-feedback source driving the loop after the
+  attack instead of sagging into `deeooh`.
+- Added a sustained 2.5-5 kHz band-energy parity gate for `ANLGSYN 1`; the old
+  candidate was around `.175` at the sustained check, while the new lowering is
+  above `1.0`.
+- Raised `Piano Bass` graph gain to `.30`; latest metrics: score `.7552858`,
+  log-mel `.16204594`, envelope `.06413663`, RMS `.9909909`.
+- Fresh `ANLGSYN 1`: score `.7245976`, log-mel `.18460114`, envelope
+  `.119950555`, RMS `.97143364`, zero-crossing `.97149533`.
+- Verified with bundled Python/dexed-py:
+  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  74 passed.
+
+Previous slice:
+
 - Tightened `ANLGSYN 1` after listening caught the `deeooh` failure: the
   max-feedback candidate had a better attack but lost sustained buzz midway.
 - Added conditional output nonlinearity in the DX7 probe lowering:
@@ -26,7 +46,7 @@ Completed this slice:
   `.13874851`, envelope `.067291394`, RMS `.99121606`, zero-crossing
   `.95325506`.
 
-Previous slice:
+Earlier slice:
 
 - Retuned DX7 max-feedback lowering for `ANLGSYN 1`. Route-index sweeps did not
   materially improve the missing high-band buzz; hotter feedback did.
