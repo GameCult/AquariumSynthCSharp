@@ -73,6 +73,7 @@ live_invariants:
   - Reference fixtures must preserve provenance, license status, source hash, and feature pressure.
   - Public-domain reference fixtures and dexed-py helpers are test/development material only; the NuGet package must ship only AquariumSynth.Dsl.
   - ZynAddSubFX import starts as feature extraction, not translation. Use project-authored `.xiz` fixtures until external preset-bank license/provenance is explicit.
+  - Named `layer` declarations own Zyn-style kit/layer identity: engine tag, optional key range metadata, default gain, and effect-send labels. They lower to ordinary voices for now; do not smuggle PAD/free-envelope/effect behavior into them.
   - Structured `.aqua` stock lives under `patches/` as development source material. Every library patch must parse/export, and the patch library must stay out of the NuGet package unless intentionally promoted.
   - Project-authored Dexed patches may be generated inside tests for calibration; do not ship them in the NuGet package or treat them as runtime dependencies.
   - Harsh calibration probes belong in tests and ignored artifacts, not in the patch library unless they are musically useful stock.
@@ -94,9 +95,9 @@ reference_targets:
     priority: 2
     purpose: "Additive, subtractive, PAD, formant, kit, and layered-instrument pressure test."
     source: "https://github.com/zynaddsubfx/zynaddsubfx"
-    status: "Initial ZynInstrumentReader reads plain or gzip-compressed .xiz XML from project-authored fixtures and classifies active ADD/SUB/PAD engines, enabled kit items, layering, envelopes, free envelopes, LFOs, filters, formants, and effects as ReferencePatch features. First Aquarium rebuilds exist for additive lead, PAD texture, and vocal/formant layer. A non-vendored upstream bank survey parsed 1358/1358 .xiz files and identified named kit/layer routing as the next likely owner abstraction."
+    status: "Initial ZynInstrumentReader reads plain or gzip-compressed .xiz XML from project-authored fixtures and classifies active ADD/SUB/PAD engines, enabled kit items, layering, envelopes, free envelopes, LFOs, filters, formants, and effects as ReferencePatch features. First Aquarium rebuilds exist for additive lead, PAD texture, and vocal/formant layer and now use named `layer` declarations. A non-vendored upstream bank survey parsed 1358/1358 .xiz files and identified named kit/layer routing as the next likely owner abstraction."
     first_slice:
-      - "Map named kit/layer routing first; the upstream worst-case survey says it is the owner needed before additive harmonic bank, PAD spectral source, free envelope, or richer formant morphing syntax."
+      - "Use named layers as the owner before promoting additive harmonic bank, PAD spectral source, free envelope, or richer formant morphing syntax."
       - "Do not add all of them at once."
   faust:
     priority: 3
@@ -127,11 +128,10 @@ next_agent_start_here:
     Continue the ZynAddSubFX phase. The first parser/classifier slice exists in
     `src/AquariumSynth.Dsl/ZynInstrument.cs` with project-authored fixtures
     under `tests/AquariumSynth.Dsl.Tests/Fixtures/ZynAddSubFX/ProjectAuthored`.
-    Next pressure is to map named kit/layer routing from the Zyn survey evidence
-    in `docs/zynaddsubfx-pressure-survey.md`. The worst upstream targets combine
-    many enabled kit items and engines, so layer authority should come before
-    syntax golf for additive banks, PAD source generation, free envelopes, or
-    formant morphing. Leave DX7 alone unless a regression test fails.
+    Next pressure is to choose the next syntax that attaches to named layers:
+    additive harmonic bank, PAD spectral source, free envelope, or richer
+    formant morphing. Do one, prove it across more than one target, and leave
+    DX7 alone unless a regression test fails.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -144,6 +144,16 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-14
+    summary: >
+      Added the first Zyn-driven language-golf abstraction: `layer`.
+      Layer declarations own name, engine tag, optional MIDI key range metadata,
+      default gain, and effect-send labels while lowering to ordinary Aquarium
+      voices. The three Zyn-style rebuilds now use named layers, proving the
+      abstraction generalizes across additive, PAD-texture, and vocal/formant
+      targets without adding fixture-specific shortcuts or hidden PAD/effect
+      behavior.
+    verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore: 88 passed"
   - date: 2026-05-14
     summary: >
       Hardened the Zyn reader against the real upstream instrument bank and

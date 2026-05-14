@@ -61,3 +61,16 @@ Reason: the worst Zyn instruments repeatedly combine multiple kit items and
 engines. A named layer surface would give additive banks, PAD sources, free
 envelopes, and formant motion somewhere coherent to live later. Without it, the
 next abstractions risk becoming loose fields on anonymous voices.
+
+## First Response
+
+Aquarium now has a minimal `layer` command:
+
+```text
+layer name=pad_low engine=pad min_key=36 max_key=84 gain=.07
+voice layer=pad_low freq=130.8128
+```
+
+The layer owns source identity and metadata while current lowering still emits
+ordinary voices. This is the scaffold needed before promoting PAD sources,
+additive harmonic banks, free envelopes, or richer formant motion.

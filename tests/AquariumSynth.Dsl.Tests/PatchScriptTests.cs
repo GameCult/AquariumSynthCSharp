@@ -255,8 +255,10 @@ public sealed class PatchScriptTests
             var export = FaustEmitter.Emit(patch, new FaustExportOptions(rebuild.Id.Replace('/', '_').Replace('-', '_')));
 
             Assert.Contains("process =", export.Source);
+            Assert.NotEmpty(patch.Layers);
             Assert.NotEmpty(rebuild.MatchedFeatures);
             Assert.NotEmpty(rebuild.MissingFeatures);
+            Assert.Contains(rebuild.MatchedFeatures, feature => feature.Name == "named_layers");
             Assert.All(rebuild.MissingFeatures, feature => Assert.False(string.IsNullOrWhiteSpace(feature.Notes)));
         }
     }
@@ -284,6 +286,41 @@ public sealed class PatchScriptTests
                 }
             }
         }
+    }
+
+    [Fact]
+    public void LayerSyntaxNamesReusableVoiceGroups()
+    {
+        var patch = PatchScript.Parse("""
+            layer name=kick engine=sub min_key=36 max_key=36 gain=.4 wave=sine freq=55 attack=.001 sustain=.04 decay=.18
+            layer name=air engine=add min_key=60 max_key=84 gain=.12 wave=saw lpf=.72
+            voice layer=kick
+            voice layer=air freq=440
+            voice layer=air freq=660 gain=.08
+            """);
+
+        Assert.Equal(2, patch.Layers.Count);
+        Assert.Equal(3, patch.Voices.Count);
+        Assert.Equal("kick", patch.Voices[0].Layer?.Name);
+        Assert.Equal("sub", patch.Voices[0].Layer?.Engine);
+        Assert.Equal(36, patch.Voices[0].Layer?.MinKey);
+        Assert.Equal(36, patch.Voices[0].Layer?.MaxKey);
+        Assert.Equal(.4f, patch.Voices[0].Gain, 5);
+        Assert.Equal("air", patch.Voices[1].Layer?.Name);
+        Assert.Equal("air", patch.Voices[2].Layer?.Name);
+        Assert.Equal(.08f, patch.Voices[2].Gain, 5);
+    }
+
+    [Fact]
+    public void LayerSyntaxRejectsUnknownOrDuplicateLayers()
+    {
+        Assert.Throws<PatchScriptException>(() => PatchScript.Parse("""
+            layer name=body
+            layer name=body
+            voice layer=body
+            """));
+
+        Assert.Throws<PatchScriptException>(() => PatchScript.Parse("voice layer=missing"));
     }
 
     [Fact]

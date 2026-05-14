@@ -790,10 +790,13 @@ public static class BuiltInScripts
             vibrato=@/macro/motion
             vibrato_hz=5.5
 
-        voice freq=220 gain=0.16
-        voice freq=440 gain=0.075
-        voice freq=660 gain=0.045
-        voice freq=880 gain=0.025
+        layer name=body engine=add min_key=36 max_key=96 gain=0.16
+        layer name=shine engine=add min_key=48 max_key=108 gain=0.045
+
+        voice layer=body freq=220
+        voice layer=body freq=440 gain=0.075
+        voice layer=shine freq=660
+        voice layer=shine freq=880 gain=0.025
         """;
 
     public const string ZynStylePadTexture = """
@@ -827,10 +830,14 @@ public static class BuiltInScripts
             lpf=0.18
             gain=0.05
 
-        voice freq=130.8128 gain=0.07 vibrato=@/macro/spread vibrato_hz=0.09
-        voice freq=196 gain=0.052 vibrato=0.012 vibrato_hz=0.13
-        voice freq=261.6256 gain=0.044 wave=triangle vibrato=0.009 vibrato_hz=0.11
-        voice wave=noise freq=1800 gain=0.018 noise=0.82 attack=0.8 sustain=1.7 decay=1.1 lpf=0.36 hpf=0.22
+        layer name=pad_low engine=pad min_key=36 max_key=84 gain=0.07 vibrato=@/macro/spread vibrato_hz=0.09
+        layer name=pad_high engine=pad min_key=48 max_key=108 gain=0.044 vibrato=0.009 vibrato_hz=0.11
+        layer name=air engine=add min_key=0 max_key=127 gain=0.018 wave=noise noise=0.82 attack=0.8 sustain=1.7 decay=1.1 lpf=0.36 hpf=0.22
+
+        voice layer=pad_low freq=130.8128
+        voice layer=pad_low freq=196 gain=0.052 vibrato=0.012 vibrato_hz=0.13
+        voice layer=pad_high freq=261.6256 wave=triangle
+        voice layer=air freq=1800
         """;
 
     public const string ZynStyleVocalLayer = """
@@ -861,27 +868,27 @@ public static class BuiltInScripts
             formant_mix=0.22
             gain=0.04
 
+        layer name=air engine=add min_key=48 max_key=108 gain=0.11 send=formant
+        layer name=body engine=sub min_key=24 max_key=72 gain=0.075
+        layer name=breath engine=add min_key=0 max_key=127 gain=0.018 wave=noise noise=0.75 hpf=0.58 lpf=0.62 send=formant
+
         voice
+            layer=air
             wave=saw
             freq=174.614
-            gain=0.11
             formants=520:90:0.9,1080:150:1,2450:280:0.35
             formant_mix=@/macro/vowel
 
         voice
+            layer=body
             wave=triangle
             freq=87.307
-            gain=0.075
             lpf=0.48
             drive=0.08
 
         voice
-            wave=noise
+            layer=breath
             freq=2600
-            gain=0.018
-            noise=0.75
-            hpf=0.58
-            lpf=0.62
             formants=700:120:0.5,1600:220:0.6
             formant_mix=0.3
         """;

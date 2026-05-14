@@ -134,6 +134,12 @@ The current external-bank pressure survey is in
 signal is that named kit/layer routing should probably precede syntax golf for
 PAD, additive banks, or formant motion.
 
+The first language-golf response is `layer`: a named layer declaration owns
+engine tags, optional MIDI key range metadata, default gain, and an effect-send
+label while lowering to ordinary Aquarium voices. It is intentionally only an
+ownership/routing scaffold for now; it does not add PAD synthesis, free
+envelopes, or effect buses by stealth.
+
 Sources:
 
 - [ZynAddSubFX](https://github.com/zynaddsubfx/zynaddsubfx)

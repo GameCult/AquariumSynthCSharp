@@ -186,6 +186,14 @@ public sealed record ReferenceSource(
 
 public sealed record ReferenceFeature(string Name, string Value, string Notes = "");
 
+public sealed record PatchLayer(
+    string Name,
+    string Engine = "",
+    int? MinKey = null,
+    int? MaxKey = null,
+    float Gain = 1,
+    string EffectSend = "");
+
 public sealed record ReferencePatch(
     string Id,
     string Family,
@@ -199,6 +207,7 @@ public sealed record Repeat(float IntervalSeconds);
 
 public sealed record Voice
 {
+    public PatchLayer? Layer { get; init; }
     public Oscillator Oscillator { get; init; } = new();
     public Note Note { get; init; } = new();
     public Envelope Envelope { get; init; } = new();
@@ -217,6 +226,7 @@ public sealed record Voice
 public sealed record SynthPatch
 {
     public IReadOnlyList<Voice> Voices { get; init; } = Array.Empty<Voice>();
+    public IReadOnlyList<PatchLayer> Layers { get; init; } = Array.Empty<PatchLayer>();
     public IReadOnlyList<OperatorGraph> OperatorGraphs { get; init; } = Array.Empty<OperatorGraph>();
     public IReadOnlyList<ControlLane> Controls { get; init; } = Array.Empty<ControlLane>();
     public IReadOnlyList<PatchParameter> Parameters { get; init; } = Array.Empty<PatchParameter>();

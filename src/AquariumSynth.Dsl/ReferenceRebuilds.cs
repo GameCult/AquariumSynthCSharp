@@ -22,6 +22,7 @@ public static class ReferenceRebuildCatalog
             BuiltInScripts.ZynStyleAdditiveLead,
             [
                 new("engine_add", "1", "Represented as explicit additive sine partial voices."),
+                new("named_layers", "body,shine", "Layer declarations group partial voices under reusable ADD engine intent."),
                 new("partial_voice_count", "4", "The additive shape is represented as four explicit Aquarium partial voices."),
                 new("envelope_count", "2", "Amplitude and pitch contour pressure maps to ADSR plus vibrato in the current patch surface."),
                 new("lfo_count", "1", "The fixture's amplitude/frequency motion is represented as patch-level vibrato/macro motion.")
@@ -39,6 +40,7 @@ public static class ReferenceRebuildCatalog
             BuiltInScripts.ZynStylePadTexture,
             [
                 new("engine_pad", "1", "Approximated as slow layered oscillators plus an air/noise layer."),
+                new("named_layers", "pad_low,pad_high,air", "Layer declarations separate PAD body from air/noise texture."),
                 new("filter_count", "1", "Represented with low-pass/high-pass field sites."),
                 new("free_envelope_count", "1", "Approximated with slow ADSR timing and macro spread."),
                 new("slow_modulation", "patch_lfo", "The rebuild adds slow patch modulation because PAD texture wants motion even though the minimal fixture only marks PAD/filter/free-envelope pressure.")
@@ -58,6 +60,7 @@ public static class ReferenceRebuildCatalog
                 new("engine_add", "1", "The air/formant layer is represented as a formant-filtered oscillator voice."),
                 new("engine_sub", "1", "The body layer is represented as a lower triangle voice."),
                 new("layered_instrument", "yes", "Multiple Zyn kit items map to multiple Aquarium voices."),
+                new("named_layers", "air,body,breath", "Layer declarations preserve source identity before voice expansion."),
                 new("formant_filter_count", "1", "Represented with Aquarium formant filters and a vowel macro."),
                 new("effect_count", "1", "Approximated with local drive/soft clipping rather than a Zyn effect slot.")
             ],

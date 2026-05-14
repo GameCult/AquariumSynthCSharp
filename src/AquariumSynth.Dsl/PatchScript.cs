@@ -34,7 +34,9 @@ public static class PatchScript
         private readonly List<OperatorGraph> _operatorGraphs = [];
         private readonly List<PatchParameter> _parameters = [];
         private readonly List<ParameterBinding> _parameterBindings = [];
+        private readonly List<PatchLayer> _layers = [];
         private readonly Dictionary<string, string> _defaults = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, Dictionary<string, string>> _layerDefaults = new(StringComparer.OrdinalIgnoreCase);
         private PendingOperatorGraph? _pendingOperatorGraph;
 
         public List<Voice> Voices { get; } = [];
@@ -51,6 +53,7 @@ public static class PatchScript
             return new SynthPatch
             {
                 Voices = Voices,
+                Layers = _layers,
                 OperatorGraphs = _operatorGraphs,
                 Controls = _controls,
                 Parameters = _parameters,
@@ -89,6 +92,10 @@ public static class PatchScript
                     FlushPendingOperatorGraph();
                     var name = Required(fields, "name", line);
                     _templates[name] = Without(fields, "name");
+                    break;
+                case "layer":
+                    FlushPendingOperatorGraph();
+                    AddLayer(fields, line);
                     break;
                 case "voice":
                     FlushPendingOperatorGraph();
@@ -130,6 +137,14 @@ public static class PatchScript
         private Dictionary<string, string> ExpandVoiceFields(Dictionary<string, string> fields, int line)
         {
             var expanded = new Dictionary<string, string>(_defaults, StringComparer.OrdinalIgnoreCase);
+            if (TryGetAny(fields, ["layer"], out var layerName))
+            {
+                if (!_layerDefaults.TryGetValue(layerName, out var layer))
+                {
+                    throw new PatchScriptException(line, $"unknown layer `{layerName}`");
+                }
+                Merge(expanded, layer);
+            }
             if (TryGetAny(fields, ["use", "u"], out var templateName))
             {
                 foreach (var name in templateName.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
@@ -143,6 +158,43 @@ public static class PatchScript
             }
             Merge(expanded, Without(fields, "use", "u"));
             return expanded;
+        }
+
+        private void AddLayer(IReadOnlyDictionary<string, string> fields, int line)
+        {
+            var name = Required(fields, "name", line);
+            if (_layers.Any(layer => layer.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new PatchScriptException(line, $"duplicate layer `{name}`");
+            }
+
+            var layer = new PatchLayer(
+                name,
+                GetAny(fields, ["engine", "e"], ""),
+                TryGetAny(fields, ["min_key", "key_min", "lo"], out var minKey) ? ParseInt(minKey, line) : null,
+                TryGetAny(fields, ["max_key", "key_max", "hi"], out var maxKey) ? ParseInt(maxKey, line) : null,
+                GetBoundFloat(fields, line, 1, $"/layers/{_layers.Count}/gain", "gain", "g"),
+                GetAny(fields, ["send", "effect", "fx"], ""));
+            if (layer is { MinKey: { } min, MaxKey: { } max } && min > max)
+            {
+                throw new PatchScriptException(line, "layer min_key must be less than or equal to max_key");
+            }
+
+            _layers.Add(layer);
+            _layerDefaults[name] = LayerVoiceFields(layer, Without(fields, "name", "engine", "e", "min_key", "key_min", "lo", "max_key", "key_max", "hi", "send", "effect", "fx"));
+        }
+
+        private static Dictionary<string, string> LayerVoiceFields(PatchLayer layer, IReadOnlyDictionary<string, string> fields)
+        {
+            var result = new Dictionary<string, string>(fields, StringComparer.OrdinalIgnoreCase)
+            {
+                ["layer"] = layer.Name
+            };
+            if (!result.ContainsKey("gain"))
+            {
+                result["gain"] = F(layer.Gain);
+            }
+            return result;
         }
 
         private void ApplyPatch(IReadOnlyDictionary<string, string> fields, int line)
@@ -230,6 +282,9 @@ public static class PatchScript
 
             return new Voice
             {
+                Layer = TryGetAny(fields, ["layer"], out var layerName)
+                    ? _layers.First(layer => layer.Name.Equals(layerName, StringComparison.OrdinalIgnoreCase))
+                    : null,
                 Oscillator = new Oscillator(
                     waveform,
                     frequency,
@@ -845,6 +900,7 @@ public static class PatchScript
         "p" or "patch" or "instrument" => "patch",
         "d" or "default" or "defaults" => "defaults",
         "def" or "t" or "template" => "template",
+        "layer" or "kit" => "layer",
         "v" or "voice" => "voice",
         "opgraph" or "ops" or "operators" => "opgraph",
         "operator" or "op" => "operator",
@@ -958,6 +1014,9 @@ public static class PatchScript
         float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
             ? parsed
             : throw new PatchScriptException(line, $"bad number `{value}`");
+
+    private static string F(float value) =>
+        value.ToString("0.######", CultureInfo.InvariantCulture);
 
     private static float PunchGain(float value) => 1 + Math.Max(0, Math.Clamp(value, -1, 1));
 

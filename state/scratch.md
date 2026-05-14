@@ -15,6 +15,21 @@ Doctrine update:
 
 Completed this slice:
 
+- Added Zyn-driven language golf through `layer` declarations. A layer owns
+  name, engine tag, optional MIDI key range metadata, default gain, and an
+  effect-send label, then lowers to ordinary voices for now.
+- Converted the three Zyn-style rebuilds to use named layers:
+  additive `body`/`shine`, PAD `pad_low`/`pad_high`/`air`, and vocal
+  `air`/`body`/`breath`.
+- This is an ownership scaffold, not hidden PAD/free-envelope/effect machinery.
+  Future additive-bank, PAD-source, free-envelope, and formant-motion syntax
+  now has somewhere coherent to attach.
+- Verified with bundled Python/dexed-py still wired:
+  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  88 passed.
+
+Previous slice:
+
 - Hardened `ZynInstrumentReader` against the real upstream Zyn instrument bank:
   it now tolerates leading whitespace before XML declarations and counts only
   actual `FORMANT_FILTER`/`FILTER` blocks instead of all internal formant/vowel
