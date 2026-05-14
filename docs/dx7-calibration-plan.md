@@ -106,6 +106,19 @@ math is still fake in the places that matter perceptually.
      `<= 0.145`, envelope distance at `<= 0.08`, zero-crossing at `>= 0.75`,
      RMS ratio near unity, and score at `>= 0.75`.
 
+9. **Community voice survey**
+   - Use public-domain community SysEx fixtures as broader behavioral probes
+     after each isolated calibration rung.
+   - `analog1.syx` from Musical Artifacts artifact 152 now has a broad rendered
+     parity test for four actual community voices: `ANLGSYN 1`, `{ Mooger }`,
+     `Piano Bass`, and `RES SYNTH1`. The test writes listening artifacts under
+     `artifacts/parity/dx7-community-analog1/` and gates log-mel at `<= 0.3`,
+     envelope distance at `<= 0.16`, and score at `>= 0.5`.
+   - A first survey also tried `DX1 LEAD B` and `MELLOWSOLO`; they were left
+     out of the passing gate because their log-mel/zero-crossing mismatch is
+     larger. Keep those failures as pressure for oscillator phase, feedback,
+     and transient detail rather than padding the test with weak thresholds.
+
 ## Rejected Path
 
 Do not keep tuning `PRC SYNTH1` with branch-specific magic constants. That patch

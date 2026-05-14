@@ -137,6 +137,41 @@ public sealed class Dx7ReferenceParityTests
     }
 
     [Fact]
+    public async Task PublicDomainDx7AnalogCommunityVoicesMeetBroadRenderedParityWhenInstalled()
+    {
+        var cases = new[]
+        {
+            new CommunityDx7VoiceCase(7, "ANLGSYN 1", 0.65f, 1.0f, 0.25f),
+            new CommunityDx7VoiceCase(19, "{ Mooger }", 0.65f, 1.0f, 0.25f),
+            new CommunityDx7VoiceCase(22, "Piano Bass", 0.45f, 0.8f, 0.25f),
+            new CommunityDx7VoiceCase(31, "RES SYNTH1", 0.65f, 1.0f, 0.25f)
+        };
+
+        var comparisons = new List<(CommunityDx7VoiceCase Case, AudioComparison Comparison, string ArtifactDir)>();
+        foreach (var item in cases)
+        {
+            var result = await RenderAndComparePublicDomainDx7VoiceAsync(item);
+            if (result is null)
+            {
+                return;
+            }
+
+            comparisons.Add(result.Value);
+        }
+
+        var report = string.Join(
+            Environment.NewLine + Environment.NewLine,
+            comparisons.Select(item =>
+                $"{item.Case.Index}: {item.Case.ExpectedName}{Environment.NewLine}" +
+                $"{ParityReport(item.Comparison)}{Environment.NewLine}" +
+                $"artifacts: {item.ArtifactDir}"));
+
+        Assert.All(comparisons, item => Assert.True(item.Comparison.LogMelDistance <= 0.3f, report));
+        Assert.All(comparisons, item => Assert.True(item.Comparison.EnvelopeDistance <= 0.16f, report));
+        Assert.All(comparisons, item => Assert.True(item.Comparison.Score >= 0.5f, report));
+    }
+
+    [Fact]
     public async Task ProjectAuthoredDx7AlgorithmEightSummedStackMeetsParityWhenInstalled()
     {
         var spec = new DexedPatchSpec(
@@ -443,6 +478,60 @@ public sealed class Dx7ReferenceParityTests
         return comparison;
     }
 
+    private static async Task<(CommunityDx7VoiceCase Case, AudioComparison Comparison, string ArtifactDir)?> RenderAndComparePublicDomainDx7VoiceAsync(
+        CommunityDx7VoiceCase item)
+    {
+        var bankPath = FixturePath("Dx7", "PublicDomain", "analog1.syx");
+        var reference = await DexedPyRenderer.RenderAsync(
+            bankPath,
+            patchIndex: item.Index,
+            noteDurationSeconds: item.NoteDurationSeconds,
+            renderDurationSeconds: item.RenderDurationSeconds);
+
+        if (reference is null)
+        {
+            return null;
+        }
+
+        var bank = Dx7SysEx.ParseBank(File.ReadAllBytes(bankPath));
+        var voice = bank.Voices[item.Index];
+        Assert.Equal(item.ExpectedName, voice.Name);
+
+        var graphName = $"dx7_analog1_{item.Index}_{SafeName(voice.Name)}";
+        var script = Dx7VoiceProbeScript(
+            voice,
+            graphName,
+            item.GraphGain,
+            envelopeScale: 0.62f,
+            gateSeconds: item.NoteDurationSeconds,
+            useAppliedEnvelope: true);
+        var candidateSource = FaustEmitter.EmitScript(script);
+        var candidate = await FaustCompiler.RenderAsync(
+            candidateSource.Source,
+            new FaustRenderOptions(DurationSeconds: item.RenderDurationSeconds));
+
+        if (candidate is null)
+        {
+            return null;
+        }
+
+        var comparison = new AudioAnalyzer(new AudioAnalysisConfig(SampleRate: reference.SampleRate))
+            .Compare(reference.Samples, candidate.Samples);
+        var artifactDir = ArtifactPath(
+            "parity",
+            "dx7-community-analog1",
+            $"{item.Index:00}-{SafeName(voice.Name)}-{DateTimeOffset.UtcNow:yyyyMMddTHHmmssfff}");
+        WriteListeningArtifacts(
+            artifactDir,
+            reference.Samples,
+            candidate.Samples,
+            reference.SampleRate,
+            script,
+            comparison);
+
+        return (item, comparison, artifactDir);
+    }
+
     private static DexedOperatorSpec SilentOperator(int number) =>
         FullOperator(number, outputLevel: 0, coarse: 1);
 
@@ -595,6 +684,17 @@ public sealed class Dx7ReferenceParityTests
     private static string F(float value) =>
         value.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture);
 
+    private static string SafeName(string value)
+    {
+        var builder = new StringBuilder(value.Length);
+        foreach (var ch in value.ToLowerInvariant())
+        {
+            builder.Append(char.IsLetterOrDigit(ch) ? ch : '_');
+        }
+
+        return builder.ToString().Trim('_');
+    }
+
     private static string ParityReport(AudioComparison comparison) =>
         string.Join(
             Environment.NewLine,
@@ -626,6 +726,13 @@ internal sealed record DexedOperatorSpec(
     int FrequencyMode,
     IReadOnlyList<int> Rates,
     IReadOnlyList<int> Levels);
+
+internal sealed record CommunityDx7VoiceCase(
+    int Index,
+    string ExpectedName,
+    float NoteDurationSeconds,
+    float RenderDurationSeconds,
+    float GraphGain);
 
 internal static class DexedPyRenderer
 {

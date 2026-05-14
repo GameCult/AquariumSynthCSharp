@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-14T14:00:00+01:00
+updated: 2026-05-14T14:09:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -64,6 +64,7 @@ live_invariants:
   - Public-domain reference fixtures and dexed-py helpers are test/development material only; the NuGet package must ship only AquariumSynth.Dsl.
   - Structured `.aqua` stock lives under `patches/` as development source material. Every library patch must parse/export, and the patch library must stay out of the NuGet package unless intentionally promoted.
   - Project-authored Dexed patches may be generated inside tests for calibration; do not ship them in the NuGet package or treat them as runtime dependencies.
+  - Harsh calibration probes belong in tests and ignored artifacts, not in the patch library unless they are musically useful stock.
   - Listening WAV artifacts belong under ignored `artifacts/`; keep them out of NuGet and commits unless explicitly promoted as fixtures.
   - Do not consume external synth targets that cannot be backed by parity tests. Parsing is inventory; reproducing behavior through terse, readable Aquarium DSL is the proof.
   - Audio metrics are evidence, not final judgment.
@@ -122,8 +123,8 @@ next_agent_start_here:
     route scale now gives PRC the same character with closer harsh stacked
     modulation. Split project-authored algorithm-8 cascade and summed-pair
     probes now back the 6.0 summed/cascaded route scale. Next pressure is
-    residual PRC high-air/timbre mismatch, then broader public-domain voice
-    selection before broad import.
+    residual PRC high-air/timbre mismatch and high zero-crossing mismatch on
+    broader public-domain community voices before broad import.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -136,6 +137,18 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-14
+    summary: >
+      Added a rendered public-domain community DX7 parity test against four
+      actual `analog1.syx` voices from Musical Artifacts artifact 152:
+      `ANLGSYN 1`, `{ Mooger }`, `Piano Bass`, and `RES SYNTH1`. The test
+      renders Dexed references, lowers the same voices through the current
+      Aquarium DX7 operator-graph path, writes listening WAV/report artifacts
+      under `artifacts/parity/dx7-community-analog1/`, and gates broad parity
+      at log-mel <= 0.3, envelope <= 0.16, score >= 0.5. First survey also
+      tried `DX1 LEAD B` and `MELLOWSOLO`; they remain pressure because
+      log-mel/zero-crossing mismatch is too large for the broad gate.
+    verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore: 70 passed"
   - date: 2026-05-14
     summary: >
       Added split project-authored DX7 algorithm-8 parity probes for the

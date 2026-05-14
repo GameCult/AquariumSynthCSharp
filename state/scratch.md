@@ -15,6 +15,27 @@ Doctrine update:
 
 Completed this slice:
 
+- Added `PublicDomainDx7AnalogCommunityVoicesMeetBroadRenderedParityWhenInstalled`,
+  which renders actual public-domain `analog1.syx` community voices through
+  Dexed and the current Aquarium DX7 lowering. Kept four broad parity voices:
+  `ANLGSYN 1`, `{ Mooger }`, `Piano Bass`, and `RES SYNTH1`.
+- The test writes WAVs/reports under
+  `artifacts/parity/dx7-community-analog1/<voice>/` and gates log-mel
+  `<= .3`, envelope distance `<= .16`, and score `>= .5`.
+- Latest kept-voice metrics:
+  - `ANLGSYN 1`: log-mel `.25955316`, envelope `.12271979`, score `.5709625`
+  - `{ Mooger }`: log-mel `.23776375`, envelope `.07168135`, score `.66662127`
+  - `Piano Bass`: log-mel `.19985504`, envelope `.14781862`, score `.5205584`
+  - `RES SYNTH1`: log-mel `.22371109`, envelope `.109231755`, score `.54040927`
+- First survey also tried `DX1 LEAD B` and `MELLOWSOLO`; they were excluded
+  from the passing gate because log-mel and zero-crossing mismatch were too
+  large. That is pressure, not library stock.
+- Verified with bundled Python/dexed-py:
+  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  70 passed.
+
+Previous slice:
+
 - Added two split project-authored DX7 algorithm-8 rendered parity probes:
   `ProjectAuthoredDx7AlgorithmEightCascadeProbeMeetsParityWhenInstalled` for
   `6 -> 5 -> 3`, and
