@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-14T04:10:00+01:00
+updated: 2026-05-14T04:13:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -46,6 +46,7 @@ live_invariants:
   - DX7 operator output level approximation belongs in reference import/rebuild helpers, not the generic DSL model.
   - DX7 carrier output amplitude follows the measured `2^((outputLevel - 99) / 8)` curve; do not restore the old internal-level proxy.
   - DX7 isolated two-operator modulation uses Aquarium route index `6.275` for full-level modulators; do not apply that blindly to cascaded stacks before algorithm output compensation is modeled.
+  - DX7 feedback lowers through `Dx7SysEx.OperatorFeedbackAmount`; do not restore PRC-local `feedback * constant` folklore.
   - DX7 calibration must proceed through isolated rungs in `docs/dx7-calibration-plan.md`; do not keep tuning hard PRC-specific constants as a substitute for a level/index model.
   - Staged operator envelopes own multi-target operator level contours through `env=rl rates=... levels=...`; do not force DX7-style contours back into the general ADSR voice envelope model.
   - DX7 rate/level envelopes may lower to staged operator envelopes or labeled ADSR approximations, but exact DX7 EG timing/gain calibration remains missing pressure.
@@ -100,10 +101,10 @@ reference_targets:
 next_agent_start_here:
   recommended_first_task: >
     Listen to the latest generated PRC SYNTH1 WAVs under
-    Continue the ladder in `docs/dx7-calibration-plan.md` with feedback scaling
-    and algorithm output compensation. Single-carrier amplitude and isolated
-    two-op modulation index are now fitted; cascaded PRC stacks still need a
-    real compensation model.
+    Continue the ladder in `docs/dx7-calibration-plan.md` with envelope level
+    curve and algorithm output compensation. Single-carrier amplitude, isolated
+    two-op modulation index, and feedback are now fitted; cascaded PRC stacks
+    still need a real compensation model.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -116,6 +117,13 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-14
+    summary: >
+      Completed the DX7 feedback calibration rung. Isolated feedback sweeps fit
+      Aquarium feedback amounts `0, .01, .02, .05, .10, .19, .38, .66` for DX7
+      feedback values 0-7. `Dx7SysEx.OperatorFeedbackAmount` now owns that
+      table, and the PRC probe no longer uses a local `feedback * constant`.
+    verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore --filter \"CalibratesDx7FeedbackToAquariumFeedbackAmount|PublicDomainDx7PrcSynth1WritesListeningWavsWhenInstalled\": passed"
   - date: 2026-05-14
     summary: >
       Completed the isolated two-operator modulation-index rung. Dexed sweeps

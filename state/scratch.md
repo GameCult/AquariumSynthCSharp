@@ -15,6 +15,16 @@ Doctrine update:
 
 Completed this slice:
 
+- Completed the feedback calibration rung. Isolated Dexed feedback sweeps fit a
+  nonlinear Aquarium feedback table: `0, .01, .02, .05, .10, .19, .38, .66`
+  for DX7 feedback values `0..7`.
+- Added `Dx7SysEx.OperatorFeedbackAmount` and moved the PRC feedback lowering
+  off the old `voice.Feedback * 0.04` constant. PRC barely changed because
+  feedback value `5` maps to `.19`, close to the previous accidental `.20`.
+  The win is ownership: feedback scaling is no longer folklore.
+
+Previous slice:
+
 - Completed the second calibration rung for isolated two-operator FM. A Dexed
   sweep fits full-scale DX7 modulation at about `12.55` radians. Given the
   current Aquarium Faust formula, that maps to an Aquarium route index of

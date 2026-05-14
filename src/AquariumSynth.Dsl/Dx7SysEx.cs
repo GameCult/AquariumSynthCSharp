@@ -215,6 +215,9 @@ public static class Dx7SysEx
     public static float OperatorOutputAmplitude(float outputLevel) =>
         MathF.Pow(2, (Math.Clamp(outputLevel, 0, 99) - 99) / 8f);
 
+    public static float OperatorFeedbackAmount(int feedback) =>
+        FeedbackAmounts[Math.Clamp(feedback, 0, FeedbackAmounts.Length - 1)];
+
     public static Dx7RateLevelEnvelopeApproximation ApproximateRateLevelEnvelope(Dx7Envelope envelope)
     {
         var l1 = Level(envelope.Level1);
@@ -564,6 +567,11 @@ public static class Dx7SysEx
         206, 209, 211, 213, 215, 217, 218, 220, 222, 224, 225, 227, 229, 230, 232, 233,
         235, 237, 238, 240, 241, 242, 243, 244, 246, 246, 248, 249, 250, 251, 252, 253,
         254
+    ];
+
+    private static readonly float[] FeedbackAmounts =
+    [
+        0f, 0.01f, 0.02f, 0.05f, 0.10f, 0.19f, 0.38f, 0.66f
     ];
 
     private static readonly int[] ExpScaleData =

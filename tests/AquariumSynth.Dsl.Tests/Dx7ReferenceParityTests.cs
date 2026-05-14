@@ -164,7 +164,7 @@ public sealed class Dx7ReferenceParityTests
             builder.AppendLine($"    level={F(level)}");
             if (topology.SelfFeedbackOperators.Contains(op.Number))
             {
-                builder.AppendLine($"    feedback={F(voice.Feedback * 0.04f)}");
+                builder.AppendLine($"    feedback={F(Dx7SysEx.OperatorFeedbackAmount(voice.Feedback))}");
             }
             builder.AppendLine($"    {envelope.ToScriptSpec()}");
             builder.AppendLine();

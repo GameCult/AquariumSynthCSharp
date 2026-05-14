@@ -217,6 +217,14 @@ public sealed class Dx7SysExTests
     }
 
     [Fact]
+    public void CalibratesDx7FeedbackToAquariumFeedbackAmount()
+    {
+        Assert.Equal(0, Dx7SysEx.OperatorFeedbackAmount(0));
+        Assert.Equal(0.19f, Dx7SysEx.OperatorFeedbackAmount(5));
+        Assert.Equal(0.66f, Dx7SysEx.OperatorFeedbackAmount(7));
+    }
+
+    [Fact]
     public void ApproximatesDx7RateLevelEnvelopeAsStagedEnvelope()
     {
         var approximation = Dx7SysEx.ApproximateRateLevelEnvelope(new Dx7Envelope(
