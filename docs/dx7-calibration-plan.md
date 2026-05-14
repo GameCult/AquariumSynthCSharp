@@ -88,17 +88,20 @@ math is still fake in the places that matter perceptually.
    - Replace hard `PRC SYNTH1` route probe logic with a topology-aware DX7
      route rule: isolated direct branches keep the two-op scale, while
      summed/cascaded branches use the summed-modulator scale.
-   - A project-authored algorithm-8 summed-stack parity test now backs the
-     topology-aware summed-modulator scale.
+   - The summed/cascaded scale is now `2.4`. A project-authored algorithm-8
+     summed-stack parity test backs the topology-aware scale outside PRC, and
+     the hard PRC replay improves to log-mel `0.16794802`, envelope distance
+     `0.09510617`, centroid ratio `1.1254044`, and score `0.68491656` after
+     graph gain normalization.
 
 8. **Hard target replay**
    - Re-run `PRC SYNTH1`.
    - Keep the log-mel gate and listening artifacts.
    - Raise thresholds only when the calibrated lowering improves for the right
      reason.
-   - Current curved-envelope replay gates log-mel at `<= 0.18`, envelope
-     distance at `<= 0.14`, zero-crossing at `>= 0.75`, RMS ratio near unity,
-     and score at `>= 0.64`.
+   - Current curved-envelope plus stronger-stack replay gates log-mel at
+     `<= 0.18`, envelope distance at `<= 0.14`, zero-crossing at `>= 0.75`,
+     RMS ratio near unity, and score at `>= 0.64`.
 
 ## Rejected Path
 

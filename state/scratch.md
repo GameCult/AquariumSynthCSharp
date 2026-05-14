@@ -15,6 +15,15 @@ Doctrine update:
 
 Completed this slice:
 
+- Increased `Dx7SysEx.SummedOperatorModulationRouteIndex` from `1.6` to `2.4`.
+  This targets the missing harsh stacked-modulation brightness without adding a
+  generic drive/overdrive knob. The independent project-authored algorithm-8
+  summed-stack probe now uses graph gain `.218` and gates log-mel at `<= .12`
+  with RMS normalization.
+- Latest hard `PRC SYNTH1` after stronger stack scale and graph gain `.309`:
+  log-mel `0.16794802`, envelope distance `0.09510617`, RMS ratio `1.00095`,
+  zero-crossing ratio `0.79647374`, centroid ratio `1.1254044`, score
+  `0.68491656`.
 - Added `Dx7SysEx.ApproximateAppliedRateLevelEnvelope`, which traces the
   Dexed-style block-interpolated applied EG gain and lowers it into Aquarium's
   curved staged envelope surface, normalized so operator output level remains a

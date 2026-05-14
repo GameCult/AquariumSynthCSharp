@@ -49,8 +49,8 @@ live_invariants:
   - DX7 feedback lowers through `Dx7SysEx.OperatorFeedbackAmount`; do not restore PRC-local `feedback * constant` folklore.
   - DX7 ratio-mode detune lowers through `Dx7SysEx.OperatorFrequencyRatio`; do not silently drop detune from operator graph scripts.
   - DX7 algorithm output compensation lowers through ROM `COM` values relative to the algorithm-32 six-output baseline; do not restore PRC-local carrier scale tables.
-  - DX7 route lowering is topology-aware: isolated direct branches use `OperatorModulationRouteIndex`; summed edges and direct edges feeding summed modulation use `SummedOperatorModulationRouteIndex`.
-  - `SummedOperatorModulationRouteIndex` is calibrated from the hard PRC target. It is no longer PRC-local, but project-authored algorithm-8 stack sweeps should tighten it before broad DX7 import.
+  - DX7 route lowering is topology-aware: isolated direct branches use `OperatorModulationRouteIndex` (`6.275`); summed edges and direct edges feeding summed modulation use `SummedOperatorModulationRouteIndex` (`2.4`).
+  - `SummedOperatorModulationRouteIndex` is backed by the hard PRC target and a project-authored algorithm-8 stack probe; do not restore the older under-bright `1.6` scale.
   - DX7 calibration must proceed through isolated rungs in `docs/dx7-calibration-plan.md`; do not keep tuning hard PRC-specific constants as a substitute for a level/index model.
   - Staged operator envelopes own multi-target operator level contours through `env=rl rates=... levels=...`; do not force DX7-style contours back into the general ADSR voice envelope model.
   - Staged operator envelopes may use per-segment curves through `curves=lin,exp,...`; this belongs to the rate/level contour authority, not to the standard ADSR envelope.
@@ -116,10 +116,10 @@ next_agent_start_here:
     two-op modulation index, feedback, ratio detune, ROM COM output
     compensation, and topology-aware route lowering are now fitted or mapped;
     a project-authored algorithm-8 stack test now backs the summed route scale
-    outside PRC. Curved applied-envelope lowering now improves the hard PRC
-    log-mel and envelope metrics, but zero-crossing/phase behavior is worse.
-    Next pressure is oscillator/phase behavior or a project-authored envelope
-    sweep that can separate contour wins from remaining centroid/timbre damage.
+    outside PRC. Curved applied-envelope lowering plus stronger summed/cascaded
+    route scale now gives PRC the same character with closer harsh stacked
+    modulation. Next pressure is residual centroid/timbre mismatch and broader
+    project-authored DX7 sweeps before broad import.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -132,6 +132,15 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-14
+    summary: >
+      Increased `Dx7SysEx.SummedOperatorModulationRouteIndex` from 1.6 to 2.4
+      after listening identified missing harsh stacked-modulation brightness.
+      The stronger scale improves PRC log-mel to 0.16794802, envelope distance
+      to 0.09510617, centroid ratio to 1.1254044, and score to 0.68491656 with
+      RMS ratio 1.00095. The independent project-authored algorithm-8
+      summed-stack test now uses graph gain 0.218 and tighter log-mel/RMS gates.
+    verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore --filter \"PublicDomainDx7PrcSynth1WritesListeningWavsWhenInstalled|ProjectAuthoredDx7AlgorithmEightSummedStackMeetsParityWhenInstalled\": passed"
   - date: 2026-05-14
     summary: >
       Added `Dx7SysEx.ApproximateAppliedRateLevelEnvelope` and used it in the

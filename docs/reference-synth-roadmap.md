@@ -81,9 +81,9 @@ First deliverable:
   operator routing rather than a sine-like behavioral match. Staged operator
   envelopes now exist as readable `env=rl rates=... levels=...` declarations
   with per-segment curves. Direct DX7 rate/level lowering on `PRC SYNTH1`
-  forced EG timing/gain calibration; the current applied-envelope lowering
-  improves log-mel and envelope distance but exposes worse zero-crossing/phase
-  behavior. The hard PRC probe writes ignored listening artifacts under
+  forced EG timing/gain calibration; the current applied-envelope lowering and
+  stronger summed/cascaded route scale give PRC the same character with much
+  closer stacked-modulation brightness. The hard PRC probe writes ignored listening artifacts under
   `artifacts/parity/dx7-prc-synth1` so metrics and ears can steer the next
   calibration pass together. Listening showed aggregate score was a weak judge
   for this target, so the hard PRC probe gates primarily on log-mel distance.

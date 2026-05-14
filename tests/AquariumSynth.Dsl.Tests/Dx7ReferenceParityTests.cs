@@ -101,7 +101,7 @@ public sealed class Dx7ReferenceParityTests
         var script = Dx7VoiceProbeScript(
             voice,
             graphName: "dx7_prc_synth1_probe",
-            graphGain: 0.283f,
+            graphGain: 0.309f,
             envelopeScale: 0.62f,
             gateSeconds: null,
             useAppliedEnvelope: true);
@@ -165,7 +165,7 @@ public sealed class Dx7ReferenceParityTests
         var script = Dx7VoiceProbeScript(
             VoiceFromSpec(spec),
             graphName: "dx7_algorithm8_summed_stack_probe",
-            graphGain: 0.39f,
+            graphGain: 0.218f,
             envelopeScale: 0.62f,
             gateSeconds: 0.45f);
         var candidateSource = FaustEmitter.EmitScript(script);
@@ -181,8 +181,9 @@ public sealed class Dx7ReferenceParityTests
         var comparison = new AudioAnalyzer(new AudioAnalysisConfig(SampleRate: reference.SampleRate))
             .Compare(reference.Samples, candidate.Samples);
 
-        Assert.True(comparison.LogMelDistance <= 0.31f, ParityReport(comparison));
-        Assert.True(comparison.Score >= 0.35f, ParityReport(comparison));
+        Assert.True(comparison.LogMelDistance <= 0.12f, ParityReport(comparison));
+        Assert.InRange(comparison.RmsRatio, 0.90f, 1.10f);
+        Assert.True(comparison.Score >= 0.45f, ParityReport(comparison));
     }
 
     [Fact]
