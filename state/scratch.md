@@ -15,6 +15,28 @@ Doctrine update:
 
 Completed this slice:
 
+- Added two split project-authored DX7 algorithm-8 rendered parity probes:
+  `ProjectAuthoredDx7AlgorithmEightCascadeProbeMeetsParityWhenInstalled` for
+  `6 -> 5 -> 3`, and
+  `ProjectAuthoredDx7AlgorithmEightSummedPairProbeMeetsParityWhenInstalled`
+  for `4 + 5 -> 3`.
+- Tightened the existing combined algorithm-8 stack gate now that real metrics
+  are known. The project-authored probes gate log-mel at `<= .06`; latest real
+  Dexed run:
+  - combined stack: log-mel `0.04029555`, score `0.8664546`
+  - summed pair: log-mel `0.042429477`, score `0.870778`
+  - cascade: log-mel `0.03811625`, score `0.9157809`
+- Project-authored DX7 parity tests now write listening WAVs and reports under
+  `artifacts/parity/dx7-project-authored/<probe>/`.
+- Added the split probe scripts to the patch library:
+  `patches/dx7/algorithm-8-cascade-probe.aqua` and
+  `patches/dx7/algorithm-8-summed-pair-probe.aqua`.
+- Verified with bundled Python/dexed-py:
+  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  69 passed.
+
+Previous slice:
+
 - Added a structured `.aqua` patch library under `patches/` with:
   `examples/`, `sfxr/`, `bfxr/`, `808/`, `fm-bell/`, `wobble-bass/`,
   `dx7/`, and `advanced/`.

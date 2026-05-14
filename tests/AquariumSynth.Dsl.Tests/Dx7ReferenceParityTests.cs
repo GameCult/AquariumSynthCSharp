@@ -152,38 +152,81 @@ public sealed class Dx7ReferenceParityTests
                 FullOperator(5, outputLevel: 86, coarse: 2),
                 FullOperator(6, outputLevel: 82, coarse: 4)
             ]);
-        var reference = await DexedPyRenderer.RenderPatchAsync(
+
+        var comparison = await RenderAndCompareProjectAuthoredDx7Async(
             spec,
+            graphName: "dx7_algorithm8_summed_stack_probe",
+            graphGain: 0.218f,
             noteDurationSeconds: 0.45f,
             renderDurationSeconds: 0.7f);
 
-        if (reference is null)
-        {
-            return;
-        }
+        if (comparison is null) return;
 
-        var script = Dx7VoiceProbeScript(
-            VoiceFromSpec(spec),
-            graphName: "dx7_algorithm8_summed_stack_probe",
-            graphGain: 0.218f,
-            envelopeScale: 0.62f,
-            gateSeconds: 0.45f);
-        var candidateSource = FaustEmitter.EmitScript(script);
-        var candidate = await FaustCompiler.RenderAsync(
-            candidateSource.Source,
-            new FaustRenderOptions(DurationSeconds: 0.7f));
-
-        if (candidate is null)
-        {
-            return;
-        }
-
-        var comparison = new AudioAnalyzer(new AudioAnalysisConfig(SampleRate: reference.SampleRate))
-            .Compare(reference.Samples, candidate.Samples);
-
-        Assert.True(comparison.LogMelDistance <= 0.12f, ParityReport(comparison));
+        Assert.True(comparison.LogMelDistance <= 0.06f, ParityReport(comparison));
         Assert.InRange(comparison.RmsRatio, 0.90f, 1.10f);
-        Assert.True(comparison.Score >= 0.45f, ParityReport(comparison));
+        Assert.True(comparison.Score >= 0.80f, ParityReport(comparison));
+    }
+
+    [Fact]
+    public async Task ProjectAuthoredDx7AlgorithmEightCascadeProbeMeetsParityWhenInstalled()
+    {
+        var spec = new DexedPatchSpec(
+            "AQ ALG8CAS",
+            Algorithm: 8,
+            Feedback: 0,
+            Operators:
+            [
+                SilentOperator(1),
+                SilentOperator(2),
+                FullOperator(3, outputLevel: 99, coarse: 1),
+                SilentOperator(4),
+                FullOperator(5, outputLevel: 86, coarse: 2),
+                FullOperator(6, outputLevel: 82, coarse: 4)
+            ]);
+
+        var comparison = await RenderAndCompareProjectAuthoredDx7Async(
+            spec,
+            graphName: "dx7_algorithm8_cascade_probe",
+            graphGain: 0.25f,
+            noteDurationSeconds: 0.45f,
+            renderDurationSeconds: 0.7f);
+
+        if (comparison is null) return;
+
+        Assert.True(comparison.LogMelDistance <= 0.06f, ParityReport(comparison));
+        Assert.InRange(comparison.RmsRatio, 0.90f, 1.10f);
+        Assert.True(comparison.Score >= 0.85f, ParityReport(comparison));
+    }
+
+    [Fact]
+    public async Task ProjectAuthoredDx7AlgorithmEightSummedPairProbeMeetsParityWhenInstalled()
+    {
+        var spec = new DexedPatchSpec(
+            "AQ ALG8PAIR",
+            Algorithm: 8,
+            Feedback: 0,
+            Operators:
+            [
+                SilentOperator(1),
+                SilentOperator(2),
+                FullOperator(3, outputLevel: 99, coarse: 1),
+                FullOperator(4, outputLevel: 88, coarse: 1),
+                FullOperator(5, outputLevel: 86, coarse: 2),
+                SilentOperator(6)
+            ]);
+
+        var comparison = await RenderAndCompareProjectAuthoredDx7Async(
+            spec,
+            graphName: "dx7_algorithm8_summed_pair_probe",
+            graphGain: 0.25f,
+            noteDurationSeconds: 0.45f,
+            renderDurationSeconds: 0.7f);
+
+        if (comparison is null) return;
+
+        Assert.True(comparison.LogMelDistance <= 0.06f, ParityReport(comparison));
+        Assert.InRange(comparison.RmsRatio, 0.95f, 1.10f);
+        Assert.True(comparison.Score >= 0.80f, ParityReport(comparison));
     }
 
     [Fact]
@@ -350,6 +393,55 @@ public sealed class Dx7ReferenceParityTests
             OscillatorSync: true,
             new Dx7Lfo(35, 0, 0, 0, KeySync: true, Dx7LfoWaveform.Sine, PitchModulationSensitivity: 3),
             Transpose: 24);
+
+    private static async Task<AudioComparison?> RenderAndCompareProjectAuthoredDx7Async(
+        DexedPatchSpec spec,
+        string graphName,
+        float graphGain,
+        float noteDurationSeconds,
+        float renderDurationSeconds)
+    {
+        var reference = await DexedPyRenderer.RenderPatchAsync(
+            spec,
+            noteDurationSeconds: noteDurationSeconds,
+            renderDurationSeconds: renderDurationSeconds);
+
+        if (reference is null)
+        {
+            return null;
+        }
+
+        var script = Dx7VoiceProbeScript(
+            VoiceFromSpec(spec),
+            graphName,
+            graphGain,
+            envelopeScale: 0.62f,
+            gateSeconds: noteDurationSeconds);
+        var candidateSource = FaustEmitter.EmitScript(script);
+        var candidate = await FaustCompiler.RenderAsync(
+            candidateSource.Source,
+            new FaustRenderOptions(DurationSeconds: renderDurationSeconds));
+
+        if (candidate is null)
+        {
+            return null;
+        }
+
+        var comparison = new AudioAnalyzer(new AudioAnalysisConfig(SampleRate: reference.SampleRate))
+            .Compare(reference.Samples, candidate.Samples);
+        var artifactDir = ArtifactPath(
+            "parity",
+            "dx7-project-authored",
+            $"{graphName}-{DateTimeOffset.UtcNow:yyyyMMddTHHmmssfff}");
+        WriteListeningArtifacts(
+            artifactDir,
+            reference.Samples,
+            candidate.Samples,
+            reference.SampleRate,
+            script,
+            comparison);
+        return comparison;
+    }
 
     private static DexedOperatorSpec SilentOperator(int number) =>
         FullOperator(number, outputLevel: 0, coarse: 1);

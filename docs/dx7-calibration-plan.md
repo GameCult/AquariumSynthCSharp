@@ -89,10 +89,13 @@ math is still fake in the places that matter perceptually.
      route rule: isolated direct branches keep the two-op scale, while
      summed/cascaded branches use the summed-modulator scale.
    - The summed/cascaded scale is now `6.0`. A project-authored algorithm-8
-     summed-stack parity test backs the topology-aware scale outside PRC, and
-     the hard PRC replay improves to log-mel `0.13874426`, envelope distance
-     `0.067291506`, centroid ratio `1.1156512`, and score `0.7546445` after
-     graph gain normalization.
+     summed-stack parity test backs the topology-aware scale outside PRC. Split
+     project-authored probes now also isolate the cascaded `6 -> 5 -> 3` branch
+     at log-mel `0.03811625` and the summed `4 + 5 -> 3` branch at log-mel
+     `0.042429477`, with listening WAV artifacts under
+     `artifacts/parity/dx7-project-authored/`. The hard PRC replay improves to
+     log-mel `0.13874426`, envelope distance `0.067291506`, centroid ratio
+     `1.1156512`, and score `0.7546445` after graph gain normalization.
 
 8. **Hard target replay**
    - Re-run `PRC SYNTH1`.

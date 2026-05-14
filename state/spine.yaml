@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-14T13:08:00+01:00
+updated: 2026-05-14T14:00:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -51,7 +51,7 @@ live_invariants:
   - DX7 ratio-mode detune lowers through `Dx7SysEx.OperatorFrequencyRatio`; do not silently drop detune from operator graph scripts.
   - DX7 algorithm output compensation lowers through ROM `COM` values relative to the algorithm-32 six-output baseline; do not restore PRC-local carrier scale tables.
   - DX7 route lowering is topology-aware: isolated direct branches use `OperatorModulationRouteIndex` (`6.275`); summed edges and direct edges feeding summed modulation use `SummedOperatorModulationRouteIndex` (`6.0`).
-  - `SummedOperatorModulationRouteIndex` is backed by the hard PRC target and a project-authored algorithm-8 stack probe; do not restore the older under-bright `1.6` scale.
+  - `SummedOperatorModulationRouteIndex` is backed by the hard PRC target, a project-authored algorithm-8 stack probe, and split cascade/summed-pair probes; do not restore the older under-bright `1.6` scale.
   - DX7 calibration must proceed through isolated rungs in `docs/dx7-calibration-plan.md`; do not keep tuning hard PRC-specific constants as a substitute for a level/index model.
   - Staged operator envelopes own multi-target operator level contours through `env=rl rates=... levels=...`; do not force DX7-style contours back into the general ADSR voice envelope model.
   - Staged operator envelopes may use per-segment curves through `curves=lin,exp,...`; this belongs to the rate/level contour authority, not to the standard ADSR envelope.
@@ -120,8 +120,10 @@ next_agent_start_here:
     a project-authored algorithm-8 stack test now backs the summed route scale
     outside PRC. Curved applied-envelope lowering plus stronger summed/cascaded
     route scale now gives PRC the same character with closer harsh stacked
-    modulation. Next pressure is residual centroid/timbre mismatch and broader
-    project-authored DX7 sweeps before broad import.
+    modulation. Split project-authored algorithm-8 cascade and summed-pair
+    probes now back the 6.0 summed/cascaded route scale. Next pressure is
+    residual PRC high-air/timbre mismatch, then broader public-domain voice
+    selection before broad import.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -134,6 +136,17 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-14
+    summary: >
+      Added split project-authored DX7 algorithm-8 parity probes for the
+      cascaded `6 -> 5 -> 3` branch and summed `4 + 5 -> 3` branch. The tests
+      render Dexed references, render Aquarium operator-graph candidates, write
+      listening WAV/report artifacts under `artifacts/parity/dx7-project-authored/`,
+      and gate log-mel at <= 0.06. Latest real-Dexed run: combined stack
+      log-mel 0.04029555/score 0.8664546, summed pair 0.042429477/0.870778,
+      cascade 0.03811625/0.9157809. Promoted the two split probe scripts into
+      `patches/dx7/` and indexed them in `patches/library.yaml`.
+    verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore: 69 passed"
   - date: 2026-05-14
     summary: >
       Added a structured development patch library under `patches/` with a

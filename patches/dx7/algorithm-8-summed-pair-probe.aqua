@@ -1,0 +1,51 @@
+# DX7 algorithm 8 summed-pair probe
+# Family: dx7
+# Source: project-authored Dexed parity probe
+# Notes: Isolates the 4 + 5 -> 3 summed modulation branch backing the topology-aware summed/cascaded route scale.
+
+patch
+    gain=1.4
+    soft_clip=false
+
+opgraph
+    name=dx7_algorithm8_summed_pair_probe
+    freq=261.6256
+    gain=0.25
+
+operator name=op6
+    ratio=1
+    level=0.000188
+    env=rl rates=0.00248,0.00248,0.00248,0.00248 levels=1,1,1,0 gate=0.45
+
+operator name=op5
+    ratio=2
+    level=0.32421
+    env=rl rates=0.00248,0.00248,0.00248,0.00248 levels=1,1,1,0 gate=0.45
+
+operator name=op4
+    ratio=1
+    level=0.385553
+    feedback=0
+    env=rl rates=0.00248,0.00248,0.00248,0.00248 levels=1,1,1,0 gate=0.45
+
+operator name=op3
+    ratio=1
+    level=3
+    env=rl rates=0.00248,0.00248,0.00248,0.00248 levels=1,1,1,0 gate=0.45
+
+operator name=op2
+    ratio=1
+    level=0.000188
+    env=rl rates=0.00248,0.00248,0.00248,0.00248 levels=1,1,1,0 gate=0.45
+
+operator name=op1
+    ratio=1
+    level=0.000565
+    env=rl rates=0.00248,0.00248,0.00248,0.00248 levels=1,1,1,0 gate=0.45
+
+route from=op6 to=op5 index=6
+route from=op4 to=op3 index=6
+route from=op5 to=op3 index=6
+route from=op2 to=op1 index=6.275
+carrier name=op1
+carrier name=op3
