@@ -17,6 +17,8 @@ surfaces:
   reference_roadmap: docs/reference-synth-roadmap.md
   dx7_public_domain_fixtures: tests/AquariumSynth.Dsl.Tests/Fixtures/Dx7/PublicDomain
   zyn_reference_source: external/zynaddsubfx
+  zyn_reference_build_script: tools/zyn-reference/build-zyn-reference.ps1
+  zyn_reference_build_patch: tools/zyn-reference/patches/0001-msys-part-constructor.patch
   zyn_project_fixtures: tests/AquariumSynth.Dsl.Tests/Fixtures/ZynAddSubFX/ProjectAuthored
   package: AquariumSynth.Dsl 0.1.0-aquarium.1
 modules:
