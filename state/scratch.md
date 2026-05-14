@@ -15,6 +15,22 @@ Doctrine update:
 
 Completed this slice:
 
+- Added test-only project-authored Dexed patch rendering through
+  `DexedPyRenderer.RenderPatchAsync`. It builds a `dexed.Patch` from explicit
+  operator specs and renders it without adding any shipped fixture or package
+  surface.
+- Added an independent project-authored algorithm-8 summed-stack parity test.
+  This backs the topology-aware route lowering outside the public-domain PRC
+  patch, so `SummedOperatorModulationRouteIndex` is no longer only PRC-shaped
+  evidence.
+- Cut the attempted DX7 EG exponential level curve again. On an isolated
+  envelope target, exponential EG levels plus a shorter timing scale improved
+  shape versus linear levels, but PRC still failed log-mel (`0.2857573` at a
+  tuned timing scale). The live lowering stays linear for EG levels until an
+  isolated envelope target passes without harming the hard target.
+
+Previous slice:
+
 - Moved the remaining PRC cascaded-route scalar into a topology-aware DX7 route
   helper. `Dx7SysEx.OperatorRouteIndex(topology, edge)` now keeps the isolated
   two-op route scale (`6.275`) for standalone direct branches and uses the

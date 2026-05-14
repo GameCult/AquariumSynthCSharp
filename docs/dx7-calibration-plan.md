@@ -61,6 +61,9 @@ math is still fake in the places that matter perceptually.
    - Render fixed-output operators with varied DX7 EG levels and rates.
    - Fit the rate/level envelope amplitude curve instead of assuming
      `level / 99`.
+   - Current cut lesson: reusing the operator output-level amplitude curve for
+     EG levels improves some envelope metrics but fails the hard PRC log-mel
+     target. Do not land it without isolated envelope parity.
 
 7. **Summed/cascaded modulation**
    - Render project-authored algorithm-8 stacks that isolate `6 -> 5 -> 3`
@@ -68,8 +71,8 @@ math is still fake in the places that matter perceptually.
    - Replace hard `PRC SYNTH1` route probe logic with a topology-aware DX7
      route rule: isolated direct branches keep the two-op scale, while
      summed/cascaded branches use the summed-modulator scale.
-   - A hard-target calibrated summed-modulator scale exists; project-authored
-     isolated stack sweeps should still tighten it before broad DX7 import.
+   - A project-authored algorithm-8 summed-stack parity test now backs the
+     topology-aware summed-modulator scale.
 
 8. **Hard target replay**
    - Re-run `PRC SYNTH1`.

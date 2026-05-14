@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using System.Text;
 
 namespace AquariumSynth.Dsl.Tests;
@@ -97,7 +98,12 @@ public sealed class Dx7ReferenceParityTests
         var voice = bank.Voices[17];
         Assert.Equal("PRC SYNTH1", voice.Name);
 
-        var script = PrcSynth1ProbeScript(voice);
+        var script = Dx7VoiceProbeScript(
+            voice,
+            graphName: "dx7_prc_synth1_probe",
+            graphGain: 0.39f,
+            envelopeScale: 0.62f,
+            gateSeconds: null);
         var candidateSource = FaustEmitter.EmitScript(script);
         var candidate = await FaustCompiler.RenderAsync(
             candidateSource.Source,
@@ -126,6 +132,55 @@ public sealed class Dx7ReferenceParityTests
         Assert.True(comparison.Score >= 0.40f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
     }
 
+    [Fact]
+    public async Task ProjectAuthoredDx7AlgorithmEightSummedStackMeetsParityWhenInstalled()
+    {
+        var spec = new DexedPatchSpec(
+            "AQ ALG8SUM",
+            Algorithm: 8,
+            Feedback: 0,
+            Operators:
+            [
+                SilentOperator(1),
+                SilentOperator(2),
+                FullOperator(3, outputLevel: 99, coarse: 1),
+                FullOperator(4, outputLevel: 88, coarse: 1),
+                FullOperator(5, outputLevel: 86, coarse: 2),
+                FullOperator(6, outputLevel: 82, coarse: 4)
+            ]);
+        var reference = await DexedPyRenderer.RenderPatchAsync(
+            spec,
+            noteDurationSeconds: 0.45f,
+            renderDurationSeconds: 0.7f);
+
+        if (reference is null)
+        {
+            return;
+        }
+
+        var script = Dx7VoiceProbeScript(
+            VoiceFromSpec(spec),
+            graphName: "dx7_algorithm8_summed_stack_probe",
+            graphGain: 0.39f,
+            envelopeScale: 0.62f,
+            gateSeconds: 0.45f);
+        var candidateSource = FaustEmitter.EmitScript(script);
+        var candidate = await FaustCompiler.RenderAsync(
+            candidateSource.Source,
+            new FaustRenderOptions(DurationSeconds: 0.7f));
+
+        if (candidate is null)
+        {
+            return;
+        }
+
+        var comparison = new AudioAnalyzer(new AudioAnalysisConfig(SampleRate: reference.SampleRate))
+            .Compare(reference.Samples, candidate.Samples);
+
+        Assert.True(comparison.LogMelDistance <= 0.31f, ParityReport(comparison));
+        Assert.True(comparison.Score >= 0.35f, ParityReport(comparison));
+    }
+
     private static string FixturePath(params string[] parts) =>
         Path.Combine([AppContext.BaseDirectory, "Fixtures", .. parts]);
 
@@ -141,7 +196,12 @@ public sealed class Dx7ReferenceParityTests
         return Path.Combine([root, "artifacts", .. parts]);
     }
 
-    private static string PrcSynth1ProbeScript(Dx7Voice voice)
+    private static string Dx7VoiceProbeScript(
+        Dx7Voice voice,
+        string graphName,
+        float graphGain,
+        float envelopeScale,
+        float? gateSeconds)
     {
         var topology = Dx7SysEx.AlgorithmTopology(voice.Algorithm);
         var builder = new StringBuilder();
@@ -150,16 +210,16 @@ public sealed class Dx7ReferenceParityTests
         builder.AppendLine("    soft_clip=false");
         builder.AppendLine();
         builder.AppendLine("opgraph");
-        builder.AppendLine("    name=dx7_prc_synth1_probe");
+        builder.AppendLine($"    name={graphName}");
         builder.AppendLine("    freq=261.6256");
-        builder.AppendLine("    gain=0.39");
+        builder.AppendLine($"    gain={F(graphGain)}");
         builder.AppendLine();
 
         foreach (var op in voice.Operators.OrderByDescending(op => op.Number))
         {
             var level = Dx7SysEx.ApproximateOperatorLevel(op).LinearLevel *
                         Dx7SysEx.OperatorOutputCompensation(topology, op.Number);
-            var envelope = ScaledEnvelope(Dx7SysEx.ApproximateRateLevelEnvelope(op.Envelope), 0.62f);
+            var envelope = ScaledEnvelope(Dx7SysEx.ApproximateRateLevelEnvelope(op.Envelope), envelopeScale, gateSeconds);
             builder.AppendLine($"operator name=op{op.Number}");
             builder.AppendLine($"    ratio={F(Dx7SysEx.OperatorFrequencyRatio(op))}");
             builder.AppendLine($"    level={F(level)}");
@@ -187,7 +247,49 @@ public sealed class Dx7ReferenceParityTests
         return builder.ToString();
     }
 
-    private static Dx7RateLevelEnvelopeApproximation ScaledEnvelope(Dx7RateLevelEnvelopeApproximation approximation, float scale)
+    private static Dx7Voice VoiceFromSpec(DexedPatchSpec spec) =>
+        new(
+            spec.Name,
+            spec.Operators.Select(op =>
+                new Dx7Operator(
+                    op.Number,
+                    new Dx7Envelope(
+                        op.Rates[0],
+                        op.Rates[1],
+                        op.Rates[2],
+                        op.Rates[3],
+                        op.Levels[0],
+                        op.Levels[1],
+                        op.Levels[2],
+                        op.Levels[3]),
+                    BreakPoint: 39,
+                    LeftDepth: 0,
+                    RightDepth: 0,
+                    LeftCurve: 0,
+                    RightCurve: 0,
+                    RateScaling: 0,
+                    AmplitudeModulationSensitivity: 0,
+                    KeyVelocitySensitivity: 0,
+                    OutputLevel: op.OutputLevel,
+                    FrequencyMode: op.FrequencyMode == 0 ? Dx7FrequencyMode.Ratio : Dx7FrequencyMode.Fixed,
+                    FrequencyCoarse: op.FrequencyCoarse,
+                    FrequencyFine: op.FrequencyFine,
+                    Detune: op.Detune))
+                .ToArray(),
+            new Dx7PitchEnvelope(new Dx7Envelope(99, 99, 99, 99, 50, 50, 50, 50)),
+            spec.Algorithm,
+            spec.Feedback,
+            OscillatorSync: true,
+            new Dx7Lfo(35, 0, 0, 0, KeySync: true, Dx7LfoWaveform.Sine, PitchModulationSensitivity: 3),
+            Transpose: 24);
+
+    private static DexedOperatorSpec SilentOperator(int number) =>
+        FullOperator(number, outputLevel: 0, coarse: 1);
+
+    private static DexedOperatorSpec FullOperator(int number, int outputLevel, int coarse) =>
+        new(number, outputLevel, FrequencyCoarse: coarse, FrequencyFine: 0, Detune: 7, FrequencyMode: 0, Rates: [99, 99, 99, 99], Levels: [99, 99, 99, 0]);
+
+    private static Dx7RateLevelEnvelopeApproximation ScaledEnvelope(Dx7RateLevelEnvelopeApproximation approximation, float scale, float? gateSeconds)
     {
         var envelope = approximation.Envelope;
         var scaled = new RateLevelEnvelope(
@@ -202,7 +304,7 @@ public sealed class Dx7ReferenceParityTests
         return approximation with
         {
             Envelope = scaled,
-            GateSeconds = Math.Max((scaled.Rate1Seconds + scaled.Rate2Seconds + scaled.Rate3Seconds) * 0.68f, 0.02f)
+            GateSeconds = gateSeconds ?? Math.Max((scaled.Rate1Seconds + scaled.Rate2Seconds + scaled.Rate3Seconds) * 0.68f, 0.02f)
         };
     }
 
@@ -280,6 +382,22 @@ public sealed class Dx7ReferenceParityTests
 
 internal sealed record DexedPyRender(float[] Samples, int SampleRate, string Stdout, string Stderr);
 
+internal sealed record DexedPatchSpec(
+    string Name,
+    int Algorithm,
+    int Feedback,
+    IReadOnlyList<DexedOperatorSpec> Operators);
+
+internal sealed record DexedOperatorSpec(
+    int Number,
+    int OutputLevel,
+    int FrequencyCoarse,
+    int FrequencyFine,
+    int Detune,
+    int FrequencyMode,
+    IReadOnlyList<int> Rates,
+    IReadOnlyList<int> Levels);
+
 internal static class DexedPyRenderer
 {
     public static async Task<DexedPyRender?> RenderAsync(
@@ -310,6 +428,59 @@ internal static class DexedPyRenderer
                     scriptPath,
                     bankPath,
                     patchIndex.ToStringInvariant(),
+                    outputPath,
+                    midiNote.ToStringInvariant(),
+                    velocity.ToStringInvariant(),
+                    noteDurationSeconds.ToStringInvariant(),
+                    renderDurationSeconds.ToStringInvariant(),
+                    sampleRate.ToStringInvariant()
+                ],
+                cancellationToken);
+
+            if (result.ExitCode != 0 || !File.Exists(outputPath))
+            {
+                return new DexedPyRender([], sampleRate, result.Stdout, result.Stderr);
+            }
+
+            var bytes = await File.ReadAllBytesAsync(outputPath, cancellationToken);
+            var samples = new float[bytes.Length / sizeof(float)];
+            Buffer.BlockCopy(bytes, 0, samples, 0, samples.Length * sizeof(float));
+            return new DexedPyRender(samples, sampleRate, result.Stdout, result.Stderr);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    public static async Task<DexedPyRender?> RenderPatchAsync(
+        DexedPatchSpec patch,
+        int midiNote = 60,
+        int velocity = 100,
+        float noteDurationSeconds = 1,
+        float renderDurationSeconds = 1.5f,
+        int sampleRate = 44100,
+        CancellationToken cancellationToken = default)
+    {
+        var python = await FindPythonWithDexedAsync(cancellationToken);
+        if (python is null) return null;
+
+        var tempDir = Path.Combine(Path.GetTempPath(), $"aquarium-dx7-patch-render-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var scriptPath = Path.Combine(tempDir, "render_project_dx7.py");
+            var specPath = Path.Combine(tempDir, "patch.json");
+            var outputPath = Path.Combine(tempDir, "reference.f32");
+            await File.WriteAllTextAsync(scriptPath, PatchScriptSource(), cancellationToken);
+            await File.WriteAllTextAsync(specPath, JsonSerializer.Serialize(patch), cancellationToken);
+
+            var result = await RunAsync(
+                python.FileName,
+                [
+                    .. python.PrefixArguments,
+                    scriptPath,
+                    specPath,
                     outputPath,
                     midiNote.ToStringInvariant(),
                     velocity.ToStringInvariant(),
@@ -381,6 +552,57 @@ internal static class DexedPyRenderer
         patches = Patch.load_bank(bank_path)
         synth = DexedSynth(sample_rate=sample_rate)
         synth.load_patch(patches[patch_index])
+        audio = synth.render(
+            midi_note=midi_note,
+            velocity=velocity,
+            note_duration=note_duration,
+            render_duration=render_duration)
+        np.asarray(audio, dtype=np.float32).tofile(output_path)
+        """;
+
+    private static string PatchScriptSource() =>
+        """
+        import json
+        import sys
+        import numpy as np
+        from dexed import Patch, DexedSynth
+
+        spec_path = sys.argv[1]
+        output_path = sys.argv[2]
+        midi_note = int(sys.argv[3])
+        velocity = int(sys.argv[4])
+        note_duration = float(sys.argv[5])
+        render_duration = float(sys.argv[6])
+        sample_rate = int(sys.argv[7])
+
+        with open(spec_path, "r", encoding="utf-8") as f:
+            spec = json.load(f)
+
+        patch = Patch(spec["Name"])
+        patch.algorithm = int(spec["Algorithm"]) - 1
+        patch.feedback = int(spec["Feedback"])
+        patch.transpose = 24
+        for op in patch.op:
+            op.output_level = 0
+            op.envelope.rates = [99, 99, 99, 99]
+            op.envelope.levels = [99, 99, 99, 0]
+            op.frequency_coarse = 1
+            op.frequency_fine = 0
+            op.frequency_mode = 0
+            op.detune = 7
+
+        for op_spec in spec["Operators"]:
+            op = patch.op[int(op_spec["Number"]) - 1]
+            op.output_level = int(op_spec["OutputLevel"])
+            op.frequency_coarse = int(op_spec["FrequencyCoarse"])
+            op.frequency_fine = int(op_spec["FrequencyFine"])
+            op.frequency_mode = int(op_spec["FrequencyMode"])
+            op.detune = int(op_spec["Detune"])
+            op.envelope.rates = [int(v) for v in op_spec["Rates"]]
+            op.envelope.levels = [int(v) for v in op_spec["Levels"]]
+
+        synth = DexedSynth(sample_rate=sample_rate)
+        synth.load_patch(patch)
         audio = synth.render(
             midi_note=midi_note,
             velocity=velocity,

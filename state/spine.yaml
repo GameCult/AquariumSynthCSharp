@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-14T04:34:00+01:00
+updated: 2026-05-14T05:00:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -57,6 +57,7 @@ live_invariants:
   - Recompile only for graph shape changes; vary declared parameters through the hosted DSP control API.
   - Reference fixtures must preserve provenance, license status, source hash, and feature pressure.
   - Public-domain reference fixtures and dexed-py helpers are test/development material only; the NuGet package must ship only AquariumSynth.Dsl.
+  - Project-authored Dexed patches may be generated inside tests for calibration; do not ship them in the NuGet package or treat them as runtime dependencies.
   - Listening WAV artifacts belong under ignored `artifacts/`; keep them out of NuGet and commits unless explicitly promoted as fixtures.
   - Do not consume external synth targets that cannot be backed by parity tests. Parsing is inventory; reproducing behavior through terse, readable Aquarium DSL is the proof.
   - Audio metrics are evidence, not final judgment.
@@ -68,7 +69,7 @@ reference_targets:
     priority: 1
     purpose: "Structured FM/operator graph pressure test."
     source: "https://github.com/asb2m10/dexed"
-    status: "DX7 SysEx parser, public-domain SysEx fixture, dexed-py reference rendering, first thresholded rendered parity test for analog1.syx voice 13, hard PRC SYNTH1 probe with listening WAV artifacts and log-mel <= 0.255, renderable delayed operator feedback, DX7 effective operator-level approximation, measured carrier output amplitude, isolated route index, feedback table, ratio detune lowering, ROM COM output compensation, staged operator envelopes, algorithm topology extraction, envelope-to-ADSR approximation, two Aquarium DSL rebuild attempts, first-class operator graph support, and Aquarium candidate rendering through Faust-generated C# exist."
+    status: "DX7 SysEx parser, public-domain SysEx fixture, dexed-py reference rendering, project-authored Dexed patch rendering, first thresholded rendered parity test for analog1.syx voice 13, hard PRC SYNTH1 probe with listening WAV artifacts and log-mel <= 0.255, project-authored algorithm-8 summed-stack parity, renderable delayed operator feedback, DX7 effective operator-level approximation, measured carrier output amplitude, isolated route index, feedback table, ratio detune lowering, ROM COM output compensation, staged operator envelopes, algorithm topology extraction, envelope-to-ADSR approximation, two Aquarium DSL rebuild attempts, first-class operator graph support, and Aquarium candidate rendering through Faust-generated C# exist."
     first_slice:
       - "Add a harder public-domain DX7 parity target that audibly needs operator routing."
   zynaddsubfx:
@@ -106,12 +107,13 @@ next_agent_start_here:
   recommended_first_task: >
     Listen to the latest generated PRC SYNTH1 WAVs under
     `artifacts/parity/dx7-prc-synth1`. Continue the ladder in
-    `docs/dx7-calibration-plan.md` with envelope level curve and isolated
-    summed/cascaded modulation sweeps. Single-carrier amplitude, isolated
+    `docs/dx7-calibration-plan.md` with envelope level curve calibration.
+    Single-carrier amplitude, isolated
     two-op modulation index, feedback, ratio detune, ROM COM output
     compensation, and topology-aware route lowering are now fitted or mapped;
-    the summed route scale is still hard-target calibrated rather than
-    independently swept.
+    a project-authored algorithm-8 stack test now backs the summed route scale
+    outside PRC. The attempted exponential EG level curve was cut because it
+    still failed PRC log-mel.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -124,6 +126,15 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-14
+    summary: >
+      Added test-only project-authored Dexed patch rendering and an independent
+      algorithm-8 summed-stack parity test. This backs topology-aware summed
+      route lowering outside the public-domain PRC hard target. An attempted
+      exponential DX7 EG level curve was tested and cut: it improved some
+      envelope metrics but failed PRC log-mel, so EG levels remain linear until
+      isolated envelope parity can pass without harming PRC.
+    verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore --filter \"ProjectAuthoredDx7AlgorithmEightSummedStackMeetsParityWhenInstalled|PublicDomainDx7PrcSynth1WritesListeningWavsWhenInstalled|Dx7SysExTests\": passed"
   - date: 2026-05-14
     summary: >
       Moved the remaining PRC cascaded-route scalar into
