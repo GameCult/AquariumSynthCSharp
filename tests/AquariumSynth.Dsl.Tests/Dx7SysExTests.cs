@@ -192,11 +192,20 @@ public sealed class Dx7SysExTests
             FrequencyFine: 0,
             Detune: 4));
 
-        Assert.Equal(108, operatorLevel.ScaledOutputLevel);
+        Assert.Equal(80, operatorLevel.ScaledOutputLevel);
         Assert.Equal(-5, operatorLevel.KeyScalingOffset);
         Assert.Equal(0, operatorLevel.VelocityOffset);
-        Assert.InRange(operatorLevel.LinearLevel, 0.80f, 0.81f);
+        Assert.Equal(.125f, operatorLevel.LinearLevel, 5);
         Assert.Contains("nonlinear", operatorLevel.Notes);
+    }
+
+    [Fact]
+    public void MapsDx7OutputLevelToMeasuredCarrierAmplitudeCurve()
+    {
+        Assert.Equal(1, Dx7SysEx.OperatorOutputAmplitude(99));
+        Assert.Equal(MathF.Pow(2, -1), Dx7SysEx.OperatorOutputAmplitude(91), 5);
+        Assert.Equal(MathF.Pow(2, -2), Dx7SysEx.OperatorOutputAmplitude(83), 5);
+        Assert.Equal(MathF.Pow(2, (80 - 99) / 8f), Dx7SysEx.OperatorOutputAmplitude(80), 5);
     }
 
     [Fact]

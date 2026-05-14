@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-14T03:15:00+01:00
+updated: 2026-05-14T04:04:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -25,6 +25,7 @@ current_mechanism:
   reference_rebuilds: src/AquariumSynth.Dsl/ReferenceRebuilds.cs
   tests: tests/AquariumSynth.Dsl.Tests/PatchScriptTests.cs
   doctrine: docs/audio-doctrine.md
+  dx7_calibration_plan: docs/dx7-calibration-plan.md
   roadmap: docs/reference-synth-roadmap.md
   parameter_contracts: src/AquariumSynth.Dsl/Model.cs
 
@@ -43,6 +44,8 @@ live_invariants:
   - Operator graph parameter binding also uses exact field-site paths under `/opgraphs/...`; do not add graph-wide macro routing.
   - Operator feedback must render through Faust as delayed recursion, not as a direct cyclic self-reference.
   - DX7 operator output level approximation belongs in reference import/rebuild helpers, not the generic DSL model.
+  - DX7 carrier output amplitude follows the measured `2^((outputLevel - 99) / 8)` curve; do not restore the old internal-level proxy.
+  - DX7 calibration must proceed through isolated rungs in `docs/dx7-calibration-plan.md`; do not keep tuning hard PRC-specific constants as a substitute for a level/index model.
   - Staged operator envelopes own multi-target operator level contours through `env=rl rates=... levels=...`; do not force DX7-style contours back into the general ADSR voice envelope model.
   - DX7 rate/level envelopes may lower to staged operator envelopes or labeled ADSR approximations, but exact DX7 EG timing/gain calibration remains missing pressure.
   - Recompile only for graph shape changes; vary declared parameters through the hosted DSP control API.
@@ -96,14 +99,14 @@ reference_targets:
 next_agent_start_here:
   recommended_first_task: >
     Listen to the latest generated PRC SYNTH1 WAVs under
-    `artifacts/parity/dx7-prc-synth1/<run>`. The current candidate improved on
-    log-mel by restoring the low harmonic body, but aggregate score fell because
-    zero-crossing/centroid still disagree. The next calibration should model
-    DX7 output/index scaling and algorithm output compensation rather than
-    optimizing the aggregate score.
+    Continue the ladder in `docs/dx7-calibration-plan.md` with isolated
+    two-operator modulation-index calibration. Single-carrier output amplitude
+    is now fitted; do not keep tuning PRC constants until route/index scaling is
+    measured.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
+    - docs/dx7-calibration-plan.md
     - docs/reference-synth-roadmap.md
     - state/spine.yaml
     - state/memory.json
@@ -112,6 +115,15 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-14
+    summary: >
+      Added `docs/dx7-calibration-plan.md` and completed the first calibration
+      rung. A project-authored Dexed single-carrier output-level sweep showed
+      carrier amplitude follows `2^((outputLevel - 99) / 8)`. `Dx7SysEx` now
+      exposes `OperatorOutputAmplitude` and `ApproximateOperatorLevel` uses that
+      measured curve instead of the old internal-level proxy. The PRC log-mel
+      gate is temporarily 0.26 while the next rung calibrates modulation index.
+    verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore --filter \"Dx7SysExTests|PublicDomainDx7PrcSynth1WritesListeningWavsWhenInstalled\": passed"
   - date: 2026-05-14
     summary: >
       Reoriented the hard DX7 `PRC SYNTH1` probe around log-mel distance after

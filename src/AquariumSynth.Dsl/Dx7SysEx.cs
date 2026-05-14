@@ -191,7 +191,7 @@ public static class Dx7SysEx
         int midiNote = 60,
         int velocity = 100)
     {
-        var scaled = ScaleOutLevel(op.OutputLevel);
+        var scaled = Math.Clamp(op.OutputLevel, 0, 99);
         var keyScaling = ScaleLevel(
             midiNote,
             op.BreakPoint,
@@ -200,8 +200,8 @@ public static class Dx7SysEx
             op.LeftCurve,
             op.RightCurve);
         var velocityOffset = ScaleVelocity(velocity, op.KeyVelocitySensitivity);
-        var internalLevel = Math.Max(0, (Math.Min(127, scaled + keyScaling) << 5) + velocityOffset);
-        var normalized = Math.Clamp(internalLevel / 4096f, 0, 1.5f);
+        var effectiveLevel = Math.Clamp(scaled + keyScaling + velocityOffset / 32f, 0, 99);
+        var normalized = OperatorOutputAmplitude(effectiveLevel);
 
         return new Dx7OperatorLevelApproximation(
             normalized,
@@ -210,6 +210,9 @@ public static class Dx7SysEx
             velocityOffset,
             "Approximation: DX7 output level uses nonlinear scaling plus key/velocity offsets before envelope gain.");
     }
+
+    public static float OperatorOutputAmplitude(float outputLevel) =>
+        MathF.Pow(2, (Math.Clamp(outputLevel, 0, 99) - 99) / 8f);
 
     public static Dx7RateLevelEnvelopeApproximation ApproximateRateLevelEnvelope(Dx7Envelope envelope)
     {
@@ -444,12 +447,6 @@ public static class Dx7SysEx
 
     private static float Level(int value) => Math.Clamp(value, 0, 99) / 99f;
 
-    private static int ScaleOutLevel(int outLevel)
-    {
-        var value = Math.Clamp(outLevel, 0, 99);
-        return value >= 20 ? 28 + value : LevelLookup[value];
-    }
-
     private static int ScaleVelocity(int velocity, int sensitivity)
     {
         var clampedVelocity = Math.Clamp(velocity, 0, 127);
@@ -558,11 +555,6 @@ public static class Dx7SysEx
     private static int Value(ReadOnlySpan<byte> data, int index) => SevenBit(data[index]);
 
     private static byte SevenBit(byte value) => (byte)(value & 0x7F);
-
-    private static readonly int[] LevelLookup =
-    [
-        0, 1, 3, 5, 6, 8, 10, 11, 13, 14, 16, 17, 19, 20, 21, 23, 24, 25, 27, 28
-    ];
 
     private static readonly int[] VelocityData =
     [

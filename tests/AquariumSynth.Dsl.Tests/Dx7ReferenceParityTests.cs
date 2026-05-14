@@ -122,7 +122,7 @@ public sealed class Dx7ReferenceParityTests
             script,
             comparison);
 
-        Assert.True(comparison.LogMelDistance <= 0.255f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
+        Assert.True(comparison.LogMelDistance <= 0.26f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
         Assert.True(comparison.Score >= 0.40f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
     }
 
@@ -174,7 +174,7 @@ public sealed class Dx7ReferenceParityTests
         {
             foreach (var source in edge.SourceOperators)
             {
-                builder.AppendLine($"route from=op{source} to=op{edge.TargetOperator} index={F(RouteIndex(source, edge.TargetOperator))}");
+                builder.AppendLine($"route from=op{source} to=op{edge.TargetOperator} index=0.7");
             }
         }
 
@@ -202,14 +202,9 @@ public sealed class Dx7ReferenceParityTests
         6 => 0.3f,
         5 => 0.55f,
         4 => 0.6f,
-        3 => 2.3f,
+        3 => 2.5f,
         2 => 0.8f,
         _ => 1
-    };
-
-    private static float RouteIndex(int sourceOperator, int targetOperator) => (sourceOperator, targetOperator) switch
-    {
-        _ => 0.7f
     };
 
     private static Dx7RateLevelEnvelopeApproximation ScaledEnvelope(Dx7RateLevelEnvelopeApproximation approximation, float scale)

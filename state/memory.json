@@ -22,6 +22,7 @@
       "DX7 SysEx structural parsing",
       "DX7 algorithm topology metadata",
       "DX7 effective operator-level approximation",
+      "DX7 measured carrier output amplitude curve",
       "staged operator envelope DSL",
       "DX7 envelope-to-ADSR approximation",
       "standard ADSR envelope model",
@@ -44,6 +45,7 @@
   ],
   "doctrine_refs": [
     "docs/audio-doctrine.md",
+    "docs/dx7-calibration-plan.md",
     "docs/migration-checklist.md",
     "docs/reference-synth-roadmap.md",
     "state/spine.yaml"
@@ -60,9 +62,9 @@
     "rule": "Add DSL abstractions only when reference rebuilds prove the missing invariant. Do not consume references that cannot be backed by parity tests; parsing alone is inventory, not evidence of expressivity."
   },
   "dx7_reference_path": {
-    "status": "DX7 SysEx parser extracts voice edit buffers, packed voices, packed 32-voice banks, six operators, envelopes, algorithm, feedback, oscillator sync, LFO, transpose, voice name, checksum validation, ReferencePatch features, algorithm topology from the reverse-engineered OPS algorithm ROM table, envelope-to-ADSR approximations, effective operator-level approximations, staged operator envelopes, two Aquarium DSL rebuild attempts, first-class OperatorGraph support, public-domain SysEx fixture coverage, dexed-py reference rendering, Aquarium candidate rendering through Faust-generated C#, one thresholded rendered parity test for analog1.syx voice 13, a hard PRC SYNTH1 parity probe with listening WAV artifacts and log-mel <= 0.255, and renderable delayed operator feedback.",
-    "lesson": "Algorithm 32's additive six-carrier shape maps cleanly to six Aquarium voices. Algorithm 8 justified OperatorGraph: operators, modulation edges, carriers, and feedback belong to a graph authority, not Voice fields. The first rendered parity rung is behavioral and sine-like, not exact DX7 operator execution. A harder algorithm-8 target exposed that feedback must be delayed recursion in Faust, not a direct cyclic self-reference. Static DX7 output-level approximation helps import/rebuild math but does not solve hard parity alone. Staged operator envelopes now let Aquarium express four-rate/four-level contours in readable DSL. PRC SYNTH1 listening proved aggregate score can reward the wrong thing; the current probe gates on log-mel and restores low harmonic body, but zero-crossing/centroid mismatch still exposes weak DX7 output/index scaling.",
-    "next": "Use PRC SYNTH1 listening artifacts and spectral peaks to calibrate DX7 output/index scaling or algorithm output compensation before adding new DSL surface."
+    "status": "DX7 SysEx parser extracts voice edit buffers, packed voices, packed 32-voice banks, six operators, envelopes, algorithm, feedback, oscillator sync, LFO, transpose, voice name, checksum validation, ReferencePatch features, algorithm topology from the reverse-engineered OPS algorithm ROM table, envelope-to-ADSR approximations, measured carrier output amplitude, staged operator envelopes, two Aquarium DSL rebuild attempts, first-class OperatorGraph support, public-domain SysEx fixture coverage, dexed-py reference rendering, Aquarium candidate rendering through Faust-generated C#, one thresholded rendered parity test for analog1.syx voice 13, a hard PRC SYNTH1 parity probe with listening WAV artifacts and log-mel <= 0.26, and renderable delayed operator feedback.",
+    "lesson": "Algorithm 32's additive six-carrier shape maps cleanly to six Aquarium voices. Algorithm 8 justified OperatorGraph: operators, modulation edges, carriers, and feedback belong to a graph authority, not Voice fields. The first rendered parity rung is behavioral and sine-like, not exact DX7 operator execution. A harder algorithm-8 target exposed that feedback must be delayed recursion in Faust, not a direct cyclic self-reference. Static DX7 output-level approximation helped import/rebuild math but was mathematically wrong for carrier amplitude. A single-carrier Dexed sweep shows carrier amplitude follows 2^((outputLevel - 99) / 8). Staged operator envelopes now let Aquarium express four-rate/four-level contours in readable DSL. PRC SYNTH1 still exposes weak modulation-index and output-compensation calibration.",
+    "next": "Follow docs/dx7-calibration-plan.md: calibrate single-carrier amplitude, two-op modulation index, feedback, envelope level curve, and algorithm output compensation before adding new DSL surface or continuing PRC-specific tuning."
   },
   "note_and_envelope_model": {
     "rule": "Notes own frequency, gate duration, and host/MIDI source. Envelopes own ADSR level shape.",
@@ -77,7 +79,7 @@
   },
   "last_verified": {
     "command": "dotnet test AquariumSynthCSharp.slnx --no-restore",
-    "result": "54 passed with AQUARIUM_DX7_PYTHON set to bundled Python",
-    "commit": "pending PRC SYNTH1 log-mel calibration"
+    "result": "55 passed with AQUARIUM_DX7_PYTHON set to bundled Python",
+    "commit": "pending DX7 carrier output calibration"
   }
 }

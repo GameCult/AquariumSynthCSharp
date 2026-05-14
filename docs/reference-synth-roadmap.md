@@ -87,7 +87,9 @@ First deliverable:
   showed aggregate score was a weak judge for this target, so the hard PRC
   probe now gates primarily on log-mel distance; remaining mismatch points at
   DX7 output/index scaling and algorithm output compensation rather than a
-  missing authoring syntax.
+  missing authoring syntax. The calibration ladder lives in
+  [dx7-calibration-plan.md](dx7-calibration-plan.md) and should be followed
+  before more PRC-specific tuning.
 
 Source: [Dexed](https://github.com/asb2m10/dexed)
 

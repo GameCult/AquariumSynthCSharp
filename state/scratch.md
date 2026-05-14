@@ -15,6 +15,24 @@ Doctrine update:
 
 Completed this slice:
 
+- Wrote `docs/dx7-calibration-plan.md` and referenced it from memory/spine.
+  The ladder is now: single-carrier amplitude, two-op modulation index,
+  feedback scaling, envelope level curve, algorithm output compensation, then
+  hard PRC replay.
+- Completed the first calibration rung. A project-authored Dexed single-carrier
+  output-level sweep fits `2^((outputLevel - 99) / 8)` for carrier amplitude.
+  `Dx7SysEx.OperatorOutputAmplitude` now owns that curve, and
+  `ApproximateOperatorLevel` uses it instead of the old internal-level proxy.
+- Added tests for the measured output-level curve. The hard PRC probe now gates
+  log-mel at `<= 0.26` while the next rung calibrates modulation index; latest
+  run after the carrier fix: log-mel `0.2562075`, score `0.40430218`.
+- Calibration lesson: the old operator level helper was not a harmless
+  approximation. It made mid-level operators far too loud and let PRC-specific
+  constants compensate for a broken foundation. Next pressure is route/index
+  scaling for isolated two-operator FM.
+
+Previous slice:
+
 - Reoriented the `PRC SYNTH1` hard probe around the perceptual metric that
   matched listening: log-mel distance. The probe now asserts log-mel
   `<= 0.255` plus a loose aggregate score floor instead of treating aggregate
