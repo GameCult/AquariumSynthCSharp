@@ -35,7 +35,8 @@ function Invoke-GitProbe([string[]]$Arguments) {
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\.."))
 $zynRoot = Join-Path $repoRoot "external\zynaddsubfx"
 $workSource = [System.IO.Path]::GetFullPath((Join-Path $repoRoot $SourceDir))
-$patchPath = Join-Path $PSScriptRoot "patches\0001-msys-part-constructor.patch"
+$patchRoot = Join-Path $PSScriptRoot "patches"
+$referenceSource = Join-Path $PSScriptRoot "ZynPadReference.cpp"
 $bash = Join-Path $MsysRoot "usr\bin\bash.exe"
 
 if (-not (Test-Path $bash)) {
@@ -61,19 +62,23 @@ if ($LASTEXITCODE -gt 7) {
     throw "Failed to copy Zyn source to $workSource"
 }
 
-$applyCheck = Invoke-GitProbe @("-C", $workSource, "apply", "--check", $patchPath)
-if ($applyCheck -eq 0) {
-    & git -C $workSource apply $patchPath
-    if ($LASTEXITCODE -ne 0) { throw "Failed to apply Zyn build patch." }
-    Write-Host "Applied Zyn build patch to artifact source."
-}
-else {
-    $reverseCheck = Invoke-GitProbe @("-C", $workSource, "apply", "--reverse", "--check", $patchPath)
-    if ($reverseCheck -eq 0) {
-        Write-Host "Zyn artifact source already has build patch."
+Copy-Item -LiteralPath $referenceSource -Destination (Join-Path $workSource "src\Tests\ZynPadReference.cpp") -Force
+
+foreach ($patchPath in Get-ChildItem -LiteralPath $patchRoot -Filter "*.patch" | Sort-Object Name | Select-Object -ExpandProperty FullName) {
+    $applyCheck = Invoke-GitProbe @("-C", $workSource, "apply", "--check", $patchPath)
+    if ($applyCheck -eq 0) {
+        & git -C $workSource apply $patchPath
+        if ($LASTEXITCODE -ne 0) { throw "Failed to apply Zyn build patch: $patchPath" }
+        Write-Host "Applied Zyn build patch to artifact source: $(Split-Path $patchPath -Leaf)"
     }
     else {
-        throw "Zyn build patch cannot be applied cleanly to $workSource and is not already applied."
+        $reverseCheck = Invoke-GitProbe @("-C", $workSource, "apply", "--reverse", "--check", $patchPath)
+        if ($reverseCheck -eq 0) {
+            Write-Host "Zyn artifact source already has build patch: $(Split-Path $patchPath -Leaf)"
+        }
+        else {
+            throw "Zyn build patch cannot be applied cleanly to $workSource and is not already applied: $patchPath"
+        }
     }
 }
 
@@ -92,6 +97,7 @@ cmake -S "$sourceUnix" -B "$buildUnix" -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   -DWerror=OFF
 cmake --build "$buildUnix" --target PadNoteTest -j 4
+cmake --build "$buildUnix" --target ZynPadReference -j 4
 ctest --test-dir "$buildUnix" -R PadNoteTest --output-on-failure
 "@
 
