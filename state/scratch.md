@@ -15,6 +15,19 @@ Doctrine update:
 
 Completed this slice:
 
+- Tightened `ANLGSYN 1` after listening caught the `deeooh` failure: the
+  max-feedback candidate had a better attack but lost sustained buzz midway.
+- Added conditional output nonlinearity in the DX7 probe lowering:
+  `soft_clip=true` only when a voice has DX7 feedback `7` and a self-feedback
+  topology. PRC stays `soft_clip=false`.
+- Fresh `ANLGSYN 1`: score `.70946133`, log-mel `.18456098`, envelope
+  `.10628832`, RMS `.9816304`, zero-crossing `.8657629`, centroid `.95726264`.
+- Fresh PRC after the conditional clip gate: score `.7546429`, log-mel
+  `.13874851`, envelope `.067291394`, RMS `.99121606`, zero-crossing
+  `.95325506`.
+
+Previous slice:
+
 - Retuned DX7 max-feedback lowering for `ANLGSYN 1`. Route-index sweeps did not
   materially improve the missing high-band buzz; hotter feedback did.
 - Changed only feedback value `7` from `.66` to `2.2`. Feedback value `5`
@@ -29,7 +42,7 @@ Completed this slice:
   `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
   73 passed.
 
-Previous slice:
+Earlier slice:
 
 - Fixed DX7 fixed-frequency operator lowering after `ANLGSYN 1` exposed the
   missing buzzing modulation. The old lowering treated fixed mode as a fake

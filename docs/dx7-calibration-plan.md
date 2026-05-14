@@ -130,6 +130,11 @@ math is still fake in the places that matter perceptually.
      Aquarium feedback `2.2`, while feedback value `5` remains at `0.19` for
      the hard PRC target. The hotter value restores much more of the 1.2-5 kHz
      buzzing-harmonic band, with envelope/RMS still imperfect.
+   - Listening then caught that the max-feedback candidate still lost punch
+     halfway through the note. The accepted lowering now enables Aquarium's
+     existing output `soft_clip` only for voices with max DX7 feedback and a
+     self-feedback topology. That keeps the ANLGSYN buzz alive without applying
+     output nonlinearity to the hard PRC feedback-5 target.
    - A first survey also tried `DX1 LEAD B`, `MELLOWSOLO`, and `RES SYNTH1`;
      they were left out of the passing gate because listening and
      log-mel/zero-crossing evidence do not justify calling them parity yet.

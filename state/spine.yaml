@@ -144,6 +144,17 @@ next_agent_start_here:
 completed_slices:
   - date: 2026-05-14
     summary: >
+      Tightened the `ANLGSYN 1` parity rung after listening caught the remaining
+      `deeooh` failure: the hotter feedback attack was close, but sustained
+      high-band buzz collapsed midway through the note. The DX7 probe lowering
+      now enables Aquarium's existing output soft clip only for max-feedback
+      voices with a self-feedback topology. PRC remains `soft_clip=false`.
+      Latest `ANLGSYN 1`: score 0.70946133, log-mel 0.18456098, envelope
+      0.10628832, RMS ratio 0.9816304, zero-crossing 0.8657629. Latest PRC:
+      score 0.7546429, log-mel 0.13874851, envelope 0.067291394.
+    verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore: 73 passed"
+  - date: 2026-05-14
+    summary: >
       Retuned DX7 max-feedback lowering after listening found `ANLGSYN 1` still
       sounded like `woooh` instead of Dexed's buzzier `deeeh`. Route-index
       sweeps did not help; increasing only DX7 feedback value 7 from 0.66 to

@@ -183,10 +183,10 @@ public sealed class Dx7ReferenceParityTests
 
         var report = $"{ParityReport(result.Value.Comparison)}{Environment.NewLine}artifacts: {result.Value.ArtifactDir}";
 
-        Assert.True(result.Value.Comparison.LogMelDistance <= 0.25f, report);
-        Assert.True(result.Value.Comparison.EnvelopeDistance <= 0.17f, report);
+        Assert.True(result.Value.Comparison.LogMelDistance <= 0.20f, report);
+        Assert.True(result.Value.Comparison.EnvelopeDistance <= 0.12f, report);
         Assert.InRange(result.Value.Comparison.ZeroCrossingRatio, 0.8f, 1.2f);
-        Assert.True(result.Value.Comparison.Score >= 0.6f, report);
+        Assert.True(result.Value.Comparison.Score >= 0.7f, report);
     }
 
     [Fact]
@@ -369,7 +369,7 @@ public sealed class Dx7ReferenceParityTests
         var builder = new StringBuilder();
         builder.AppendLine("patch");
         builder.AppendLine("    gain=1.4");
-        builder.AppendLine("    soft_clip=false");
+        builder.AppendLine($"    soft_clip={F(NeedsDx7OutputNonlinearity(voice, topology))}");
         builder.AppendLine();
         builder.AppendLine("opgraph");
         builder.AppendLine($"    name={graphName}");
@@ -703,6 +703,11 @@ public sealed class Dx7ReferenceParityTests
 
     private static string F(float value) =>
         value.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static string F(bool value) => value ? "true" : "false";
+
+    private static bool NeedsDx7OutputNonlinearity(Dx7Voice voice, Dx7AlgorithmTopology topology) =>
+        voice.Feedback >= 7 && topology.SelfFeedbackOperators.Count > 0;
 
     private static string SafeName(string value)
     {
