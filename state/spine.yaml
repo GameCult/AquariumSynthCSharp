@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-13T19:38:00+01:00
+updated: 2026-05-14T00:48:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -59,7 +59,7 @@ reference_targets:
     priority: 1
     purpose: "Structured FM/operator graph pressure test."
     source: "https://github.com/asb2m10/dexed"
-    status: "DX7 SysEx parser, public-domain SysEx fixture, dexed-py reference rendering, first thresholded rendered parity test for analog1.syx voice 13, hard PRC SYNTH1 probe with listening WAV artifacts, renderable delayed operator feedback, DX7 effective operator-level approximation, staged operator envelopes, algorithm topology extraction, envelope-to-ADSR approximation, two Aquarium DSL rebuild attempts, first-class operator graph support, and Aquarium candidate rendering through Faust-generated C# exist."
+    status: "DX7 SysEx parser, public-domain SysEx fixture, dexed-py reference rendering, first thresholded rendered parity test for analog1.syx voice 13, hard PRC SYNTH1 probe with listening WAV artifacts and score >= 0.60, renderable delayed operator feedback, DX7 effective operator-level approximation, staged operator envelopes, algorithm topology extraction, envelope-to-ADSR approximation, two Aquarium DSL rebuild attempts, first-class operator graph support, and Aquarium candidate rendering through Faust-generated C# exist."
     first_slice:
       - "Add a harder public-domain DX7 parity target that audibly needs operator routing."
   zynaddsubfx:
@@ -95,10 +95,11 @@ reference_targets:
 
 next_agent_start_here:
   recommended_first_task: >
-    Listen to the generated PRC SYNTH1 WAVs under
-    `artifacts/parity/dx7-prc-synth1`, then use the audible mismatch plus the
-    score report to decide whether the next calibration pass should target
-    output gain/index scaling, frequency ratio/detune, or EG curve shape.
+    Listen to the latest generated PRC SYNTH1 WAVs under
+    `artifacts/parity/dx7-prc-synth1/<run>`. The current candidate passes the
+    modest hard-target metric floor, but log-mel/timbre still lag; the next
+    calibration should target DX7 output/index scaling or algorithm output
+    compensation before adding any new DSL surface.
   must_read:
     - AGENTS.md
     - docs/audio-doctrine.md
@@ -110,6 +111,15 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-14
+    summary: >
+      Tightened the hard DX7 `PRC SYNTH1` probe to require score >= 0.60 and
+      improved the candidate to 0.6057491. The useful calibration cuts were
+      removing Aquarium soft clipping, setting the graph base frequency to 392,
+      and boosting the op3 carrier branch for algorithm-8 output/body balance.
+      Global detune and per-edge route damping were tested and cut because they
+      made the metrics worse.
+    verification: "AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore --filter PublicDomainDx7PrcSynth1WritesListeningWavsWhenInstalled: passed"
   - date: 2026-05-13
     summary: >
       Added a hard DX7 `PRC SYNTH1` rendered parity probe that emits listening

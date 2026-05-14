@@ -113,7 +113,7 @@ public sealed class Dx7ReferenceParityTests
 
         var comparison = new AudioAnalyzer(new AudioAnalysisConfig(SampleRate: reference.SampleRate))
             .Compare(reference.Samples, candidate.Samples);
-        var artifactDir = ArtifactPath("parity", "dx7-prc-synth1");
+        var artifactDir = ArtifactPath("parity", "dx7-prc-synth1", DateTimeOffset.UtcNow.ToString("yyyyMMddTHHmmssfff", System.Globalization.CultureInfo.InvariantCulture));
         WriteListeningArtifacts(
             artifactDir,
             reference.Samples,
@@ -122,7 +122,7 @@ public sealed class Dx7ReferenceParityTests
             script,
             comparison);
 
-        Assert.True(comparison.Score >= 0.40f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
+        Assert.True(comparison.Score >= 0.60f, $"{ParityReport(comparison)}{Environment.NewLine}artifacts: {artifactDir}");
     }
 
     private static string FixturePath(params string[] parts) =>
@@ -146,17 +146,17 @@ public sealed class Dx7ReferenceParityTests
         var builder = new StringBuilder();
         builder.AppendLine("patch");
         builder.AppendLine("    gain=2.0");
-        builder.AppendLine("    soft_clip=true");
+        builder.AppendLine("    soft_clip=false");
         builder.AppendLine();
         builder.AppendLine("opgraph");
         builder.AppendLine("    name=dx7_prc_synth1_probe");
-        builder.AppendLine("    freq=440");
+        builder.AppendLine("    freq=392");
         builder.AppendLine("    gain=0.55");
         builder.AppendLine();
 
         foreach (var op in voice.Operators.OrderByDescending(op => op.Number))
         {
-            var level = Dx7SysEx.ApproximateOperatorLevel(op).LinearLevel;
+            var level = Dx7SysEx.ApproximateOperatorLevel(op).LinearLevel * CarrierLevelScale(op.Number);
             var envelope = ScaledEnvelope(Dx7SysEx.ApproximateRateLevelEnvelope(op.Envelope), 0.62f);
             builder.AppendLine($"operator name=op{op.Number}");
             builder.AppendLine($"    ratio={F(Dx7Ratio(op))}");
@@ -195,6 +195,12 @@ public sealed class Dx7ReferenceParityTests
         var coarse = op.FrequencyCoarse == 0 ? 0.5f : op.FrequencyCoarse;
         return coarse * (1 + op.FrequencyFine / 100f);
     }
+
+    private static float CarrierLevelScale(int operatorNumber) => operatorNumber switch
+    {
+        3 => 1.45f,
+        _ => 1
+    };
 
     private static Dx7RateLevelEnvelopeApproximation ScaledEnvelope(Dx7RateLevelEnvelopeApproximation approximation, float scale)
     {

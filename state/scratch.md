@@ -15,6 +15,21 @@ Doctrine update:
 
 Completed this slice:
 
+- Tightened the hard DX7 `PRC SYNTH1` probe from a "writes WAVs" smoke test to
+  a modest passing parity target: threshold now requires score >= `0.60`.
+- The useful cuts were not new syntax. The candidate improved by removing
+  patch soft clipping, setting the graph base frequency to `392`, and boosting
+  the `op3` carrier branch to compensate the algorithm-8 output/body balance.
+  Global detune and per-edge route damping both made the score worse and were
+  cut.
+- Current best run with bundled Python and Faust writes timestamped artifacts
+  under `artifacts/parity/dx7-prc-synth1/<run>/`: score `0.6057491`,
+  log-mel distance `0.27658066`, envelope distance `0.38489524`, duration
+  ratio `0.98714787`, RMS ratio `0.9756519`, zero-crossing ratio `1.0458903`,
+  centroid ratio `1.093785`.
+
+Previous slice:
+
 - Added a hard DX7 `PRC SYNTH1` rendered parity probe that writes listening
   artifacts when `dexed-py` and Faust are available:
   `artifacts/parity/dx7-prc-synth1/reference-dexed.wav`,
