@@ -832,9 +832,8 @@ public static class BuiltInScripts
         layer name=pad_high engine=pad min_key=48 max_key=108 gain=0.044 vibrato=0.009 vibrato_hz=0.11 env=rl rates=0.42,0.58,0.9,1.25 levels=1,0.84,0.72,0 curves=lin,exp,lin,lin gate=1.9
         layer name=air engine=add min_key=0 max_key=127 gain=0.018 wave=noise noise=0.82 env=rl rates=0.8,0.6,1.1,1.1 levels=1,0.82,0.55,0 curves=lin,lin,exp,lin gate=2.5 lpf=0.36 hpf=0.22
 
-        voice layer=pad_low freq=130.8128
-        voice layer=pad_low freq=196 gain=0.052 vibrato=0.012 vibrato_hz=0.13
-        voice layer=pad_high freq=261.6256 wave=triangle
+        spectrum layer=pad_low root=130.8128 spread=0.012 partials=1:0.07,1.5:0.052
+        spectrum layer=pad_high root=261.6256 spread=0.009 partials=1:0.044 wave=triangle
         voice layer=air freq=1800
         """;
 

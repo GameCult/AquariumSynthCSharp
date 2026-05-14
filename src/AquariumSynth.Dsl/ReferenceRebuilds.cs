@@ -42,16 +42,17 @@ public static class ReferenceRebuildCatalog
             [
                 new("engine_pad", "1", "Approximated as slow layered oscillators plus an air/noise layer."),
                 new("named_layers", "pad_low,pad_high,air", "Layer declarations separate PAD body from air/noise texture."),
+                new("pad_spectral_source", "2 spectral banks / 3 partials", "PAD layers declare spectral partial clouds before lowering to detuned Aquarium voices."),
                 new("filter_count", "1", "Represented with low-pass/high-pass field sites."),
                 new("free_envelope_count", "1", "Approximated with staged voice rate/level envelopes and macro spread."),
                 new("voice_rate_level_envelope", "3", "PAD body and air layers use staged rate/level envelopes attached through layer defaults."),
                 new("slow_modulation", "patch_lfo", "The rebuild adds slow patch modulation because PAD texture wants motion even though the minimal fixture only marks PAD/filter/free-envelope pressure.")
             ],
             [
-                new("pad_spectral_source", "PADsynth wavetable/spectral generation", "Aquarium has no PAD-style spectral source; this rebuild is a texture approximation."),
+                new("padsynth_wavetable_exactness", "PADsynth FFT/wavetable generation", "Aquarium has spectral source syntax, but it lowers to detuned voices rather than generating a PADsynth wavetable."),
                 new("free_envelope_shape", "arbitrary Zyn envelope points", "Aquarium has staged voice envelopes now, but not arbitrary point/free-mode Zyn envelope curves.")
             ],
-            "This is pressure, not a claim of PAD parity. The current voice DSL can sketch the texture, but PAD-style spectral generation deserves its own source authority if repeated targets need it."),
+            "This is pressure, not a claim of PADsynth parity. Aquarium can now state a layered spectral cloud, while exact PAD wavetable generation remains separate pressure."),
         new(
             "zyn/project-vocal-layer/aquarium",
             "zynaddsubfx",

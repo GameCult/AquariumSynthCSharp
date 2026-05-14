@@ -259,6 +259,10 @@ public sealed class PatchScriptTests
             Assert.NotEmpty(rebuild.MatchedFeatures);
             Assert.NotEmpty(rebuild.MissingFeatures);
             Assert.Contains(rebuild.MatchedFeatures, feature => feature.Name == "named_layers");
+            if (rebuild.ReferenceId == "zyn/project/pad-texture")
+            {
+                Assert.NotEmpty(patch.SpectralBanks);
+            }
             if (rebuild.ReferenceId is "zyn/project/pad-texture" or "zyn/project/vocal-layer")
             {
                 Assert.Contains(patch.Voices, voice => voice.RateLevelEnvelope is not null);
@@ -379,6 +383,48 @@ public sealed class PatchScriptTests
         Assert.Equal(.5f, voice.Envelope.SustainLevel, 5);
         Assert.Equal(RateLevelCurve.Exponential, voice.RateLevelEnvelope.Curve2);
         Assert.Contains("rl4_env(0.1, 1, 0, 0.2, 0.8, 1, 0.3, 0.5, 1, 0.4, 0, 0, patch_param_0)", export.Source);
+    }
+
+    [Fact]
+    public void SpectralBankSyntaxExpandsPadPartialCloud()
+    {
+        var patch = PatchScript.Parse("""
+            layer name=pad engine=pad gain=.08 wave=saw env=rl rates=.1,.2,.3,.4 levels=1,.8,.5,0 gate=.9
+            spectrum layer=pad root=100 spread=.01 partials=1:.08,1.5:.04
+            """);
+        var export = FaustEmitter.Emit(patch);
+
+        var bank = Assert.Single(patch.SpectralBanks);
+        Assert.Equal("pad", bank.LayerName);
+        Assert.Equal(100, bank.RootFrequencyHz);
+        Assert.Equal(.01f, bank.SpreadRatio, 5);
+        Assert.Equal(2, bank.Partials.Count);
+        Assert.Equal(4, patch.Voices.Count);
+        Assert.All(patch.Voices, voice => Assert.Equal("pad", voice.Layer?.Name));
+        Assert.All(patch.Voices, voice => Assert.NotNull(voice.RateLevelEnvelope));
+        Assert.Equal([99, 101, 148.5f, 151.5f], patch.Voices.Select(voice => voice.Oscillator.FrequencyHz).ToArray());
+        Assert.Equal(.04f, patch.Voices[0].Gain, 5);
+        Assert.Equal(.04f, patch.Voices[1].Gain, 5);
+        Assert.Equal(.02f, patch.Voices[2].Gain, 5);
+        Assert.Equal(.02f, patch.Voices[3].Gain, 5);
+        Assert.Contains("process =", export.Source);
+    }
+
+    [Fact]
+    public void SpectralBankSyntaxRejectsUnknownLayerOrBadSpread()
+    {
+        Assert.Throws<PatchScriptException>(() =>
+            PatchScript.Parse("spectrum layer=missing root=110 partials=1:.5"));
+
+        Assert.Throws<PatchScriptException>(() => PatchScript.Parse("""
+            layer name=pad
+            spectrum layer=pad root=110 spread=-.01 partials=1:.5
+            """));
+
+        Assert.Throws<PatchScriptException>(() => PatchScript.Parse("""
+            layer name=pad
+            spectrum layer=pad root=110 spread=1 partials=1:.5
+            """));
     }
 
     [Fact]

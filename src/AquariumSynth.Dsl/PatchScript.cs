@@ -36,6 +36,7 @@ public static class PatchScript
         private readonly List<ParameterBinding> _parameterBindings = [];
         private readonly List<PatchLayer> _layers = [];
         private readonly List<HarmonicBank> _harmonicBanks = [];
+        private readonly List<SpectralBank> _spectralBanks = [];
         private readonly Dictionary<string, string> _defaults = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, Dictionary<string, string>> _layerDefaults = new(StringComparer.OrdinalIgnoreCase);
         private PendingOperatorGraph? _pendingOperatorGraph;
@@ -56,6 +57,7 @@ public static class PatchScript
                 Voices = Voices,
                 Layers = _layers,
                 HarmonicBanks = _harmonicBanks,
+                SpectralBanks = _spectralBanks,
                 OperatorGraphs = _operatorGraphs,
                 Controls = _controls,
                 Parameters = _parameters,
@@ -102,6 +104,10 @@ public static class PatchScript
                 case "harmonics":
                     FlushPendingOperatorGraph();
                     AddHarmonicBank(fields, line);
+                    break;
+                case "spectrum":
+                    FlushPendingOperatorGraph();
+                    AddSpectralBank(fields, line);
                     break;
                 case "voice":
                     FlushPendingOperatorGraph();
@@ -186,6 +192,79 @@ public static class PatchScript
                 };
                 Voices.Add(ParseVoice(ExpandVoiceFields(voiceFields, line), Voices.Count, line));
             }
+        }
+
+        private void AddSpectralBank(IReadOnlyDictionary<string, string> fields, int line)
+        {
+            var layerName = Required(fields, "layer", line);
+            if (!_layerDefaults.ContainsKey(layerName))
+            {
+                throw new PatchScriptException(line, $"unknown layer `{layerName}`");
+            }
+
+            var rootFrequency = GetFloat(fields, line, 440, "root", "base", "freq", "frequency");
+            if (rootFrequency <= 0)
+            {
+                throw new PatchScriptException(line, "spectral root frequency must be greater than zero");
+            }
+
+            var spread = GetFloat(fields, line, 0, "spread", "width", "detune");
+            if (spread is < 0 or >= 1)
+            {
+                throw new PatchScriptException(line, "spectral spread must be at least zero and less than one");
+            }
+
+            var partials = ParseHarmonicPartials(
+                GetAny(fields, ["partials", "bank", "tones"], ""),
+                line);
+            if (partials.Count == 0)
+            {
+                throw new PatchScriptException(line, "spectrum needs at least one partial");
+            }
+
+            _spectralBanks.Add(new SpectralBank(layerName, rootFrequency, spread, partials));
+
+            var sharedFields = Without(fields,
+                "layer",
+                "root",
+                "base",
+                "freq",
+                "frequency",
+                "spread",
+                "width",
+                "detune",
+                "partials",
+                "bank",
+                "tones",
+                "gain",
+                "g");
+            foreach (var partial in partials)
+            {
+                if (spread == 0)
+                {
+                    AddSpectralVoice(sharedFields, layerName, rootFrequency * partial.Ratio, partial.Gain, line);
+                    continue;
+                }
+
+                AddSpectralVoice(sharedFields, layerName, rootFrequency * partial.Ratio * (1 - spread), partial.Gain * 0.5f, line);
+                AddSpectralVoice(sharedFields, layerName, rootFrequency * partial.Ratio * (1 + spread), partial.Gain * 0.5f, line);
+            }
+        }
+
+        private void AddSpectralVoice(
+            IReadOnlyDictionary<string, string> sharedFields,
+            string layerName,
+            float frequency,
+            float gain,
+            int line)
+        {
+            var voiceFields = new Dictionary<string, string>(sharedFields, StringComparer.OrdinalIgnoreCase)
+            {
+                ["layer"] = layerName,
+                ["freq"] = F(frequency),
+                ["gain"] = F(gain)
+            };
+            Voices.Add(ParseVoice(ExpandVoiceFields(voiceFields, line), Voices.Count, line));
         }
 
         private Dictionary<string, string> ExpandVoiceFields(Dictionary<string, string> fields, int line)
@@ -982,6 +1061,7 @@ public static class PatchScript
         "def" or "t" or "template" => "template",
         "layer" or "kit" => "layer",
         "harmonics" or "partials" or "drawbars" => "harmonics",
+        "spectrum" or "spectral" or "padsource" or "pad_source" => "spectrum",
         "v" or "voice" => "voice",
         "opgraph" or "ops" or "operators" => "opgraph",
         "operator" or "op" => "operator",

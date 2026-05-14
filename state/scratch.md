@@ -15,6 +15,25 @@ Doctrine update:
 
 Completed this slice:
 
+- Added PAD spectral-cloud syntax attached to named layers:
+  `spectrum layer=pad_low root=130.8128 spread=.012 partials=1:.07,1.5:.052`.
+- The parser preserves each bank as `SpectralBank` model data, then lowers
+  each partial to detuned voice pairs. `root`, `spread`, and `partials` are
+  authoring-time graph shape, not runtime controls.
+- Converted the Zyn PAD texture rebuild from individual PAD body voices to two
+  spectral banks under `pad_low` and `pad_high`; the air/noise layer remains a
+  normal voice.
+- This is not exact PADsynth FFT/wavetable generation. It is a source-level
+  partial-cloud authority for readable PAD rebuilds.
+- Focused verification passed:
+  `dotnet test tests\AquariumSynth.Dsl.Tests\AquariumSynth.Dsl.Tests.csproj --no-restore --filter "FullyQualifiedName~SpectralBank|FullyQualifiedName~ZynStyleReferenceRebuildsParseExportAndDeclarePressure|FullyQualifiedName~BuiltInReferenceScriptsParseAndExportFaust"`:
+  4 passed.
+- Full verification with bundled Python/dexed-py:
+  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  93 passed.
+
+Previous slice:
+
 - Promoted staged rate/level envelopes to normal voices and layer defaults.
   Voice fields now accept `env=rl rates=... levels=... curves=... gate=...`;
   the model stores `Voice.RateLevelEnvelope`, and Faust emission uses

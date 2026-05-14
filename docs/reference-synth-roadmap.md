@@ -120,10 +120,11 @@ First deliverable:
   effects.
 - Rebuild one additive lead, one PAD texture, and one formant/vocal patch. The
   first rebuild catalog entries now parse/export and record the first Zyn
-  missing abstractions. Named layers, additive harmonic-bank syntax, and staged
-  rate/level envelopes for normal voices now exist; PAD-style spectral source
-  generation, arbitrary Zyn free-envelope point curves, fuller kit/effect
-  routing, and richer formant/vowel morphing remain pressure.
+  missing abstractions. Named layers, additive harmonic-bank syntax, PAD
+  spectral-cloud syntax, and staged rate/level envelopes for normal voices now
+  exist; exact PADsynth wavetable generation, arbitrary Zyn free-envelope point
+  curves, fuller kit/effect routing, and richer formant/vowel morphing remain
+  pressure.
 
 Do not vendor the upstream Zyn instrument-bank submodule until its preset
 license/provenance is explicit enough for this repo. Use project-authored
@@ -159,6 +160,18 @@ voice layer=pad freq=220
 This promotes the envelope authority already used by operator graphs into the
 voice path. It is enough to express layered PAD/vocal onset and release shapes,
 but it is not yet a Zyn free-envelope point editor.
+
+The fourth response is `spectrum`: PAD layers can declare a source-level partial
+cloud that lowers to detuned voice pairs:
+
+```text
+layer name=pad_low engine=pad
+spectrum layer=pad_low root=130.8128 spread=.012 partials=1:.07,1.5:.052
+```
+
+This gives PAD texture targets a reusable source authority without claiming
+exact PADsynth FFT/wavetable generation. `root`, `spread`, and `partials` are
+authoring-time graph shape, not runtime controls.
 
 Sources:
 

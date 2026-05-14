@@ -98,3 +98,15 @@ voice layer=pad freq=220
 That gives PAD and vocal layers asymmetric contour authority without returning
 to anonymous ADSR piles. Arbitrary Zyn free-envelope point curves remain
 pressure; the staged surface is the first coherent rung, not the whole ladder.
+
+PAD layers now have a spectral-cloud source command:
+
+```text
+layer name=pad_low engine=pad
+spectrum layer=pad_low root=130.8128 spread=.012 partials=1:.07,1.5:.052
+```
+
+The command records PAD-like partial intent under the layer and lowers it to
+detuned voice pairs. This is not a PADsynth wavetable generator. It is the
+smallest honest source authority needed before exact PAD synthesis earns its
+own machinery.
