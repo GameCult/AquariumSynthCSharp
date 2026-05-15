@@ -224,9 +224,10 @@ public static class FaustEmitter
         var hpf = $"clip01({parameters.Expression(OwnerField(ownerPath, "filter/hpf"), voice.Filter.HighPass)} * (1.0 + {parameters.Expression(OwnerField(ownerPath, "filter/hpf_ramp"), voice.Filter.HighPassRamp)} * age * 2.0) + patch_mod_hpf + {hpfMod})";
         var hasResonance = voice.Filter.LowPassResonance > 0 || parameters.IsBound(OwnerField(ownerPath, "filter/resonance"));
         var resonance = parameters.Expression(OwnerField(ownerPath, "filter/resonance"), voice.Filter.LowPassResonance);
+        var lowPassOrder = Math.Clamp(voice.Filter.LowPassOrder, 1, 12);
         var lowpass = hasResonance
             ? $"fi.resonlp(max(20.0, {lpf} * 18000.0), 0.7 + clip01({resonance}) * 18.0, 1.0)"
-            : $"fi.lowpass(1, max(20.0, {lpf} * 18000.0))";
+            : $"fi.lowpass({lowPassOrder}, max(20.0, {lpf} * 18000.0))";
 
         source.AppendLine($"{name}_freq = {frequency};");
         source.AppendLine($"{name}_osc = {oscillator};");

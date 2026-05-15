@@ -105,6 +105,15 @@ Current user-ear correction:
   `doublepadbass_0 lpf=0.003325` and `doublepadbass_1 lpf=0.047225`. The
   character should now be deep-bass-first; remaining pressure is filter
   envelope/level recovery, not more static high-band brightness.
+- User still heard Aqua as kazoo-first. The next missing authority was not
+  brightness but pitch: DoublePadBass PAD frequency params set
+  `coarse_detune=15360`, and Zyn's `getdetune` wraps octave `15` to `-1`.
+  Aqua had ignored PAD coarse/fine detune and played both spectral tables at
+  `261.6256 Hz`; it now emits `freq=130.8128` for both enabled kit layers.
+- The same pass added explicit `lpf_order` so Zyn analog `LP2` filters lower to
+  Faust `fi.lowpass(2, ...)` instead of pretending all low-passes are first
+  order. Latest DoublePadBass: log-mel `0.259298`, score `0.370218`, centroid
+  ratio `1.027115`; remaining pressure is loudness/envelope recovery.
 
 Completed this slice:
 

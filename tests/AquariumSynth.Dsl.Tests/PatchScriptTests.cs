@@ -657,6 +657,16 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
+    public void VoiceLowPassOrderSelectsFaustFilterOrder()
+    {
+        var patch = PatchScript.Parse("v w=saw f=80 lpf=.1 lpf_order=2");
+        var export = FaustEmitter.Emit(patch);
+
+        Assert.Equal(2, patch.Voices[0].Filter.LowPassOrder);
+        Assert.Contains("fi.lowpass(2, max(20.0,", export.Source);
+    }
+
+    [Fact]
     public void VoiceEnvelopeUsesStandardAdsrAndNoteGate()
     {
         var patch = PatchScript.Parse("v w=saw f=220 gate=.4 attack=.01 env_decay=.08 sustain_level=.6 release=.3");

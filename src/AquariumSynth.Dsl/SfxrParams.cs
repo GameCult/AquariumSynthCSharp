@@ -187,6 +187,7 @@ public sealed record SfxrParams
                 Math.Clamp(LpfFreq, 0, 1),
                 Math.Clamp(LpfRamp, -1, 1),
                 Math.Clamp(LpfResonance, 0, 1),
+                1,
                 Math.Clamp(HpfFreq, 0, 1),
                 Math.Clamp(HpfRamp, -1, 1)),
             Phaser = new Phaser(

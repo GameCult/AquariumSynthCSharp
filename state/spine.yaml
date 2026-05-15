@@ -170,6 +170,19 @@ next_agent_start_here:
 completed_slices:
   - date: 2026-05-15
     summary: >
+      Mapped two missing Zyn PAD authorities exposed by DoublePadBass listening:
+      analog low-pass slope and PAD frequency detune. Aquarium now has a general
+      `lpf_order` field which emits Faust `fi.lowpass(order, ...)`; Zyn analog
+      `LP2` filters lower to `lpf_order=2` and include Zyn stage count. The Zyn
+      PAD importer also applies Zyn `getdetune` semantics to
+      `FREQUENCY_PARAMETERS`, so DoublePadBass `coarse_detune=15360` wraps to
+      one octave down and generated `spectrum` playback moves from `261.6256`
+      to `130.8128`. DoublePadBass log-mel moved from `0.334546` after static
+      cutoff mapping to `0.259298`; the remaining gap is mostly envelope/RMS,
+      not wrong pitch or high-band balance.
+    verification: "dotnet test AquariumSynthCSharp.slnx --no-restore: 103 passed"
+  - date: 2026-05-15
+    summary: >
       Mapped static Zyn PAD global low-pass filters into generated Aqua layers
       after user listening identified DoublePadBass as over-emphasizing kit0's
       high buzz while the reference character comes from kit1's low rumble.

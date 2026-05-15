@@ -249,6 +249,8 @@ public static class ZynInstrumentReader
             MathF.Pow(0.1f, 3.0f * (1.0f - volume / 96.0f)),
             0.001f,
             1.5f);
+        var frequency = pad.Element("FREQUENCY_PARAMETERS");
+        var noteFrequencyHz = ZynPadPlaybackFrequency(frequency, playbackFrequencyHz);
         var attack = EnvelopeTime(envelope, "A_dt", 0.28f);
         var decay = EnvelopeTime(envelope, "D_dt", 0.42f);
         var release = EnvelopeTime(envelope, "R_dt", 1.2f);
@@ -259,6 +261,7 @@ public static class ZynInstrumentReader
         var position = ZynPositionText(pad.Element("HARMONIC_POSITION"));
         var filter = pad.Element("FILTER_PARAMETERS");
         var lowPass = ZynPadLowPass(filter);
+        var lowPassOrder = ZynPadLowPassOrder(filter);
         var safeName = includeKitSuffix ? $"{safeBaseName}_{kitId}" : safeBaseName;
         var partialText = string.Join(",", harmonics.Select(partial => $"{F(partial.Ratio)}:{F(partial.Gain)}"));
 
@@ -267,6 +270,7 @@ public static class ZynInstrumentReader
         matched.Add(new($"{featurePrefix}oscillator_base_function", IntParam(oscillator, "base_function", 0).ToString(CultureInfo.InvariantCulture), "Expanded Zyn OscilGen base function into harmonic partials before PAD synthesis."));
         matched.Add(new($"{featurePrefix}oscillator_spectrum_adjust", $"{IntParam(oscillator, "spectrum_adjust_type", 0)}:{IntParam(oscillator, "spectrum_adjust_par", 64)}", "Applied Zyn OscilGen spectrum adjustment to generated harmonic partials."));
         matched.Add(new($"{featurePrefix}table_root", F(tableRootFrequencyHz), "Root frequency comes from the Zyn oracle generated sample basefreq."));
+        matched.Add(new($"{featurePrefix}note_frequency", F(noteFrequencyHz), "Mapped Zyn PAD coarse/fine detune into Aquarium table playback frequency."));
         matched.Add(new($"{featurePrefix}volume", volume.ToString(CultureInfo.InvariantCulture), "Mapped PAD amplitude volume into Aquarium layer gain."));
         matched.Add(new($"{featurePrefix}bandwidth", bandwidth.ToString(CultureInfo.InvariantCulture), "Mapped Zyn PAD bandwidth into Aquarium spectral table generation."));
         matched.Add(new($"{featurePrefix}bandwidth_scale", bandwidthScale.ToString(CultureInfo.InvariantCulture), "Mapped Zyn PAD bandwidth scaling exponent selection."));
@@ -275,14 +279,15 @@ public static class ZynInstrumentReader
         if (lowPass < 1)
         {
             matched.Add(new($"{featurePrefix}filter_lpf", F(lowPass), "Mapped static Zyn PAD global low-pass frequency into Aquarium layer filtering."));
+            matched.Add(new($"{featurePrefix}filter_lpf_order", lowPassOrder.ToString(CultureInfo.InvariantCulture), "Mapped Zyn analog LP1/LP2 and stage count into Aquarium low-pass order."));
         }
         if (filter is not null)
         {
             missing.Add(new($"{featurePrefix}filter_modulation", "present", "Filter envelope/LFO lowering remains separate pressure."));
         }
 
-        script.AppendLine($"layer name={safeName} engine=pad gain={F(layerGain)} lpf={F(lowPass)} env=rl rates={F(attack)},{F(decay)},1,{F(release)} levels=1,1,1,0 curves=lin,lin,lin,lin gate=1.5");
-        script.AppendLine($"spectrum layer={safeName} root={F(tableRootFrequencyHz)} freq={F(playbackFrequencyHz)} spread=0 zyn_mode={mode} zyn_bandwidth={bandwidth} zyn_bwscale={bandwidthScale} zyn_profile={profile} zyn_position={position} partials={partialText}");
+        script.AppendLine($"layer name={safeName} engine=pad gain={F(layerGain)} lpf={F(lowPass)} lpf_order={lowPassOrder} env=rl rates={F(attack)},{F(decay)},1,{F(release)} levels=1,1,1,0 curves=lin,lin,lin,lin gate=1.5");
+        script.AppendLine($"spectrum layer={safeName} root={F(tableRootFrequencyHz)} freq={F(noteFrequencyHz)} spread=0 zyn_mode={mode} zyn_bandwidth={bandwidth} zyn_bwscale={bandwidthScale} zyn_profile={profile} zyn_position={position} partials={partialText}");
     }
 
     private static ZynKitItem ParseKitItem(XElement item)
@@ -823,6 +828,87 @@ public static class ZynInstrumentReader
 
         var cutoffHz = MathF.Pow(2.0f, (DescendantIntParam(filter, "freq", 127) / 64.0f - 1.0f) * 5.0f + 9.96578428f);
         return Math.Clamp(cutoffHz / 18000.0f, 20.0f / 18000.0f, 1f);
+    }
+
+    private static int ZynPadLowPassOrder(XElement? filter)
+    {
+        if (filter is null)
+        {
+            return 1;
+        }
+
+        var category = DescendantIntParam(filter, "category", 0);
+        var type = DescendantIntParam(filter, "type", 0);
+        if (category != 0)
+        {
+            return 1;
+        }
+
+        var poles = type switch
+        {
+            1 => 1,
+            2 => 2,
+            _ => 1
+        };
+        return Math.Clamp(poles * (DescendantIntParam(filter, "stages", 0) + 1), 1, 12);
+    }
+
+    private static float ZynPadPlaybackFrequency(XElement? frequency, float playbackFrequencyHz)
+    {
+        var detuneCents = ZynDetuneCents(
+            IntParam(frequency, "detune_type", 1),
+            IntParam(frequency, "coarse_detune", 0),
+            IntParam(frequency, "detune", 8192));
+        return playbackFrequencyHz * MathF.Pow(2.0f, detuneCents / 1200.0f);
+    }
+
+    private static float ZynDetuneCents(int type, int coarseDetune, int fineDetune)
+    {
+        var octave = coarseDetune / 1024;
+        if (octave >= 8)
+        {
+            octave -= 16;
+        }
+
+        var coarse = coarseDetune % 1024;
+        if (coarse > 512)
+        {
+            coarse -= 1024;
+        }
+
+        var fine = fineDetune - 8192;
+        float coarseCents;
+        float fineCents;
+        switch (type)
+        {
+            case 2:
+                coarseCents = MathF.Abs(coarse * 10.0f);
+                fineCents = MathF.Abs(fine / 8192.0f) * 10.0f;
+                break;
+            case 3:
+                coarseCents = MathF.Abs(coarse * 100.0f);
+                fineCents = MathF.Pow(10.0f, MathF.Abs(fine / 8192.0f) * 3.0f) / 10.0f - 0.1f;
+                break;
+            case 4:
+                coarseCents = MathF.Abs(coarse * 701.95500087f);
+                fineCents = (MathF.Pow(2.0f, MathF.Abs(fine / 8192.0f) * 12.0f) - 1.0f) / 4095.0f * 1200.0f;
+                break;
+            default:
+                coarseCents = MathF.Abs(coarse * 50.0f);
+                fineCents = MathF.Abs(fine / 8192.0f) * 35.0f;
+                break;
+        }
+
+        if (fineDetune < 8192)
+        {
+            fineCents = -fineCents;
+        }
+        if (coarse < 0)
+        {
+            coarseCents = -coarseCents;
+        }
+
+        return octave * 1200.0f + coarseCents + fineCents;
     }
 
     private static int IntParam(XElement? root, string name, int fallback)

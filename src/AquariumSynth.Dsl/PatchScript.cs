@@ -441,6 +441,7 @@ public static class PatchScript
                     GetBoundFloat(fields, line, 1, OwnerField(ownerPath, "filter/lpf"), "lpf", "l"),
                     GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "filter/lpf_ramp"), "lpf_ramp", "lr"),
                     GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "filter/resonance"), "resonance", "res"),
+                    GetBoundInt(fields, line, 1, OwnerField(ownerPath, "filter/lpf_order"), "lpf_order", "lpfo"),
                     GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "filter/hpf"), "hpf", "h"),
                     GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "filter/hpf_ramp"), "hpf_ramp", "hr")),
                 Phaser = new Phaser(
@@ -706,6 +707,24 @@ public static class PatchScript
             string fieldPath,
             params string[] keys) =>
             TryGetAny(fields, keys, out var value) ? ParseBoundFloat(value, line, fallback, fieldPath) : fallback;
+
+        private int GetBoundInt(
+            IReadOnlyDictionary<string, string> fields,
+            int line,
+            int fallback,
+            string fieldPath,
+            params string[] keys)
+        {
+            if (!TryGetAny(fields, keys, out var value))
+            {
+                return fallback;
+            }
+            if (value.StartsWith('@'))
+            {
+                throw new PatchScriptException(line, $"parameter binding is not supported for integer field `{fieldPath}`");
+            }
+            return ParseInt(value, line);
+        }
 
         private float ParseBoundFloat(string value, int line, float fallback, string fieldPath)
         {
