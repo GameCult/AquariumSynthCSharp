@@ -27,11 +27,16 @@ Current slice:
   selected note table root when the parity oracle provides it.
 - Latest upstream PAD survey after this pass:
   `Organ Choir Pad2` artifact
-  `artifacts/parity/zyn-upstream-pad-fixtures/0008-organ-choir-pad2-20260515T153520870`,
-  log-mel `0.499122`, envelope `0.295493`, RMS ratio `0.900147`,
-  centroid ratio `1.010911`, score `0.51966`. Peak anatomy now has the
-  candidate led by the 523 Hz choir voice, with 261 Hz body at about `-1.29dB`
-  versus Zyn's `-2.23dB`.
+  `artifacts/parity/zyn-upstream-pad-fixtures/0008-organ-choir-pad2-20260515T162034810`,
+  log-mel `0.471483`, envelope `0.302978`, RMS ratio `0.878`,
+  centroid ratio `1.011328`, score `0.541933`. The violin-vs-wind issue was
+  kit1 source-table shape: Aqua had ignored Zyn `base_function_modulation=1`
+  and `adaptive_harmonics=1`, producing a smooth upper harmonic ramp. The
+  importer now applies base-function phase modulation before DFT and adaptive
+  harmonic remapping at the PAD table root.
+- Direct kit1 table spectrum moved from violin-shaped to wind-shaped:
+  400-800 Hz energy is now `0.2713` against Zyn `0.2780`; 8-16 kHz is
+  `0.1471` against Zyn `0.1355`.
 - The accepted fixtures stayed on the sample-0 root path: DoublePadBass
   log-mel `0.247674`, score `0.650319`; Ghost Ensemble log-mel `0.369402`,
   score `0.57229`; Soft Pad log-mel `0.317897`, score `0.608833`.

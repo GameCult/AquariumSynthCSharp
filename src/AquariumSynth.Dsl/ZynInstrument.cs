@@ -286,7 +286,7 @@ public static class ZynInstrumentReader
         var amplitude = pad.Element("AMPLITUDE_PARAMETERS");
         var envelope = amplitude?.Element("AMPLITUDE_ENVELOPE");
         var oscillator = pad.Element("OSCIL");
-        var harmonics = ParsePadOscillatorHarmonics(oscillator, maxHarmonics: 64).ToList();
+        var harmonics = ParsePadOscillatorHarmonics(oscillator, tableRootFrequencyHz, maxHarmonics: 64).ToList();
         if (harmonics.Count == 0)
         {
             harmonics.Add(new HarmonicPartial(1, 0.16f));
@@ -321,6 +321,14 @@ public static class ZynInstrumentReader
         var featurePrefix = includeKitSuffix ? $"pad_kit_{kitId}_" : "pad_";
         matched.Add(new($"{featurePrefix}oscillator_harmonics", harmonics.Count.ToString(CultureInfo.InvariantCulture), "Mapped OSCIL/HARMONICS magnitudes into Aquarium spectrum partials."));
         matched.Add(new($"{featurePrefix}oscillator_base_function", IntParam(oscillator, "base_function", 0).ToString(CultureInfo.InvariantCulture), "Expanded Zyn OscilGen base function into harmonic partials before PAD synthesis."));
+        if (IntParam(oscillator, "base_function_modulation", 0) != 0)
+        {
+            matched.Add(new($"{featurePrefix}oscillator_base_function_modulation", IntParam(oscillator, "base_function_modulation", 0).ToString(CultureInfo.InvariantCulture), "Applied Zyn OscilGen base-function phase modulation before PAD synthesis."));
+        }
+        if (IntParam(oscillator, "adaptive_harmonics", 0) != 0)
+        {
+            matched.Add(new($"{featurePrefix}oscillator_adaptive_harmonics", IntParam(oscillator, "adaptive_harmonics", 0).ToString(CultureInfo.InvariantCulture), "Applied Zyn adaptive harmonic remapping at the PAD table root frequency."));
+        }
         matched.Add(new($"{featurePrefix}oscillator_spectrum_adjust", $"{IntParam(oscillator, "spectrum_adjust_type", 0)}:{IntParam(oscillator, "spectrum_adjust_par", 64)}", "Applied Zyn OscilGen spectrum adjustment to generated harmonic partials."));
         matched.Add(new($"{featurePrefix}table_root", F(tableRootFrequencyHz), "Root frequency comes from the Zyn oracle generated sample basefreq."));
         matched.Add(new($"{featurePrefix}note_frequency", F(noteFrequencyHz), "Mapped Zyn PAD coarse/fine detune into Aquarium table playback frequency."));
@@ -442,7 +450,7 @@ public static class ZynInstrumentReader
     private static string? AttributeValue(XElement element, string name) =>
         element.Attribute(name)?.Value;
 
-    private static IReadOnlyList<HarmonicPartial> ParsePadOscillatorHarmonics(XElement? oscillator, int maxHarmonics)
+    private static IReadOnlyList<HarmonicPartial> ParsePadOscillatorHarmonics(XElement? oscillator, float tableRootFrequencyHz, int maxHarmonics)
     {
         var harmonicMagnitudes = oscillator?.Element("HARMONICS")?.Elements("HARMONIC")
             .Select(ParsePadHarmonicMagnitude)
@@ -464,7 +472,7 @@ public static class ZynInstrumentReader
                 .ToArray() ?? [];
         }
 
-        var freqs = ZynOscilGenFrequencies(oscillator, harmonicMagnitudes, maxHarmonics);
+        var freqs = ZynOscilGenFrequencies(oscillator, harmonicMagnitudes, tableRootFrequencyHz, maxHarmonics);
         var gains = freqs.Select(value => value.Magnitude).ToArray();
         ApplyZynSpectrumAdjust(
             gains,
@@ -485,6 +493,7 @@ public static class ZynInstrumentReader
         IntParam(oscillator, "wave_shaping_function", 0) != 0 ||
         IntParam(oscillator, "filter_type", 0) != 0 ||
         IntParam(oscillator, "modulation", 0) != 0 ||
+        IntParam(oscillator, "base_function_modulation", 0) != 0 ||
         IntParam(oscillator, "spectrum_adjust_type", 0) != 0 ||
         (IntParam(oscillator, "base_function", 0) != 0 && harmonicMagnitudes.Count > 1) ||
         IntParam(oscillator, "harmonic_shift", 0) != 0 ||
@@ -493,6 +502,7 @@ public static class ZynInstrumentReader
     private static Complex[] ZynOscilGenFrequencies(
         XElement? oscillator,
         IReadOnlyList<HarmonicPartial> harmonicMagnitudes,
+        float tableRootFrequencyHz,
         int maxHarmonics)
     {
         var freqs = Dft(ZynOscilGenBaseSamples(oscillator, harmonicMagnitudes), maxHarmonics);
@@ -519,6 +529,7 @@ public static class ZynInstrumentReader
             ApplyZynHarmonicShift(freqs, IntParam(oscillator, "harmonic_shift", 0));
         }
 
+        ApplyZynAdaptiveHarmonics(freqs, oscillator, tableRootFrequencyHz);
         return freqs;
     }
 
@@ -536,15 +547,53 @@ public static class ZynInstrumentReader
             for (var i = 0; i < sampleCount; i++)
             {
                 var t = i / (double)sampleCount * harmonicNumber;
+                var phase = ZynBaseFunctionPhase(oscillator, t);
                 var sample = baseFunction == 0
-                    ? -Math.Sin(Math.Tau * t)
-                    : ZynBaseFunction(baseFunction, t, parameterValue);
+                    ? -Math.Sin(Math.Tau * phase)
+                    : ZynBaseFunction(baseFunction, phase, parameterValue);
                 samples[i] += sample * harmonic.Gain;
             }
         }
 
         NormalizePeak(samples);
         return samples;
+    }
+
+    private static double ZynBaseFunctionPhase(XElement? oscillator, double phase)
+    {
+        var type = IntParam(oscillator, "base_function_modulation", 0);
+        if (type == 0)
+        {
+            return phase - Math.Floor(phase);
+        }
+
+        var p1 = IntParam(oscillator, "base_function_modulation_par1", 64) / 127.0;
+        var p2 = IntParam(oscillator, "base_function_modulation_par2", 64) / 127.0;
+        var p3 = IntParam(oscillator, "base_function_modulation_par3", 32) / 127.0;
+        phase = type switch
+        {
+            1 => phase * ZynBaseModulationRevMultiplier(p3) +
+                 Math.Sin((phase + p2) * Math.Tau) * ((Math.Pow(2.0, p1 * 5.0) - 1.0) / 10.0),
+            2 => phase +
+                 Math.Sin((phase * (1.0 + Math.Floor(Math.Pow(2.0, p3 * 5.0) - 1.0)) + p2) * Math.Tau) *
+                 ((Math.Pow(2.0, p1 * 5.0) - 1.0) / 10.0),
+            3 => phase +
+                 Math.Pow((1.0 - Math.Cos((phase + p2) * Math.Tau)) * 0.5,
+                     0.01 + (Math.Pow(2.0, p3 * 16.0) - 1.0) / 10.0) *
+                 ((Math.Pow(2.0, p1 * 7.0) - 1.0) / 10.0),
+            4 => phase * Math.Pow(2.0,
+                     IntParam(oscillator, "base_function_modulation_par1", 64) / 32.0 +
+                     IntParam(oscillator, "base_function_modulation_par2", 64) / 2048.0) + p3,
+            _ => phase
+        };
+
+        return phase - Math.Floor(phase);
+    }
+
+    private static double ZynBaseModulationRevMultiplier(double parameter)
+    {
+        var multiplier = Math.Floor(Math.Pow(2.0, parameter * 5.0) - 1.0);
+        return multiplier < 0.9999 ? -1.0 : multiplier;
     }
 
     private static Complex[] Dft(IReadOnlyList<double> samples, int maxHarmonics)
@@ -698,6 +747,103 @@ public static class ZynInstrumentReader
             if (target > 0 && target < freqs.Length)
             {
                 freqs[target] = copy[i];
+            }
+        }
+    }
+
+    private static void ApplyZynAdaptiveHarmonics(Complex[] freqs, XElement? oscillator, float baseFrequencyHz)
+    {
+        var mode = IntParam(oscillator, "adaptive_harmonics", 0);
+        if (mode == 0)
+        {
+            return;
+        }
+
+        var input = freqs.ToArray();
+        Array.Clear(freqs);
+        input[0] = Complex.Zero;
+        var baseFrequency = 30.0 * Math.Pow(10.0, IntParam(oscillator, "adaptive_harmonics_base_frequency", 128) / 128.0);
+        var power = (IntParam(oscillator, "adaptive_harmonics_power", 100) + 1.0) / 101.0;
+        var ratio = Math.Pow(Math.Max(1.0, baseFrequencyHz) / baseFrequency, power);
+        var down = false;
+        if (ratio > 1.0)
+        {
+            ratio = 1.0 / ratio;
+            down = true;
+        }
+
+        for (var i = 0; i < freqs.Length - 2; i++)
+        {
+            var position = i * ratio;
+            var high = (int)position;
+            var low = position - high;
+            if (high >= freqs.Length - 2)
+            {
+                break;
+            }
+
+            if (down)
+            {
+                freqs[high] += (1.0 - low) * input[i];
+                freqs[high + 1] += low * input[i];
+            }
+            else
+            {
+                freqs[i] = (1.0 - low) * input[high] + low * input[high + 1];
+            }
+        }
+
+        if (!down)
+        {
+            freqs[0] *= ratio;
+        }
+
+        if (freqs.Length > 1)
+        {
+            freqs[1] += freqs[0];
+        }
+        freqs[0] = Complex.Zero;
+        ApplyZynAdaptiveHarmonicPostprocess(freqs, mode, IntParam(oscillator, "adaptive_harmonics_par", 50));
+    }
+
+    private static void ApplyZynAdaptiveHarmonicPostprocess(Complex[] freqs, int mode, int parameter)
+    {
+        if (mode <= 1)
+        {
+            return;
+        }
+
+        var par = 1.0 - Math.Pow(1.0 - parameter * 0.01, 1.5);
+        var input = freqs.ToArray();
+        for (var i = 1; i < freqs.Length; i++)
+        {
+            freqs[i] *= 1.0 - par;
+            input[i] *= par;
+        }
+
+        if (mode == 2)
+        {
+            for (var i = 1; i < freqs.Length; i += 2)
+            {
+                freqs[i] += input[i];
+            }
+            return;
+        }
+
+        var harmonic = (mode - 3) / 2 + 2;
+        var subtractVsAdd = (mode - 3) % 2;
+        if (subtractVsAdd == 0)
+        {
+            for (var i = harmonic; i < freqs.Length; i += harmonic)
+            {
+                freqs[i] += input[i];
+            }
+        }
+        else
+        {
+            for (var source = 1; source * harmonic < freqs.Length; source++)
+            {
+                freqs[source * harmonic] += input[source];
             }
         }
     }

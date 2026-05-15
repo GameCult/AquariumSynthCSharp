@@ -213,8 +213,14 @@ public sealed class ZynInstrumentTests
         Assert.Contains("spectrum layer=organ_choir_pad2_1 root=622.25", rebuild.Script);
         Assert.Contains(rebuild.MatchedFeatures, feature => feature.Name == "pad_kit_0_filter_hpf_envelope");
         Assert.Contains(rebuild.MatchedFeatures, feature => feature.Name == "pad_kit_1_oscillator_base_function" && feature.Value == "7");
+        Assert.Contains(rebuild.MatchedFeatures, feature => feature.Name == "pad_kit_1_oscillator_base_function_modulation" && feature.Value == "1");
+        Assert.Contains(rebuild.MatchedFeatures, feature => feature.Name == "pad_kit_1_oscillator_adaptive_harmonics" && feature.Value == "1");
         Assert.Equal(77.7813f, patch.SpectralBanks[0].RootFrequencyHz, precision: 4);
         Assert.Equal(622.25f, patch.SpectralBanks[1].RootFrequencyHz, precision: 4);
+        var octavePartials = patch.SpectralBanks[1].Partials.ToDictionary(partial => (int)MathF.Round(partial.Ratio), partial => partial.Gain);
+        Assert.True(octavePartials[2] > 0.09f);
+        Assert.True(octavePartials[3] < 0.01f);
+        Assert.True(octavePartials[4] < 0.001f);
     }
 
     [Fact]
