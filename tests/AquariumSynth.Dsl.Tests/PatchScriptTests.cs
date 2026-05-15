@@ -415,7 +415,7 @@ public sealed class PatchScriptTests
     public void LayerLowPassQParsesAndExportsAsExplicitFilterDamping()
     {
         var patch = PatchScript.Parse("""
-            layer name=pad engine=pad gain=.08 lpf=.3 lpf_q=.5
+            layer name=pad engine=pad gain=.08 lpf=.3 lpf_q=.5 lpf_order=4
             voice layer=pad freq=220
             """);
         var export = FaustEmitter.Emit(patch);
@@ -424,6 +424,7 @@ public sealed class PatchScriptTests
         Assert.Equal(.5f, voice.Filter.LowPassQ, 5);
         Assert.Contains("fi.resonlp(max(20.0, clip01(0.3", export.Source);
         Assert.Contains("max(0.1, 0.5)", export.Source);
+        Assert.Contains(") : fi.resonlp(max(20.0, clip01(0.3", export.Source);
     }
 
     [Fact]

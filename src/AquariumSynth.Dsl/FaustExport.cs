@@ -235,7 +235,7 @@ public static class FaustEmitter
         var lowPassQ = parameters.Expression(OwnerField(ownerPath, "filter/lpf_q"), voice.Filter.LowPassQ);
         var lowPassOrder = Math.Clamp(voice.Filter.LowPassOrder, 1, 12);
         var lowpass = hasExplicitQ
-            ? $"fi.resonlp(max(20.0, {lpf} * 18000.0), max(0.1, {lowPassQ}), 1.0)"
+            ? ResonantLowPassCascade($"max(20.0, {lpf} * 18000.0)", $"max(0.1, {lowPassQ})", lowPassOrder)
             : hasResonance
             ? $"fi.resonlp(max(20.0, {lpf} * 18000.0), 0.7 + clip01({resonance}) * 18.0, 1.0)"
             : $"fi.lowpass({lowPassOrder}, max(20.0, {lpf} * 18000.0))";
@@ -260,6 +260,12 @@ public static class FaustEmitter
         source.AppendLine($"{name}_formants = {FormantExpression(name, voice)};");
         source.AppendLine($"{name} = (({name}_phased * (1.0 - {formantMix}) + {name}_formants * {formantMix}) * {envelope}{tremolo} * max(0.0, 1.0 + patch_mod_gain + {gain}) * {parameters.Expression(OwnerField(ownerPath, "gain"), voice.Gain)});");
         source.AppendLine();
+    }
+
+    private static string ResonantLowPassCascade(string cutoff, string q, int order)
+    {
+        var stages = Math.Max(1, (order + 1) / 2);
+        return string.Join(" : ", Enumerable.Repeat($"fi.resonlp({cutoff}, {q}, 1.0)", stages));
     }
 
     private static void EmitSpectralBank(

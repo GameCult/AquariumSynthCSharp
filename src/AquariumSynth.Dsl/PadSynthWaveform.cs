@@ -140,7 +140,7 @@ internal static class PadSynthWaveform
 
         for (var i = 0; i < profileSize * superSample; i++)
         {
-            var x = (i + 0.5) / (profileSize * superSample);
+            var x = i / (double)(profileSize * superSample);
             x = (x - 0.5) * width + 0.5;
             if (x is < 0 or > 1)
             {

@@ -13,6 +13,7 @@
 #include "../Misc/XMLwrapper.h"
 #include "../Params/Controller.h"
 #include "../Params/PADnoteParameters.h"
+#include "../Synth/OscilGen.h"
 #include "../Synth/PADnote.h"
 #include <algorithm>
 #include <cmath>
@@ -67,6 +68,30 @@ void writeFloat32(const std::string& path, const float* samples, int count)
     }
 }
 
+void normalizeMaxLikePad(float* values, int count)
+{
+    float max = 0.0f;
+    for(int i = 0; i < count; ++i)
+        if(values[i] > i)
+            max = values[i];
+
+    if(max > 0.000001f)
+        for(int i = 0; i < count; ++i)
+            values[i] /= max;
+}
+
+void writeHarmonics(
+    PADnoteParameters& parameters,
+    const SYNTH_T& synth,
+    const std::string& path,
+    float baseFrequency)
+{
+    std::vector<float> harmonics(synth.oscilsize, 0.0f);
+    parameters.oscilgen->get(harmonics.data(), baseFrequency, false);
+    normalizeMaxLikePad(harmonics.data(), synth.oscilsize / 2);
+    writeFloat32(path, harmonics.data(), synth.oscilsize / 2);
+}
+
 void renderNote(
     const PADnoteParameters& parameters,
     const SYNTH_T& synth,
@@ -103,7 +128,7 @@ void renderNote(
 int main(int argc, char** argv)
 {
     if(argc < 3 || argc > 7) {
-        std::cerr << "Usage: ZynPadReference <input.xiz> <output.f32> [kit-index] [sample-index|note] [frequency-hz] [seconds]\n";
+        std::cerr << "Usage: ZynPadReference <input.xiz> <output.f32> [kit-index] [sample-index|note|harmonics] [frequency-hz] [seconds]\n";
         return 2;
     }
 
@@ -111,7 +136,8 @@ int main(int argc, char** argv)
     const std::string outputPath = argv[2];
     const int kitIndex = argc >= 4 ? parseInt(argv[3], "kit index") : 0;
     const bool renderAudio = argc >= 5 && std::string(argv[4]) == "note";
-    const int requestedSample = argc >= 5 && !renderAudio ? parseInt(argv[4], "sample index") : 0;
+    const bool renderHarmonics = argc >= 5 && std::string(argv[4]) == "harmonics";
+    const int requestedSample = argc >= 5 && !renderAudio && !renderHarmonics ? parseInt(argv[4], "sample index") : 0;
     const float frequency = argc >= 6 ? std::strtof(argv[5], nullptr) : 261.6256f;
     const float seconds = argc >= 7 ? std::strtof(argv[6], nullptr) : 1.5f;
 
@@ -147,6 +173,14 @@ int main(int argc, char** argv)
         renderNote(parameters, synth, time, outputPath, frequency, seconds);
         std::cout << "mode=note samples=" << static_cast<int>(seconds * synth.samplerate)
                   << " frequency=" << frequency << "\n";
+        FFT_cleanup();
+        return 0;
+    }
+
+    if(renderHarmonics) {
+        writeHarmonics(parameters, synth, outputPath, frequency);
+        std::cout << "mode=harmonics count=" << synth.oscilsize / 2
+                  << " basefreq=" << frequency << "\n";
         FFT_cleanup();
         return 0;
     }

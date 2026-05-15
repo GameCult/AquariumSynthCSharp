@@ -159,6 +159,27 @@ Current user-ear correction:
 - Latest upstream PAD survey after Q kept the accepted batch intact:
   DoublePadBass log-mel `0.247729`, envelope `0.208429`, RMS ratio `0.887621`,
   score `0.650069`; Soft Pad log-mel `0.316754`, score `0.6089`.
+- User then heard Ghost as closer but still overly bright in the middle. A
+  Zyn oracle `harmonics` diagnostic was added to `ZynPadReference` so the
+  exact normalized OscilGen harmonic vector can be dumped before PAD table
+  generation. That proved Ghost's first 32 imported partial ratios already
+  match Zyn's OscilGen output; the h8/h10 glare was not a first-page harmonic
+  extraction bug.
+- Two tempting cuts were tested and rejected or narrowed:
+  using Zyn's 1024-sample OscilGen base table helped Ghost but regressed the
+  accepted DoublePadBass batch, so it was cut; raising generated OscilGen
+  partial output from 32 to 64 worsened Ghost, so the readable 32-partial cap
+  remains.
+- The real Ghost middle-brightness fix was filter lowering ownership: explicit
+  `lpf_q` had accidentally replaced a 4-pole Zyn-style low-pass with a single
+  Faust `resonlp`, preserving Q but throwing away slope. Faust export now
+  cascades resonant low-pass stages according to `lpf_order` when `lpf_q` is
+  present. Latest Ghost:
+  artifact `artifacts/parity/zyn-upstream-pad-fixtures/0121-ghost-ensemble-20260515T134050872`,
+  log-mel `0.369402`, envelope distance `0.363685`, RMS ratio `1.054875`,
+  centroid ratio `1.006808`, score `0.57229`. DoublePadBass remains at
+  log-mel `0.247748`, envelope `0.208433`, RMS ratio `0.887555`, score
+  `0.650029`.
 
 Completed this slice:
 
