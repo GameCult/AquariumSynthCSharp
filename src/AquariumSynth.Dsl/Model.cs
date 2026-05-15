@@ -106,6 +106,7 @@ public sealed record Filter(
     float LowPass = 1,
     float LowPassRamp = 0,
     float LowPassResonance = 0,
+    float LowPassQ = 0,
     int LowPassOrder = 1,
     float HighPass = 0,
     float HighPassRamp = 0,

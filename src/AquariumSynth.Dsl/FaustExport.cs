@@ -157,7 +157,10 @@ public static class FaustEmitter
         List<string> warnings,
         string? oscillatorOverride = null)
     {
-        if (voice.Filter.LowPassResonance != 0 || parameters.IsBound(OwnerField(ownerPath, "filter/resonance")))
+        if (voice.Filter.LowPassResonance != 0 ||
+            voice.Filter.LowPassQ != 0 ||
+            parameters.IsBound(OwnerField(ownerPath, "filter/resonance")) ||
+            parameters.IsBound(OwnerField(ownerPath, "filter/lpf_q")))
         {
             warnings.Add($"{name}: low-pass resonance is approximated with Faust resonlp");
         }
@@ -226,10 +229,14 @@ public static class FaustEmitter
             : "";
         var lpf = $"clip01({parameters.Expression(OwnerField(ownerPath, "filter/lpf"), voice.Filter.LowPass)} * (1.0 + {parameters.Expression(OwnerField(ownerPath, "filter/lpf_ramp"), voice.Filter.LowPassRamp)} * age * 1.8){lpfEnvelope} + patch_mod_lpf + {lpfMod})";
         var hpf = $"clip01({parameters.Expression(OwnerField(ownerPath, "filter/hpf"), voice.Filter.HighPass)} * (1.0 + {parameters.Expression(OwnerField(ownerPath, "filter/hpf_ramp"), voice.Filter.HighPassRamp)} * age * 2.0) + patch_mod_hpf + {hpfMod})";
+        var hasExplicitQ = voice.Filter.LowPassQ > 0 || parameters.IsBound(OwnerField(ownerPath, "filter/lpf_q"));
         var hasResonance = voice.Filter.LowPassResonance > 0 || parameters.IsBound(OwnerField(ownerPath, "filter/resonance"));
         var resonance = parameters.Expression(OwnerField(ownerPath, "filter/resonance"), voice.Filter.LowPassResonance);
+        var lowPassQ = parameters.Expression(OwnerField(ownerPath, "filter/lpf_q"), voice.Filter.LowPassQ);
         var lowPassOrder = Math.Clamp(voice.Filter.LowPassOrder, 1, 12);
-        var lowpass = hasResonance
+        var lowpass = hasExplicitQ
+            ? $"fi.resonlp(max(20.0, {lpf} * 18000.0), max(0.1, {lowPassQ}), 1.0)"
+            : hasResonance
             ? $"fi.resonlp(max(20.0, {lpf} * 18000.0), 0.7 + clip01({resonance}) * 18.0, 1.0)"
             : $"fi.lowpass({lowPassOrder}, max(20.0, {lpf} * 18000.0))";
 

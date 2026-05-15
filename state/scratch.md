@@ -137,6 +137,28 @@ Current user-ear correction:
   DoublePadBass: WAV peak `0.979` against clipped Zyn reference peak `1.0`,
   log-mel `0.211671`, envelope distance `0.226563`, RMS ratio `0.818669`,
   score `0.631168`.
+- User accepted DoublePadBass and moved the ear target to Ghost Ensemble:
+  Aqua over-emphasized upper harmonics and sounded brighter/tinnier than Zyn.
+  The first missing general authority was Zyn PAD filter note tracking:
+  `freq_track=97` lowers Ghost's cutoff at C4 by the Zyn
+  `log2(note/440) * tracking` rule. Aqua now applies that when importing PAD
+  global filters.
+- Ghost still had too much upper tail, so the next cut was not a Ghost-only
+  brightness knob. Aquarium now has explicit low-pass Q via `lpf_q`/`lpq` on
+  the filter model. Zyn PAD analog low-pass `q` imports through
+  `exp((q/127)^2 * ln(1000)) - 0.9`; Ghost emits `lpf_q=0.499021`, which Faust
+  lowers through `fi.resonlp(..., max(0.1, lpf_q), 1.0)`.
+- Latest Ghost after note tracking + Q:
+  artifact `artifacts/parity/zyn-upstream-pad-fixtures/0121-ghost-ensemble-20260515T131053271`,
+  log-mel `0.375637`, envelope distance `0.363075`, RMS ratio `1.09995`,
+  centroid ratio `1.010727`, score `0.561458`. This improves from the
+  post-tracking `0.38424` log-mel / `1.155288` RMS ratio, but a table-harmonic
+  diagnostic still shows candidate h8/h10/higher partials hot against the Zyn
+  table. Remaining Ghost pressure is OscilGen/PAD source-table shape, not
+  static filter ownership.
+- Latest upstream PAD survey after Q kept the accepted batch intact:
+  DoublePadBass log-mel `0.247729`, envelope `0.208429`, RMS ratio `0.887621`,
+  score `0.650069`; Soft Pad log-mel `0.316754`, score `0.6089`.
 
 Completed this slice:
 

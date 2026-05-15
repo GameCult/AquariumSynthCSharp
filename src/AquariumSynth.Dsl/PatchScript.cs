@@ -441,6 +441,7 @@ public static class PatchScript
                     GetBoundFloat(fields, line, 1, OwnerField(ownerPath, "filter/lpf"), "lpf", "l"),
                     GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "filter/lpf_ramp"), "lpf_ramp", "lr"),
                     GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "filter/resonance"), "resonance", "res"),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "filter/lpf_q"), "lpf_q", "lpq"),
                     GetBoundInt(fields, line, 1, OwnerField(ownerPath, "filter/lpf_order"), "lpf_order", "lpfo"),
                     GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "filter/hpf"), "hpf", "h"),
                     GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "filter/hpf_ramp"), "hpf_ramp", "hr"),

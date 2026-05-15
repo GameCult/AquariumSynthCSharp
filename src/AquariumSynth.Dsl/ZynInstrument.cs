@@ -263,7 +263,8 @@ public static class ZynInstrumentReader
         var profile = ZynProfileText(pad.Element("HARMONIC_PROFILE"));
         var position = ZynPositionText(pad.Element("HARMONIC_POSITION"));
         var filter = pad.Element("FILTER_PARAMETERS");
-        var lowPass = ZynPadLowPass(filter);
+        var lowPass = ZynPadLowPass(filter, playbackFrequencyHz);
+        var lowPassQ = ZynPadLowPassQ(filter);
         var lowPassOrder = ZynPadLowPassOrder(filter);
         var lowPassEnvelope = ZynPadLowPassEnvelope(filter, lowPass);
         var safeName = includeKitSuffix ? $"{safeBaseName}_{kitId}" : safeBaseName;
@@ -283,6 +284,7 @@ public static class ZynInstrumentReader
         if (lowPass < 1)
         {
             matched.Add(new($"{featurePrefix}filter_lpf", F(lowPass), "Mapped static Zyn PAD global low-pass frequency into Aquarium layer filtering."));
+            matched.Add(new($"{featurePrefix}filter_lpf_q", F(lowPassQ), "Mapped Zyn analog low-pass Q into Aquarium filter damping."));
             matched.Add(new($"{featurePrefix}filter_lpf_order", lowPassOrder.ToString(CultureInfo.InvariantCulture), "Mapped Zyn analog LP1/LP2 and stage count into Aquarium low-pass order."));
         }
         if (lowPassEnvelope is not null)
@@ -297,7 +299,8 @@ public static class ZynInstrumentReader
         var filterEnvelopeText = lowPassEnvelope is null
             ? ""
             : $" lpf_env=rl lpf_start={F(lowPassEnvelope.StartLevel)} lpf_rates={F(lowPassEnvelope.Rate1Seconds)},{F(lowPassEnvelope.Rate2Seconds)},{F(lowPassEnvelope.Rate3Seconds)},{F(lowPassEnvelope.Rate4Seconds)} lpf_levels={F(lowPassEnvelope.Level1)},{F(lowPassEnvelope.Level2)},{F(lowPassEnvelope.Level3)},{F(lowPassEnvelope.Level4)} lpf_curves=lin,lin,lin,lin";
-        script.AppendLine($"layer name={safeName} engine=pad gain={F(layerGain)} lpf={F(lowPass)} lpf_order={lowPassOrder}{filterEnvelopeText} env=rl rates={F(attack)},{F(decay)},1,{F(release)} levels=1,1,1,0 curves=lin,lin,lin,lin gate=1.5");
+        var filterQText = lowPass < 1 ? $" lpf_q={F(lowPassQ)}" : "";
+        script.AppendLine($"layer name={safeName} engine=pad gain={F(layerGain)} lpf={F(lowPass)}{filterQText} lpf_order={lowPassOrder}{filterEnvelopeText} env=rl rates={F(attack)},{F(decay)},1,{F(release)} levels=1,1,1,0 curves=lin,lin,lin,lin gate=1.5");
         script.AppendLine($"spectrum layer={safeName} root={F(tableRootFrequencyHz)} freq={F(noteFrequencyHz)} spread=0 zyn_mode={mode} zyn_bandwidth={bandwidth} zyn_bwscale={bandwidthScale} zyn_profile={profile} zyn_position={position} partials={partialText}");
     }
 
@@ -823,7 +826,7 @@ public static class ZynInstrumentReader
             IntParam(position, "parameter3", 0).ToString(CultureInfo.InvariantCulture));
     }
 
-    private static float ZynPadLowPass(XElement? filter)
+    private static float ZynPadLowPass(XElement? filter, float playbackFrequencyHz)
     {
         if (filter is null)
         {
@@ -838,6 +841,8 @@ public static class ZynInstrumentReader
         }
 
         var cutoffHz = MathF.Pow(2.0f, (DescendantIntParam(filter, "freq", 127) / 64.0f - 1.0f) * 5.0f + 9.96578428f);
+        var trackingPercent = (DescendantIntParam(filter, "freq_track", 64) - 64.0f) / 64.0f;
+        cutoffHz *= MathF.Pow(2.0f, MathF.Log2(playbackFrequencyHz / 440.0f) * trackingPercent);
         return Math.Clamp(cutoffHz / 18000.0f, 20.0f / 18000.0f, 1f);
     }
 
@@ -862,6 +867,24 @@ public static class ZynInstrumentReader
             _ => 1
         };
         return Math.Clamp(poles * (DescendantIntParam(filter, "stages", 0) + 1), 1, 12);
+    }
+
+    private static float ZynPadLowPassQ(XElement? filter)
+    {
+        if (filter is null)
+        {
+            return 0;
+        }
+
+        var category = DescendantIntParam(filter, "category", 0);
+        var type = DescendantIntParam(filter, "type", 0);
+        if (category != 0 || type is not (1 or 2))
+        {
+            return 0;
+        }
+
+        var q = DescendantIntParam(filter, "q", 64) / 127.0f;
+        return MathF.Exp(q * q * MathF.Log(1000.0f)) - 0.9f;
     }
 
     private static RateLevelEnvelope? ZynPadLowPassEnvelope(XElement? filter, float baseLowPass)

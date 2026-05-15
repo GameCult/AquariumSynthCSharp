@@ -412,6 +412,21 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
+    public void LayerLowPassQParsesAndExportsAsExplicitFilterDamping()
+    {
+        var patch = PatchScript.Parse("""
+            layer name=pad engine=pad gain=.08 lpf=.3 lpf_q=.5
+            voice layer=pad freq=220
+            """);
+        var export = FaustEmitter.Emit(patch);
+
+        var voice = Assert.Single(patch.Voices);
+        Assert.Equal(.5f, voice.Filter.LowPassQ, 5);
+        Assert.Contains("fi.resonlp(max(20.0, clip01(0.3", export.Source);
+        Assert.Contains("max(0.1, 0.5)", export.Source);
+    }
+
+    [Fact]
     public void SpectralBankSeparatesTableRootFromPlaybackFrequency()
     {
         var patch = PatchScript.Parse("""
