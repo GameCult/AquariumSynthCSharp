@@ -119,6 +119,12 @@ public static class ZynInstrumentReader
         float playbackFrequencyHz = 261.6256f) =>
         RebuildFirstPadAsAquariumScript(File.ReadAllBytes(path), tableRootFrequencyHz, playbackFrequencyHz);
 
+    public static ZynPadRebuild RebuildEnabledPadsAsAquariumScript(
+        string path,
+        IReadOnlyDictionary<int, float> tableRootFrequencyHzByKitItem,
+        float playbackFrequencyHz = 261.6256f) =>
+        RebuildEnabledPadsAsAquariumScript(File.ReadAllBytes(path), tableRootFrequencyHzByKitItem, playbackFrequencyHz);
+
     public static ZynPadRebuild RebuildFirstPadAsAquariumScript(
         ReadOnlySpan<byte> bytes,
         float tableRootFrequencyHz,
@@ -130,13 +136,105 @@ public static class ZynInstrumentReader
         var document = ParseDocument(bytes);
         var instrument = document.Descendants("INSTRUMENT").FirstOrDefault()
             ?? throw new ArgumentException("Zyn instrument XML is missing INSTRUMENT");
-        var name = StringValue(instrument.Element("INFO"), "name", "unnamed");
         var item = instrument
             .Descendants("INSTRUMENT_KIT_ITEM")
             .FirstOrDefault(IsEnabledPadItem)
             ?? throw new ArgumentException("Zyn instrument XML has no enabled PAD kit item");
+        return RebuildPadItemsAsAquariumScript(document, [item], new Dictionary<int, float> { [IntAttribute(item, "id")] = tableRootFrequencyHz }, playbackFrequencyHz);
+    }
+
+    public static ZynPadRebuild RebuildEnabledPadsAsAquariumScript(
+        ReadOnlySpan<byte> bytes,
+        IReadOnlyDictionary<int, float> tableRootFrequencyHzByKitItem,
+        float playbackFrequencyHz = 261.6256f)
+    {
+        if (tableRootFrequencyHzByKitItem.Count == 0) throw new ArgumentException("At least one PAD table root is required.", nameof(tableRootFrequencyHzByKitItem));
+        if (playbackFrequencyHz <= 0) throw new ArgumentOutOfRangeException(nameof(playbackFrequencyHz));
+
+        var document = ParseDocument(bytes);
+        var instrument = document.Descendants("INSTRUMENT").FirstOrDefault()
+            ?? throw new ArgumentException("Zyn instrument XML is missing INSTRUMENT");
+        var items = instrument
+            .Descendants("INSTRUMENT_KIT_ITEM")
+            .Where(IsEnabledPadItem)
+            .ToList();
+        if (items.Count == 0)
+        {
+            throw new ArgumentException("Zyn instrument XML has no enabled PAD kit item");
+        }
+
+        return RebuildPadItemsAsAquariumScript(document, items, tableRootFrequencyHzByKitItem, playbackFrequencyHz);
+    }
+
+    private static ZynPadRebuild RebuildPadItemsAsAquariumScript(
+        XDocument document,
+        IReadOnlyList<XElement> items,
+        IReadOnlyDictionary<int, float> tableRootFrequencyHzByKitItem,
+        float playbackFrequencyHz)
+    {
+        if (playbackFrequencyHz <= 0) throw new ArgumentOutOfRangeException(nameof(playbackFrequencyHz));
+
+        var instrument = document.Descendants("INSTRUMENT").FirstOrDefault()
+            ?? throw new ArgumentException("Zyn instrument XML is missing INSTRUMENT");
+        var name = StringValue(instrument.Element("INFO"), "name", "unnamed");
+        var safeBaseName = SafeIdentifier(name);
+
+        var script = new StringBuilder();
+        script.AppendLine("# Generated from a ZynAddSubFX PAD fixture for parity pressure.");
+        script.AppendLine("# Scope: enabled PAD kit items, OSCIL source shaping, PAD table profile, basic volume/envelope.");
+        script.AppendLine("patch");
+        script.AppendLine("    gain=1");
+        script.AppendLine("    soft_clip=false");
+        script.AppendLine();
+        script.AppendLine("defaults");
+        script.AppendLine("    wave=sine");
+        script.AppendLine("    lpf=1");
+        script.AppendLine("    hpf=0");
+        script.AppendLine();
+
+        var matched = new List<ReferenceFeature>
+        {
+            new("engine_pad", items.Count.ToString(CultureInfo.InvariantCulture), "Translated enabled PAD kit item layers.")
+        };
+        var missing = new List<ReferenceFeature>();
+
+        foreach (var item in items)
+        {
+            var kitId = IntAttribute(item, "id");
+            if (!tableRootFrequencyHzByKitItem.TryGetValue(kitId, out var tableRootFrequencyHz) || tableRootFrequencyHz <= 0)
+            {
+                throw new ArgumentException($"Missing PAD table root for kit item {kitId}.", nameof(tableRootFrequencyHzByKitItem));
+            }
+
+            AppendPadItemScript(
+                item,
+                name,
+                safeBaseName,
+                items.Count > 1,
+                tableRootFrequencyHz,
+                playbackFrequencyHz,
+                script,
+                matched,
+                missing);
+        }
+
+        return new ZynPadRebuild(name, items.Count == 1 ? IntAttribute(items[0], "id") : -1, script.ToString(), matched, missing);
+    }
+
+    private static void AppendPadItemScript(
+        XElement item,
+        string instrumentName,
+        string safeBaseName,
+        bool includeKitSuffix,
+        float tableRootFrequencyHz,
+        float playbackFrequencyHz,
+        StringBuilder script,
+        List<ReferenceFeature> matched,
+        List<ReferenceFeature> missing)
+    {
         var pad = item.Element("PAD_SYNTH_PARAMETERS")
             ?? throw new ArgumentException("Enabled PAD kit item is missing PAD_SYNTH_PARAMETERS");
+        var kitId = IntAttribute(item, "id");
         var amplitude = pad.Element("AMPLITUDE_PARAMETERS");
         var envelope = amplitude?.Element("AMPLITUDE_ENVELOPE");
         var oscillator = pad.Element("OSCIL");
@@ -159,44 +257,32 @@ public static class ZynInstrumentReader
         var bandwidthScale = IntParam(pad, "bandwidth_scale", 0);
         var profile = ZynProfileText(pad.Element("HARMONIC_PROFILE"));
         var position = ZynPositionText(pad.Element("HARMONIC_POSITION"));
-        var safeName = SafeIdentifier(string.IsNullOrWhiteSpace(name) ? $"pad_{IntAttribute(item, "id")}" : name);
+        var filter = pad.Element("FILTER_PARAMETERS");
+        var lowPass = ZynPadLowPass(filter);
+        var safeName = includeKitSuffix ? $"{safeBaseName}_{kitId}" : safeBaseName;
         var partialText = string.Join(",", harmonics.Select(partial => $"{F(partial.Ratio)}:{F(partial.Gain)}"));
 
-        var matched = new List<ReferenceFeature>
+        var featurePrefix = includeKitSuffix ? $"pad_kit_{kitId}_" : "pad_";
+        matched.Add(new($"{featurePrefix}oscillator_harmonics", harmonics.Count.ToString(CultureInfo.InvariantCulture), "Mapped OSCIL/HARMONICS magnitudes into Aquarium spectrum partials."));
+        matched.Add(new($"{featurePrefix}oscillator_base_function", IntParam(oscillator, "base_function", 0).ToString(CultureInfo.InvariantCulture), "Expanded Zyn OscilGen base function into harmonic partials before PAD synthesis."));
+        matched.Add(new($"{featurePrefix}oscillator_spectrum_adjust", $"{IntParam(oscillator, "spectrum_adjust_type", 0)}:{IntParam(oscillator, "spectrum_adjust_par", 64)}", "Applied Zyn OscilGen spectrum adjustment to generated harmonic partials."));
+        matched.Add(new($"{featurePrefix}table_root", F(tableRootFrequencyHz), "Root frequency comes from the Zyn oracle generated sample basefreq."));
+        matched.Add(new($"{featurePrefix}volume", volume.ToString(CultureInfo.InvariantCulture), "Mapped PAD amplitude volume into Aquarium layer gain."));
+        matched.Add(new($"{featurePrefix}bandwidth", bandwidth.ToString(CultureInfo.InvariantCulture), "Mapped Zyn PAD bandwidth into Aquarium spectral table generation."));
+        matched.Add(new($"{featurePrefix}bandwidth_scale", bandwidthScale.ToString(CultureInfo.InvariantCulture), "Mapped Zyn PAD bandwidth scaling exponent selection."));
+        matched.Add(new($"{featurePrefix}harmonic_profile", profile, "Mapped Zyn PAD harmonic profile shape into Aquarium spectral table generation."));
+        matched.Add(new($"{featurePrefix}harmonic_position", position, "Mapped Zyn PAD harmonic position warp into Aquarium spectral table generation."));
+        if (lowPass < 1)
         {
-            new("engine_pad", "1", "Translated first enabled PAD kit item."),
-            new("pad_oscillator_harmonics", harmonics.Count.ToString(CultureInfo.InvariantCulture), "Mapped OSCIL/HARMONICS magnitudes into Aquarium spectrum partials."),
-            new("pad_oscillator_base_function", IntParam(oscillator, "base_function", 0).ToString(CultureInfo.InvariantCulture), "Expanded Zyn OscilGen base function into harmonic partials before PAD synthesis."),
-            new("pad_oscillator_spectrum_adjust", $"{IntParam(oscillator, "spectrum_adjust_type", 0)}:{IntParam(oscillator, "spectrum_adjust_par", 64)}", "Applied Zyn OscilGen spectrum adjustment to generated harmonic partials."),
-            new("pad_table_root", F(tableRootFrequencyHz), "Root frequency comes from the Zyn oracle generated sample basefreq."),
-            new("pad_volume", volume.ToString(CultureInfo.InvariantCulture), "Mapped PAD amplitude volume into Aquarium layer gain."),
-            new("pad_bandwidth", bandwidth.ToString(CultureInfo.InvariantCulture), "Mapped Zyn PAD bandwidth into Aquarium spectral table generation."),
-            new("pad_bandwidth_scale", bandwidthScale.ToString(CultureInfo.InvariantCulture), "Mapped Zyn PAD bandwidth scaling exponent selection."),
-            new("pad_harmonic_profile", profile, "Mapped Zyn PAD harmonic profile shape into Aquarium spectral table generation."),
-            new("pad_harmonic_position", position, "Mapped Zyn PAD harmonic position warp into Aquarium spectral table generation.")
-        };
-        var missing = new List<ReferenceFeature>();
-        if (pad.Element("FILTER_PARAMETERS") is not null)
+            matched.Add(new($"{featurePrefix}filter_lpf", F(lowPass), "Mapped static Zyn PAD global low-pass frequency into Aquarium layer filtering."));
+        }
+        if (filter is not null)
         {
-            missing.Add(new("pad_filter_parameters", "present", "Filter envelope/LFO lowering remains separate pressure."));
+            missing.Add(new($"{featurePrefix}filter_modulation", "present", "Filter envelope/LFO lowering remains separate pressure."));
         }
 
-        var script = new StringBuilder();
-        script.AppendLine("# Generated from a ZynAddSubFX PAD fixture for parity pressure.");
-        script.AppendLine("# Scope: first enabled PAD kit item, OSCIL harmonic magnitudes, basic volume/envelope.");
-        script.AppendLine("patch");
-        script.AppendLine("    gain=1");
-        script.AppendLine("    soft_clip=false");
-        script.AppendLine();
-        script.AppendLine("defaults");
-        script.AppendLine("    wave=sine");
-        script.AppendLine("    lpf=1");
-        script.AppendLine("    hpf=0");
-        script.AppendLine();
-        script.AppendLine($"layer name={safeName} engine=pad gain={F(layerGain)} env=rl rates={F(attack)},{F(decay)},1,{F(release)} levels=1,1,1,0 curves=lin,lin,lin,lin gate=1.5");
+        script.AppendLine($"layer name={safeName} engine=pad gain={F(layerGain)} lpf={F(lowPass)} env=rl rates={F(attack)},{F(decay)},1,{F(release)} levels=1,1,1,0 curves=lin,lin,lin,lin gate=1.5");
         script.AppendLine($"spectrum layer={safeName} root={F(tableRootFrequencyHz)} freq={F(playbackFrequencyHz)} spread=0 zyn_mode={mode} zyn_bandwidth={bandwidth} zyn_bwscale={bandwidthScale} zyn_profile={profile} zyn_position={position} partials={partialText}");
-
-        return new ZynPadRebuild(name, IntAttribute(item, "id"), script.ToString(), matched, missing);
     }
 
     private static ZynKitItem ParseKitItem(XElement item)
@@ -288,7 +374,7 @@ public static class ZynInstrumentReader
             return [];
         }
 
-        if (!NeedsOscilGenWaveformExpansion(oscillator))
+        if (!NeedsOscilGenWaveformExpansion(oscillator, harmonicMagnitudes))
         {
             return oscillator?.Element("HARMONICS")?.Elements("HARMONIC")
                 .Select(ParsePadDirectHarmonic)
@@ -315,11 +401,12 @@ public static class ZynInstrumentReader
             .ToArray();
     }
 
-    private static bool NeedsOscilGenWaveformExpansion(XElement? oscillator) =>
+    private static bool NeedsOscilGenWaveformExpansion(XElement? oscillator, IReadOnlyList<HarmonicPartial> harmonicMagnitudes) =>
         IntParam(oscillator, "wave_shaping_function", 0) != 0 ||
         IntParam(oscillator, "filter_type", 0) != 0 ||
         IntParam(oscillator, "modulation", 0) != 0 ||
         IntParam(oscillator, "spectrum_adjust_type", 0) != 0 ||
+        (IntParam(oscillator, "base_function", 0) == 4 && harmonicMagnitudes.Count > 1) ||
         IntParam(oscillator, "harmonic_shift", 0) != 0 ||
         IntParam(oscillator, "adaptive_harmonics", 0) != 0;
 
@@ -720,9 +807,35 @@ public static class ZynInstrumentReader
             IntParam(position, "parameter3", 0).ToString(CultureInfo.InvariantCulture));
     }
 
+    private static float ZynPadLowPass(XElement? filter)
+    {
+        if (filter is null)
+        {
+            return 1;
+        }
+
+        var category = DescendantIntParam(filter, "category", 0);
+        var type = DescendantIntParam(filter, "type", 0);
+        if (category != 0 || type is not (1 or 2))
+        {
+            return 1;
+        }
+
+        return Math.Clamp(DescendantIntParam(filter, "freq", 127) / 127f, 0.02f, 1f);
+    }
+
     private static int IntParam(XElement? root, string name, int fallback)
     {
         var value = root?.Elements("par")
+            .FirstOrDefault(element => AttributeValue(element, "name") == name)
+            ?.Attribute("value")
+            ?.Value;
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) ? parsed : fallback;
+    }
+
+    private static int DescendantIntParam(XElement? root, string name, int fallback)
+    {
+        var value = root?.Descendants("par")
             .FirstOrDefault(element => AttributeValue(element, "name") == name)
             ?.Attribute("value")
             ?.Value;

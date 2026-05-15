@@ -170,6 +170,30 @@ next_agent_start_here:
 completed_slices:
   - date: 2026-05-15
     summary: >
+      Mapped static Zyn PAD global low-pass filters into generated Aqua layers
+      after user listening identified DoublePadBass as over-emphasizing kit0's
+      high buzz while the reference character comes from kit1's low rumble.
+      The importer now reads nested `FILTER` params under
+      `FILTER_PARAMETERS`; kit0's `freq=12` lowers to `lpf=0.094488`, while
+      kit1's `freq=61` lowers to `lpf=0.480315`. The louder gain-cap
+      experiment stayed cut. Filter envelopes and LFOs remain explicit missing
+      pressure.
+    verification: "dotnet test tests\\AquariumSynth.Dsl.Tests\\AquariumSynth.Dsl.Tests.csproj --no-restore --filter FullyQualifiedName~ZynReferenceParityTests: 4 passed"
+  - date: 2026-05-15
+    summary: >
+      Addressed the two user-identified Zyn PAD offenders separately. Ghost
+      Ensemble was collapsing toward Soft Pad because the direct-harmonic gate
+      ignored its live `base_function=4` power oscillator when no downstream
+      oscillator stage was enabled; power-base multi-harmonic sources now run
+      through the sampled OscilGen path, giving Ghost its own 32-partial source.
+      DoublePadBass was not being treated as the actual preset: it is
+      `kit_mode=1` with two enabled PAD kit items. The upstream parity path now
+      sums enabled PAD kit-note references, gathers per-kit table roots, and
+      rebuilds enabled PAD kit layers into one Aqua script. A louder gain-cap
+      experiment worsened DoublePadBass and was cut.
+    verification: "dotnet test tests\\AquariumSynth.Dsl.Tests\\AquariumSynth.Dsl.Tests.csproj --no-restore --filter FullyQualifiedName~ZynReferenceParityTests: 4 passed"
+  - date: 2026-05-15
+    summary: >
       Reworked the first Zyn OscilGen approximation into a sampled stage-order
       path for PAD presets with live oscillator processing: base waveform,
       optional oscillator filter/waveshaper order, modulation, harmonic shift,

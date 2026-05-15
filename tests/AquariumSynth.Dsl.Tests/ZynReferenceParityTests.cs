@@ -239,8 +239,11 @@ public sealed class ZynReferenceParityTests
             }
 
             var instrument = ZynInstrumentReader.ParseFile(input);
-            var kitIndex = instrument.KitItems.FirstOrDefault(item => item.Enabled && item.Engines.Contains(ZynEngine.PadSynth))?.Id ?? -1;
-            if (kitIndex < 0)
+            var padKitIds = instrument.KitItems
+                .Where(item => item.Enabled && item.Engines.Contains(ZynEngine.PadSynth))
+                .Select(item => item.Id)
+                .ToArray();
+            if (padKitIds.Length == 0)
             {
                 continue;
             }
@@ -253,15 +256,42 @@ public sealed class ZynReferenceParityTests
             var tableWav = Path.Combine(runDir, "reference-zyn-table0.wav");
             var aquaWav = Path.Combine(runDir, "candidate-aquarium.wav");
 
-            var note = await RunAsync(bash, ["-lc", ZynPadCommand(root, input, noteRaw, kitIndex, "note", "261.6256", "1.5")]);
-            Assert.Equal(0, note.ExitCode);
-            var table = await RunAsync(bash, ["-lc", ZynPadCommand(root, input, tableRaw, kitIndex, "0")]);
-            Assert.Equal(0, table.ExitCode);
-            var rebuild = ZynInstrumentReader.RebuildFirstPadAsAquariumScript(input, ParseBaseFrequency(table.Stdout));
+            var noteStdouts = new List<string>();
+            var noteLayers = new List<float[]>();
+            var tableRoots = new Dictionary<int, float>();
+            var tableStdouts = new List<string>();
+            float[] tableSamples = [];
+            foreach (var padKitId in padKitIds)
+            {
+                var kitNoteRaw = padKitIds.Length == 1 ? noteRaw : Path.Combine(runDir, $"reference-zyn-kit{padKitId}.f32");
+                var note = await RunAsync(bash, ["-lc", ZynPadCommand(root, input, kitNoteRaw, padKitId, "note", "261.6256", "1.5")]);
+                Assert.Equal(0, note.ExitCode);
+                noteStdouts.Add($"kit{padKitId}: {note.Stdout.Trim()}");
+                noteLayers.Add(await ReadFloat32Async(kitNoteRaw));
+
+                var kitTableRaw = padKitIds.Length == 1 ? tableRaw : Path.Combine(runDir, $"reference-zyn-table-kit{padKitId}.f32");
+                var table = await RunAsync(bash, ["-lc", ZynPadCommand(root, input, kitTableRaw, padKitId, "0")]);
+                Assert.Equal(0, table.ExitCode);
+                tableStdouts.Add($"kit{padKitId}: {table.Stdout.Trim()}");
+                tableRoots[padKitId] = ParseBaseFrequency(table.Stdout);
+                var currentTableSamples = await ReadFloat32Async(kitTableRaw);
+                if (tableSamples.Length == 0)
+                {
+                    tableSamples = currentTableSamples;
+                }
+
+                if (padKitIds.Length > 1)
+                {
+                    WriteWav(Path.Combine(runDir, $"reference-zyn-table-kit{padKitId}.wav"), currentTableSamples, 44100, 0.9f);
+                }
+            }
+
+            var noteSamples = SumSamples(noteLayers);
+            var rebuild = padKitIds.Length == 1
+                ? ZynInstrumentReader.RebuildFirstPadAsAquariumScript(input, tableRoots[padKitIds[0]])
+                : ZynInstrumentReader.RebuildEnabledPadsAsAquariumScript(input, tableRoots);
             await File.WriteAllTextAsync(Path.Combine(runDir, "candidate.aqua"), rebuild.Script);
 
-            var noteSamples = await ReadFloat32Async(noteRaw);
-            var tableSamples = await ReadFloat32Async(tableRaw);
             Assert.True(noteSamples.Length > 0);
             Assert.True(tableSamples.Length > noteSamples.Length);
             WriteWav(noteWav, noteSamples, 44100, 0.9f);
@@ -276,10 +306,10 @@ public sealed class ZynReferenceParityTests
                 $"fixture: {relative}",
                 $"instrument: {instrument.Name}",
                 $"input: {input}",
-                $"kit_index: {kitIndex}",
+                $"kit_index: {string.Join(",", padKitIds)}",
                 $"candidate: generated Zyn PAD rebuild",
-                $"note_stdout: {note.Stdout.Trim()}",
-                $"table_stdout: {table.Stdout.Trim()}",
+                $"note_stdout: {string.Join(" | ", noteStdouts)}",
+                $"table_stdout: {string.Join(" | ", tableStdouts)}",
                 $"peak: {Peak(noteSamples):0.######}",
                 $"rms: {Rms(noteSamples):0.######}",
                 $"duration: {features.DurationSeconds:0.######}",
@@ -292,9 +322,9 @@ public sealed class ZynReferenceParityTests
             report.Add("");
             report.Add($"fixture: {relative}");
             report.Add($"instrument: {instrument.Name}");
-            report.Add($"kit_index: {kitIndex}");
-            report.Add($"note_stdout: {note.Stdout.Trim()}");
-            report.Add($"table_stdout: {table.Stdout.Trim()}");
+            report.Add($"kit_index: {string.Join(",", padKitIds)}");
+            report.Add($"note_stdout: {string.Join(" | ", noteStdouts)}");
+            report.Add($"table_stdout: {string.Join(" | ", tableStdouts)}");
             report.Add($"peak: {Peak(noteSamples):0.######}");
             report.Add($"rms: {Rms(noteSamples):0.######}");
             report.Add($"duration: {features.DurationSeconds:0.######}");
@@ -410,6 +440,22 @@ public sealed class ZynReferenceParityTests
         var samples = new float[bytes.Length / sizeof(float)];
         Buffer.BlockCopy(bytes, 0, samples, 0, samples.Length * sizeof(float));
         return samples;
+    }
+
+    private static float[] SumSamples(IReadOnlyList<float[]> layers)
+    {
+        if (layers.Count == 0) return [];
+        var length = layers.Min(layer => layer.Length);
+        var sum = new float[length];
+        foreach (var layer in layers)
+        {
+            for (var i = 0; i < length; i++)
+            {
+                sum[i] += layer[i];
+            }
+        }
+
+        return sum;
     }
 
     private static float Peak(IReadOnlyList<float> samples) =>

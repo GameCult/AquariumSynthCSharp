@@ -71,6 +71,35 @@ Current follow-up:
   full OscilGen filter/waveshape coverage, adaptive harmonics, and note/global
   filter/envelope behavior. Do not tune thresholds around these numbers.
 
+Current user-ear correction:
+
+- User clarified Soft Pad itself is fine; Ghost Ensemble was the one collapsing
+  into a Soft Pad-like identity. The bug was our direct-harmonic gate ignoring
+  Ghost's live `base_function=4` power oscillator because no downstream
+  oscillator stage was enabled. The gate now expands power-base multi-harmonic
+  OscilGen sources, restoring Ghost to a 32-partial source. Latest Ghost:
+  log-mel `0.402789`, score `0.446977`, and the `.aqua` no longer looks like a
+  two-partial Soft Pad knockoff.
+- DoublePadBass exposed a separate ownership bug: the preset is `kit_mode=1`
+  with two enabled PAD kit items across the full key range. The old parity path
+  rendered and rebuilt only kit item 0. The upstream PAD test now sums enabled
+  PAD kit notes and passes per-kit table roots into
+  `RebuildEnabledPadsAsAquariumScript`; generated Aqua emits
+  `doublepadbass_0` and `doublepadbass_1`.
+- Latest DoublePadBass after multi-kit rebuild: log-mel `0.493451`, score
+  `0.376854`, RMS ratio `0.826864`. Raising the volume cap to `3.0` worsened it
+  (log-mel `0.521113`, RMS ratio `1.220809`), so the cap was cut back to `1.5`.
+- User then identified the remaining DoublePadBass balance issue: Aqua
+  over-emphasized kit0's high buzz while Zyn's character comes from kit1's low
+  rumble. The cause was visible Zyn global filter data we were still ignoring:
+  kit0 has filter `category=0 type=2 freq=12`, kit1 has `freq=61`. Static Zyn
+  PAD low-pass now maps to layer `lpf`; the helper had to read nested `FILTER`
+  params, not direct `FILTER_PARAMETERS` children.
+- Latest DoublePadBass after static LPF mapping: log-mel `0.421699`, score
+  `0.412022`, with generated layers `doublepadbass_0 lpf=0.094488` and
+  `doublepadbass_1 lpf=0.480315`. Filter envelope/LFO still remains explicit
+  missing pressure.
+
 Completed this slice:
 
 - Added PAD spectral-cloud syntax attached to named layers:
