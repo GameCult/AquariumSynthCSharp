@@ -799,7 +799,7 @@ public static class BuiltInScripts
 
     public const string ZynStylePadTexture = """
         patch
-            gain=1.4
+            gain=1.1
 
         param
             name=spread
@@ -826,11 +826,11 @@ public static class BuiltInScripts
             lpf=0.18
             gain=0.05
 
-        layer name=pad_low engine=pad min_key=36 max_key=84 gain=0.14 vibrato=0 vibrato_hz=0.09 env=rl rates=0.28,0.42,0.7,1.2 levels=1,0.94,0.88,0 curves=lin,exp,lin,lin gate=2.18
-        layer name=pad_high engine=pad min_key=48 max_key=108 gain=0.04 vibrato=0 vibrato_hz=0.11 env=rl rates=0.28,0.42,0.7,1.2 levels=1,0.94,0.88,0 curves=lin,exp,lin,lin gate=2.18
+        layer name=pad_low engine=pad min_key=36 max_key=84 gain=0.18 vibrato=0 vibrato_hz=0.09 env=rl rates=0.28,0.42,0.7,1.2 levels=1,0.94,0.88,0 curves=lin,exp,lin,lin gate=2.18
+        layer name=pad_high engine=pad min_key=48 max_key=108 gain=0 vibrato=0 vibrato_hz=0.11 env=rl rates=0.28,0.42,0.7,1.2 levels=1,0.94,0.88,0 curves=lin,exp,lin,lin gate=2.18
 
-        spectrum layer=pad_low root=77.7813 freq=261.6256 spread=0 partials=1:0.14,1.5:0.032
-        spectrum layer=pad_high root=77.7813 freq=261.6256 spread=0 partials=1:0.04
+        spectrum layer=pad_low root=77.7813 freq=261.6256 spread=0 partials=1:0.16,1.5:0.026,2:0.02
+        spectrum layer=pad_high root=77.7813 freq=261.6256 spread=0 partials=1:0
         """;
 
     public const string ZynStyleVocalLayer = """
