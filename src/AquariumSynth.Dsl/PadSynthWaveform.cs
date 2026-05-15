@@ -141,6 +141,7 @@ internal static class PadSynthWaveform
         for (var i = 0; i < profileSize * superSample; i++)
         {
             var x = i / (double)(profileSize * superSample);
+            var originalX = x * 2.0 - 1.0;
             x = (x - 0.5) * width + 0.5;
             if (x is < 0 or > 1)
             {
@@ -156,7 +157,6 @@ internal static class PadSynthWaveform
                 continue;
             }
 
-            var originalX = x * 2.0 - 1.0;
             var beforeFreqMult = x;
             x *= freqMult;
             x += Math.Sin(beforeFreqMult * Math.PI * modFreq) * modPar;

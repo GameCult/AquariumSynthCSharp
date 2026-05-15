@@ -170,6 +170,25 @@ public sealed class ZynInstrumentTests
     }
 
     [Fact]
+    public void UpstreamSin2xOscilFilterKeepsSpikeOnSecondHarmonicWhenAvailable()
+    {
+        var root = RepositoryRoot();
+        var path = Path.Combine(root, "external", "zynaddsubfx", "instruments", "banks", "Pads", "0002-sin2x  pad.xiz");
+        if (!File.Exists(path))
+        {
+            return;
+        }
+
+        var rebuild = ZynInstrumentReader.RebuildFirstPadAsAquariumScript(path, tableRootFrequencyHz: 109.999f);
+        var patch = PatchScript.Parse(rebuild.Script);
+
+        var bank = Assert.Single(patch.SpectralBanks);
+        var partials = bank.Partials.ToDictionary(partial => (int)MathF.Round(partial.Ratio), partial => partial.Gain);
+        Assert.True(partials[2] > partials[3] * 10);
+        Assert.True(partials[2] > partials[1]);
+    }
+
+    [Fact]
     public async Task SurveysUpstreamGplInstrumentBankWhenAvailable()
     {
         var root = RepositoryRoot();

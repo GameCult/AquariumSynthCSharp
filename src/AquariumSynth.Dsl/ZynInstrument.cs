@@ -533,7 +533,7 @@ public static class ZynInstrumentReader
 
     private static double ZynOscilFilterGain(int type, int harmonic, double par, double par2)
     {
-        var i = Math.Max(0, harmonic - 1);
+        var i = Math.Max(1, harmonic);
         return type switch
         {
             1 => ZynOscilLowPass(i, par, par2),

@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-15T13:45:00+01:00
+updated: 2026-05-15T14:15:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -81,6 +81,7 @@ live_invariants:
   - Additive `harmonics` declarations own authored ratio/gain partial banks under named layers. They lower to ordinary voices for now; do not pretend this covers Zyn ADDsynth phase, bandwidth, oscillator shaping, or free-envelope semantics.
   - Normal voices may use staged `env=rl` rate/level envelopes. Notes still own gate timing; envelopes own level shape. This is not arbitrary Zyn free-envelope point editing.
   - PAD `spectrum` declarations own authored partial clouds under named layers and split table root from playback pitch: `root` is source/base frequency, while `freq` is the note played by the spectral voice. They generate PADsynth-style FFT wavetables with frequency-domain spreading and deterministic random phase, then emit Faust table readers before ordinary voice treatment. Zyn-fed PAD banks may additionally carry `zyn_mode`, `zyn_bandwidth`, `zyn_bwscale`, `zyn_profile`, and `zyn_position`; those fields belong to the spectral table generator, not to parity-test side channels. Do not pretend this covers every Zyn OscilGen modulation/waveshaping/filter/adaptive-harmonic path yet.
+  - Zyn OscilGen oscillator filters use one-based harmonic indices: first harmonic is `1`, not `0`. Preserve that index when translating filter types or spectral peaks move to the wrong partial.
   - Filter damping is first-class: `lpf_q`/`lpq` owns explicit low-pass Q when a reference synth exposes analog filter damping. Low-pass order remains slope authority even when Q is present; Faust lowering cascades resonant low-pass stages instead of replacing order with one generic resonant filter. Do not fake Q by secretly moving cutoff, slope, or layer gain.
   - Structured `.aqua` stock lives under `patches/` as development source material. Every library patch must parse/export, and the patch library must stay out of the NuGet package unless intentionally promoted.
   - Project-authored Dexed patches may be generated inside tests for calibration; do not ship them in the NuGet package or treat them as runtime dependencies.
@@ -169,6 +170,19 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-15
+    summary: >
+      Fixed Zyn OscilGen oscillator-filter harmonic indexing after user listening
+      accepted Ghost, DoublePadBass, and Soft Pad but still heard sin2x
+      over-emphasizing the wrong high harmonic. Zyn filter functions receive
+      one-based harmonic numbers, so Aquarium's zero-based translation moved
+      sin2x's type-13 spike from h2 to h3. Preserving the Zyn index makes the
+      generated sin2x table h2-dominant, improves centroid ratio from
+      `1.227953` to `0.998145`, and moves log-mel from `0.491437` to
+      `0.479782`. Organ Choir remains slightly tinny by ear and sin2x is still
+      louder/concentrated, so the next pressure is output/profile shape rather
+      than the wrong overtone index.
+    verification: "dotnet test AquariumSynthCSharp.slnx --no-restore: 106 passed"
   - date: 2026-05-15
     summary: >
       Added generated Zyn PAD output calibration after user listening found the

@@ -180,6 +180,25 @@ Current user-ear correction:
   centroid ratio `1.006808`, score `0.57229`. DoublePadBass remains at
   log-mel `0.247748`, envelope `0.208433`, RMS ratio `0.887555`, score
   `0.650029`.
+- User accepted Ghost, DoublePadBass, and Soft Pad as nigh-indistinguishable
+  by ear, with Organ Choir still a bit tinny and sin2x still overdoing a high
+  harmonic. The sin2x issue was a real OscilGen indexing bug, not a fixture
+  brightness preference: Zyn oscillator filters receive one-based harmonic
+  indices (`filter(1)` is the first harmonic), while Aquarium had translated
+  them through a zero-based index and moved the type-13 spike filter from h2 to
+  h3. `ZynOscilFilterGain` now preserves Zyn's one-based index, and the
+  upstream sin2x regression asserts h2 dominates h3 by more than 10x.
+- Latest sin2x after the oscillator-filter index fix:
+  artifact `artifacts/parity/zyn-upstream-pad-fixtures/0002-sin2x-pad-20260515T140540381`,
+  log-mel `0.479782` (from `0.491437`), envelope distance `0.490113`, RMS
+  ratio `1.28196`, centroid ratio `0.998145` (from `1.227953`), score
+  `0.430193`. The wrong overtone placement is fixed: remaining sin2x pressure
+  is energy concentration/loudness/profile shape, not h3 accidentally wearing
+  h2's jacket.
+- Zyn PAD harmonic profile lowering also now computes the profile amplitude
+  multiplier coordinate before width scaling, matching Zyn's `origx`
+  behavior. It was effectively neutral for sin2x because that preset's width is
+  near full, but the ownership is now faithful to the source formula.
 
 Completed this slice:
 
