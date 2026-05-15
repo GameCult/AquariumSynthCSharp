@@ -82,6 +82,8 @@ live_invariants:
   - Normal voices may use staged `env=rl` rate/level envelopes. Notes still own gate timing; envelopes own level shape. This is not arbitrary Zyn free-envelope point editing.
   - PAD `spectrum` declarations own authored partial clouds under named layers and split table root from playback pitch: `root` is source/base frequency, while `freq` is the note played by the spectral voice. They generate PADsynth-style FFT wavetables with frequency-domain spreading and deterministic random phase, then emit Faust table readers before ordinary voice treatment. Zyn-fed PAD banks may additionally carry `zyn_mode`, `zyn_bandwidth`, `zyn_bwscale`, `zyn_profile`, and `zyn_position`; those fields belong to the spectral table generator, not to parity-test side channels. Do not pretend this covers every Zyn OscilGen modulation/waveshaping/filter/adaptive-harmonic path yet.
   - Zyn OscilGen oscillator filters use one-based harmonic indices: first harmonic is `1`, not `0`. Preserve that index when translating filter types or spectral peaks move to the wrong partial.
+  - Zyn PAD analog high-pass filters are filter authority too: HP1/HP2 type, stages, and FILTER_ENVELOPE motion lower through `hpf_order` and `hpf_env=rl`, not ad hoc layer gain or brightness compensation.
+  - Zyn PAD selected table roots are not a global default in Aquarium lowering. Keep sample-0 roots unless a source rule earns the selected root; currently OscilGen shift-base sources (`base_function=7`) may use the selected note table root because Organ Choir proved sample-0 roots leave the octave voice misaligned.
   - Filter damping is first-class: `lpf_q`/`lpq` owns explicit low-pass Q when a reference synth exposes analog filter damping. Low-pass order remains slope authority even when Q is present; Faust lowering cascades resonant low-pass stages instead of replacing order with one generic resonant filter. Do not fake Q by secretly moving cutoff, slope, or layer gain.
   - Structured `.aqua` stock lives under `patches/` as development source material. Every library patch must parse/export, and the patch library must stay out of the NuGet package unless intentionally promoted.
   - Project-authored Dexed patches may be generated inside tests for calibration; do not ship them in the NuGet package or treat them as runtime dependencies.
@@ -170,6 +172,19 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-15
+    summary: >
+      Mapped Organ Choir's remaining PAD voice-alignment issue to two real Zyn
+      authorities instead of a gain shove: kit0 uses analog HP2 with six-pole
+      high-pass order and FILTER_ENVELOPE cutoff motion, while kit1 uses
+      OscilGen `base_function=7` and needs the selected note table root. The
+      survey now records sample-0 and selected PAD table roots, but the
+      translator only chooses the selected root for shift-base OscilGen sources;
+      global selected roots were tested and regressed accepted DoublePadBass.
+      Latest Organ candidate is led by the 523 Hz choir voice, with 261 Hz body
+      at about -1.29 dB versus Zyn's -2.23 dB. Soft Pad, Ghost, and
+      DoublePadBass remain on the accepted sample-0 root path.
+    verification: "dotnet test AquariumSynthCSharp.slnx --no-restore: 107 passed"
   - date: 2026-05-15
     summary: >
       Fixed Zyn OscilGen oscillator-filter harmonic indexing after user listening

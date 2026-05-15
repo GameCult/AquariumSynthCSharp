@@ -227,8 +227,12 @@ public static class FaustEmitter
         var lpfEnvelope = voice.Filter.LowPassEnvelope is { } filterEnvelope
             ? $" + {RateLevelEnvelopeExpression(filterEnvelope, noteGate)}"
             : "";
+        var hpfEnvelope = voice.Filter.HighPassEnvelope is { } highPassEnvelope
+            ? $" + {RateLevelEnvelopeExpression(highPassEnvelope, noteGate)}"
+            : "";
         var lpf = $"clip01({parameters.Expression(OwnerField(ownerPath, "filter/lpf"), voice.Filter.LowPass)} * (1.0 + {parameters.Expression(OwnerField(ownerPath, "filter/lpf_ramp"), voice.Filter.LowPassRamp)} * age * 1.8){lpfEnvelope} + patch_mod_lpf + {lpfMod})";
-        var hpf = $"clip01({parameters.Expression(OwnerField(ownerPath, "filter/hpf"), voice.Filter.HighPass)} * (1.0 + {parameters.Expression(OwnerField(ownerPath, "filter/hpf_ramp"), voice.Filter.HighPassRamp)} * age * 2.0) + patch_mod_hpf + {hpfMod})";
+        var hpf = $"clip01({parameters.Expression(OwnerField(ownerPath, "filter/hpf"), voice.Filter.HighPass)} * (1.0 + {parameters.Expression(OwnerField(ownerPath, "filter/hpf_ramp"), voice.Filter.HighPassRamp)} * age * 2.0){hpfEnvelope} + patch_mod_hpf + {hpfMod})";
+        var highPassOrder = Math.Clamp(voice.Filter.HighPassOrder, 1, 12);
         var hasExplicitQ = voice.Filter.LowPassQ > 0 || parameters.IsBound(OwnerField(ownerPath, "filter/lpf_q"));
         var hasResonance = voice.Filter.LowPassResonance > 0 || parameters.IsBound(OwnerField(ownerPath, "filter/resonance"));
         var resonance = parameters.Expression(OwnerField(ownerPath, "filter/resonance"), voice.Filter.LowPassResonance);
@@ -245,7 +249,7 @@ public static class FaustEmitter
         source.AppendLine($"{name}_colored = ({name}_osc * (1.0 - {noiseMix}) + no.noise * {noiseMix});");
         source.AppendLine($"{name}_driven = ma.tanh({name}_colored * (1.0 + {driveExpression} * 12.0)) / ma.tanh(1.0 + {driveExpression} * 12.0);");
         source.AppendLine($"{name}_folded = {name}_driven * (1.0 - {foldExpression}) + fold({name}_driven * (1.0 + {foldExpression} * 3.5)) * {foldExpression};");
-        source.AppendLine($"{name}_filtered = {name}_folded : {lowpass} : fi.highpass(1, max(5.0, ({hpf}) * ({hpf}) * 7000.0));");
+        source.AppendLine($"{name}_filtered = {name}_folded : {lowpass} : fi.highpass({highPassOrder}, max(5.0, ({hpf}) * ({hpf}) * 7000.0));");
         if (voice.Phaser.OffsetSeconds != 0 || voice.Phaser.RampSecondsPerSecond != 0 ||
             parameters.IsBound(OwnerField(ownerPath, "phaser/offset")) ||
             parameters.IsBound(OwnerField(ownerPath, "phaser/ramp")))

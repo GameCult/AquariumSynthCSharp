@@ -258,7 +258,7 @@ public sealed class ZynReferenceParityTests
 
             var noteStdouts = new List<string>();
             var noteLayers = new List<float[]>();
-            var tableRoots = new Dictionary<int, float>();
+            var tableRoots = new Dictionary<int, ZynPadTableRoot>();
             var tableStdouts = new List<string>();
             float[] tableSamples = [];
             foreach (var padKitId in padKitIds)
@@ -272,8 +272,11 @@ public sealed class ZynReferenceParityTests
                 var kitTableRaw = padKitIds.Length == 1 ? tableRaw : Path.Combine(runDir, $"reference-zyn-table-kit{padKitId}.f32");
                 var table = await RunAsync(bash, ["-lc", ZynPadCommand(root, input, kitTableRaw, padKitId, "0")]);
                 Assert.Equal(0, table.ExitCode);
-                tableStdouts.Add($"kit{padKitId}: {table.Stdout.Trim()}");
-                tableRoots[padKitId] = ParseBaseFrequency(table.Stdout);
+                var selectedTableRaw = Path.Combine(runDir, $"reference-zyn-selected-table-kit{padKitId}.f32");
+                var selectedTable = await RunAsync(bash, ["-lc", ZynPadCommand(root, input, selectedTableRaw, padKitId, "selected", "261.6256")]);
+                Assert.Equal(0, selectedTable.ExitCode);
+                tableStdouts.Add($"kit{padKitId}: sample0 {table.Stdout.Trim()} selected {selectedTable.Stdout.Trim()}");
+                tableRoots[padKitId] = new ZynPadTableRoot(ParseBaseFrequency(table.Stdout), ParseBaseFrequency(selectedTable.Stdout));
                 var currentTableSamples = await ReadFloat32Async(kitTableRaw);
                 if (tableSamples.Length == 0)
                 {
@@ -287,9 +290,7 @@ public sealed class ZynReferenceParityTests
             }
 
             var noteSamples = SumSamples(noteLayers);
-            var rebuild = padKitIds.Length == 1
-                ? ZynInstrumentReader.RebuildFirstPadAsAquariumScript(input, tableRoots[padKitIds[0]])
-                : ZynInstrumentReader.RebuildEnabledPadsAsAquariumScript(input, tableRoots);
+            var rebuild = ZynInstrumentReader.RebuildEnabledPadsAsAquariumScript(input, tableRoots);
             await File.WriteAllTextAsync(Path.Combine(runDir, "candidate.aqua"), rebuild.Script);
 
             Assert.True(noteSamples.Length > 0);

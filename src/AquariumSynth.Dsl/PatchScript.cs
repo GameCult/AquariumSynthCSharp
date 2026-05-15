@@ -445,7 +445,9 @@ public static class PatchScript
                     GetBoundInt(fields, line, 1, OwnerField(ownerPath, "filter/lpf_order"), "lpf_order", "lpfo"),
                     GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "filter/hpf"), "hpf", "h"),
                     GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "filter/hpf_ramp"), "hpf_ramp", "hr"),
-                    ParseFilterRateLevelEnvelope(fields, line, ownerPath)),
+                    GetBoundInt(fields, line, 1, OwnerField(ownerPath, "filter/hpf_order"), "hpf_order", "hpfo"),
+                    ParseFilterRateLevelEnvelope(fields, line, ownerPath, "lpf"),
+                    ParseFilterRateLevelEnvelope(fields, line, ownerPath, "hpf")),
                 Phaser = new Phaser(
                     GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "phaser/offset"), "phaser", "ph"),
                     GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "phaser/ramp"), "phaser_ramp", "phr")),
@@ -1033,21 +1035,27 @@ public static class PatchScript
                 envelope);
         }
 
-        private RateLevelEnvelope? ParseFilterRateLevelEnvelope(IReadOnlyDictionary<string, string> fields, int line, string ownerPath)
+        private RateLevelEnvelope? ParseFilterRateLevelEnvelope(IReadOnlyDictionary<string, string> fields, int line, string ownerPath, string prefix)
         {
-            if (!TryGetAny(fields, ["lpf_env", "filter_env"], out var env) || env is not ("rl" or "ratelevel"))
+            var envKeys = prefix == "lpf" ? new[] { "lpf_env", "filter_env" } : new[] { "hpf_env" };
+            if (!TryGetAny(fields, envKeys, out var env) || env is not ("rl" or "ratelevel"))
             {
                 return null;
             }
 
-            var rates = ParseFloatList(Required(fields, "lpf_rates", line), line, "lpf_rates");
-            var levels = ParseFloatList(Required(fields, "lpf_levels", line), line, "lpf_levels");
+            var ratesName = $"{prefix}_rates";
+            var levelsName = $"{prefix}_levels";
+            var curvesName = $"{prefix}_curves";
+            var curveName = $"{prefix}_curve";
+            var startName = $"{prefix}_start";
+            var rates = ParseFloatList(Required(fields, ratesName, line), line, ratesName);
+            var levels = ParseFloatList(Required(fields, levelsName, line), line, levelsName);
             if (rates.Count != 4 || levels.Count != 4)
             {
                 throw new PatchScriptException(line, "filter rate/level envelope needs four rates and four levels");
             }
 
-            var curves = TryGetAny(fields, ["lpf_curves", "lpf_curve"], out var curveText)
+            var curves = TryGetAny(fields, [curvesName, curveName], out var curveText)
                 ? ParseCurveList(curveText, line)
                 : [RateLevelCurve.Linear, RateLevelCurve.Linear, RateLevelCurve.Linear, RateLevelCurve.Linear];
             if (curves.Count != 4)
@@ -1061,7 +1069,7 @@ public static class PatchScript
                 Math.Max(0, rates[2]), Math.Clamp(levels[2], -1, 1),
                 Math.Max(0, rates[3]), Math.Clamp(levels[3], -1, 1),
                 curves[0], curves[1], curves[2], curves[3],
-                TryGetAny(fields, ["lpf_start", "filter_start"], out var startText)
+                TryGetAny(fields, prefix == "lpf" ? [startName, "filter_start"] : [startName], out var startText)
                     ? Math.Clamp(ParseFloat(startText, line), -1, 1)
                     : 0);
         }

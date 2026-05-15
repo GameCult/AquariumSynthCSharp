@@ -19,6 +19,28 @@ Doctrine update:
 
 Current slice:
 
+- Organ Choir exposed two separate Zyn PAD authorities that are now mapped:
+  analog high-pass filters (`HP1`/`HP2`, stages, and FILTER_ENVELOPE motion)
+  and selected PAD table roots for OscilGen shift-base sources
+  (`base_function=7`). The root policy is source-driven: normal PAD rebuilds
+  keep the sample-0 oracle root, while shift-base OscilGen layers may use the
+  selected note table root when the parity oracle provides it.
+- Latest upstream PAD survey after this pass:
+  `Organ Choir Pad2` artifact
+  `artifacts/parity/zyn-upstream-pad-fixtures/0008-organ-choir-pad2-20260515T153520870`,
+  log-mel `0.499122`, envelope `0.295493`, RMS ratio `0.900147`,
+  centroid ratio `1.010911`, score `0.51966`. Peak anatomy now has the
+  candidate led by the 523 Hz choir voice, with 261 Hz body at about `-1.29dB`
+  versus Zyn's `-2.23dB`.
+- The accepted fixtures stayed on the sample-0 root path: DoublePadBass
+  log-mel `0.247674`, score `0.650319`; Ghost Ensemble log-mel `0.369402`,
+  score `0.57229`; Soft Pad log-mel `0.317897`, score `0.608833`.
+- Verification: `dotnet test AquariumSynthCSharp.slnx --no-restore`: 107
+  passed.
+- Next pressure remains sin2x and broader OscilGen/PAD source-table shape; do
+  not turn the base-function-7 selected-root rule into a global selected-table
+  switch. That was tested and regressed accepted DoublePadBass.
+
 - Zyn PAD per-preset rebuilds now carry first-class Zyn PAD table semantics
   instead of only `spread=0` plus harmonic magnitudes.
 - `SpectralBank` owns `PadSpectrumProfile`, including Zyn PAD mode,

@@ -72,8 +72,7 @@ void normalizeMaxLikePad(float* values, int count)
 {
     float max = 0.0f;
     for(int i = 0; i < count; ++i)
-        if(values[i] > i)
-            max = values[i];
+        max = std::max(max, std::fabs(values[i]));
 
     if(max > 0.000001f)
         for(int i = 0; i < count; ++i)
@@ -87,9 +86,33 @@ void writeHarmonics(
     float baseFrequency)
 {
     std::vector<float> harmonics(synth.oscilsize, 0.0f);
-    parameters.oscilgen->get(harmonics.data(), baseFrequency, false);
+    parameters.oscilgen->get(harmonics.data(), baseFrequency, true);
     normalizeMaxLikePad(harmonics.data(), synth.oscilsize / 2);
     writeFloat32(path, harmonics.data(), synth.oscilsize / 2);
+}
+
+int selectedSampleIndex(const PADnoteParameters& parameters, float frequency)
+{
+    const float noteLog2Frequency = std::log2(frequency);
+    const float detune = getdetune(
+        parameters.PDetuneType,
+        parameters.PCoarseDetune,
+        parameters.PDetune);
+    const float log2Frequency = noteLog2Frequency + detune / 1200.0f;
+    float minDistance = std::fabs(log2Frequency - std::log2(parameters.sample[0].basefreq + 0.0001f));
+    int selected = 0;
+    for(int i = 1; i < PAD_MAX_SAMPLES; ++i) {
+        if(parameters.sample[i].smp == nullptr)
+            break;
+
+        const float distance = std::fabs(log2Frequency - std::log2(parameters.sample[i].basefreq + 0.0001f));
+        if(distance < minDistance) {
+            selected = i;
+            minDistance = distance;
+        }
+    }
+
+    return selected;
 }
 
 void renderNote(
@@ -128,7 +151,7 @@ void renderNote(
 int main(int argc, char** argv)
 {
     if(argc < 3 || argc > 7) {
-        std::cerr << "Usage: ZynPadReference <input.xiz> <output.f32> [kit-index] [sample-index|note|harmonics] [frequency-hz] [seconds]\n";
+        std::cerr << "Usage: ZynPadReference <input.xiz> <output.f32> [kit-index] [sample-index|selected|note|harmonics] [frequency-hz] [seconds]\n";
         return 2;
     }
 
@@ -137,7 +160,8 @@ int main(int argc, char** argv)
     const int kitIndex = argc >= 4 ? parseInt(argv[3], "kit index") : 0;
     const bool renderAudio = argc >= 5 && std::string(argv[4]) == "note";
     const bool renderHarmonics = argc >= 5 && std::string(argv[4]) == "harmonics";
-    const int requestedSample = argc >= 5 && !renderAudio && !renderHarmonics ? parseInt(argv[4], "sample index") : 0;
+    const bool renderSelectedSample = argc >= 5 && std::string(argv[4]) == "selected";
+    const int requestedSample = argc >= 5 && !renderAudio && !renderHarmonics && !renderSelectedSample ? parseInt(argv[4], "sample index") : 0;
     const float frequency = argc >= 6 ? std::strtof(argv[5], nullptr) : 261.6256f;
     const float seconds = argc >= 7 ? std::strtof(argv[6], nullptr) : 1.5f;
 
@@ -185,7 +209,7 @@ int main(int argc, char** argv)
         return 0;
     }
 
-    int sampleIndex = requestedSample;
+    int sampleIndex = renderSelectedSample ? selectedSampleIndex(parameters, frequency) : requestedSample;
     if(sampleIndex < 0 || sampleIndex >= PAD_MAX_SAMPLES || parameters.sample[sampleIndex].smp == nullptr) {
         sampleIndex = -1;
         for(int i = 0; i < PAD_MAX_SAMPLES; ++i) {

@@ -189,6 +189,35 @@ public sealed class ZynInstrumentTests
     }
 
     [Fact]
+    public void UpstreamOrganChoirMapsHighPassMotionAndShiftTableRootWhenAvailable()
+    {
+        var root = RepositoryRoot();
+        var path = Path.Combine(root, "external", "zynaddsubfx", "instruments", "banks", "Dual", "0008-Organ Choir Pad2.xiz");
+        if (!File.Exists(path))
+        {
+            return;
+        }
+
+        var rebuild = ZynInstrumentReader.RebuildEnabledPadsAsAquariumScript(
+            path,
+            new Dictionary<int, ZynPadTableRoot>
+            {
+                [0] = new(77.7813f, 311.125f),
+                [1] = new(77.7813f, 622.25f)
+            });
+        var patch = PatchScript.Parse(rebuild.Script);
+
+        Assert.Contains("hpf_order=6", rebuild.Script);
+        Assert.Contains("hpf_env=rl", rebuild.Script);
+        Assert.Contains("spectrum layer=organ_choir_pad2_0 root=77.7813", rebuild.Script);
+        Assert.Contains("spectrum layer=organ_choir_pad2_1 root=622.25", rebuild.Script);
+        Assert.Contains(rebuild.MatchedFeatures, feature => feature.Name == "pad_kit_0_filter_hpf_envelope");
+        Assert.Contains(rebuild.MatchedFeatures, feature => feature.Name == "pad_kit_1_oscillator_base_function" && feature.Value == "7");
+        Assert.Equal(77.7813f, patch.SpectralBanks[0].RootFrequencyHz, precision: 4);
+        Assert.Equal(622.25f, patch.SpectralBanks[1].RootFrequencyHz, precision: 4);
+    }
+
+    [Fact]
     public async Task SurveysUpstreamGplInstrumentBankWhenAvailable()
     {
         var root = RepositoryRoot();

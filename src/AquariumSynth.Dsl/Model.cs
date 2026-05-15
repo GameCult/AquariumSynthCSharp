@@ -110,7 +110,9 @@ public sealed record Filter(
     int LowPassOrder = 1,
     float HighPass = 0,
     float HighPassRamp = 0,
-    RateLevelEnvelope? LowPassEnvelope = null);
+    int HighPassOrder = 1,
+    RateLevelEnvelope? LowPassEnvelope = null,
+    RateLevelEnvelope? HighPassEnvelope = null);
 
 public sealed record Phaser(float OffsetSeconds = 0, float RampSecondsPerSecond = 0);
 

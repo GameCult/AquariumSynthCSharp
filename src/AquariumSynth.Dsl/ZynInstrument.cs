@@ -80,6 +80,8 @@ public sealed record ZynPadRebuild(
     IReadOnlyList<ReferenceFeature> MatchedFeatures,
     IReadOnlyList<ReferenceFeature> MissingFeatures);
 
+public sealed record ZynPadTableRoot(float Sample0RootFrequencyHz, float? SelectedRootFrequencyHz = null);
+
 public enum ZynEngine
 {
     AddSynth,
@@ -127,6 +129,12 @@ public static class ZynInstrumentReader
         float playbackFrequencyHz = 261.6256f) =>
         RebuildEnabledPadsAsAquariumScript(File.ReadAllBytes(path), tableRootFrequencyHzByKitItem, playbackFrequencyHz);
 
+    public static ZynPadRebuild RebuildEnabledPadsAsAquariumScript(
+        string path,
+        IReadOnlyDictionary<int, ZynPadTableRoot> tableRootFrequencyHzByKitItem,
+        float playbackFrequencyHz = 261.6256f) =>
+        RebuildEnabledPadsAsAquariumScript(File.ReadAllBytes(path), tableRootFrequencyHzByKitItem, playbackFrequencyHz);
+
     public static ZynPadRebuild RebuildFirstPadAsAquariumScript(
         ReadOnlySpan<byte> bytes,
         float tableRootFrequencyHz,
@@ -142,12 +150,29 @@ public static class ZynInstrumentReader
             .Descendants("INSTRUMENT_KIT_ITEM")
             .FirstOrDefault(IsEnabledPadItem)
             ?? throw new ArgumentException("Zyn instrument XML has no enabled PAD kit item");
-        return RebuildPadItemsAsAquariumScript(document, [item], new Dictionary<int, float> { [IntAttribute(item, "id")] = tableRootFrequencyHz }, playbackFrequencyHz);
+        return RebuildPadItemsAsAquariumScript(
+            document,
+            [item],
+            new Dictionary<int, ZynPadTableRoot> { [IntAttribute(item, "id")] = new(tableRootFrequencyHz) },
+            playbackFrequencyHz);
     }
 
     public static ZynPadRebuild RebuildEnabledPadsAsAquariumScript(
         ReadOnlySpan<byte> bytes,
         IReadOnlyDictionary<int, float> tableRootFrequencyHzByKitItem,
+        float playbackFrequencyHz = 261.6256f)
+    {
+        return RebuildEnabledPadsAsAquariumScript(
+            bytes,
+            tableRootFrequencyHzByKitItem.ToDictionary(
+                pair => pair.Key,
+                pair => new ZynPadTableRoot(pair.Value)),
+            playbackFrequencyHz);
+    }
+
+    public static ZynPadRebuild RebuildEnabledPadsAsAquariumScript(
+        ReadOnlySpan<byte> bytes,
+        IReadOnlyDictionary<int, ZynPadTableRoot> tableRootFrequencyHzByKitItem,
         float playbackFrequencyHz = 261.6256f)
     {
         if (tableRootFrequencyHzByKitItem.Count == 0) throw new ArgumentException("At least one PAD table root is required.", nameof(tableRootFrequencyHzByKitItem));
@@ -171,7 +196,7 @@ public static class ZynInstrumentReader
     private static ZynPadRebuild RebuildPadItemsAsAquariumScript(
         XDocument document,
         IReadOnlyList<XElement> items,
-        IReadOnlyDictionary<int, float> tableRootFrequencyHzByKitItem,
+        IReadOnlyDictionary<int, ZynPadTableRoot> tableRootFrequencyHzByKitItem,
         float playbackFrequencyHz)
     {
         if (playbackFrequencyHz <= 0) throw new ArgumentOutOfRangeException(nameof(playbackFrequencyHz));
@@ -204,9 +229,15 @@ public static class ZynInstrumentReader
         foreach (var item in items)
         {
             var kitId = IntAttribute(item, "id");
-            if (!tableRootFrequencyHzByKitItem.TryGetValue(kitId, out var tableRootFrequencyHz) || tableRootFrequencyHz <= 0)
+            if (!tableRootFrequencyHzByKitItem.TryGetValue(kitId, out var tableRoot))
             {
                 throw new ArgumentException($"Missing PAD table root for kit item {kitId}.", nameof(tableRootFrequencyHzByKitItem));
+            }
+
+            var tableRootFrequencyHz = ZynPadRootForAquarium(item, tableRoot);
+            if (tableRootFrequencyHz <= 0)
+            {
+                throw new ArgumentException($"Invalid PAD table root for kit item {kitId}.", nameof(tableRootFrequencyHzByKitItem));
             }
 
             AppendPadItemScript(
@@ -222,6 +253,20 @@ public static class ZynInstrumentReader
         }
 
         return new ZynPadRebuild(name, items.Count == 1 ? IntAttribute(items[0], "id") : -1, script.ToString(), matched, missing);
+    }
+
+    private static float ZynPadRootForAquarium(XElement item, ZynPadTableRoot tableRoot)
+    {
+        var oscillator = item
+            .Element("PAD_SYNTH_PARAMETERS")
+            ?.Element("OSCIL");
+        if (IntParam(oscillator, "base_function", 0) == 7 &&
+            tableRoot.SelectedRootFrequencyHz is > 0)
+        {
+            return tableRoot.SelectedRootFrequencyHz.Value;
+        }
+
+        return tableRoot.Sample0RootFrequencyHz;
     }
 
     private static void AppendPadItemScript(
@@ -266,7 +311,10 @@ public static class ZynInstrumentReader
         var lowPass = ZynPadLowPass(filter, playbackFrequencyHz);
         var lowPassQ = ZynPadLowPassQ(filter);
         var lowPassOrder = ZynPadLowPassOrder(filter);
+        var highPass = ZynPadHighPass(filter, playbackFrequencyHz);
+        var highPassOrder = ZynPadHighPassOrder(filter);
         var lowPassEnvelope = ZynPadLowPassEnvelope(filter, lowPass);
+        var highPassEnvelope = ZynPadHighPassEnvelope(filter, highPass);
         var safeName = includeKitSuffix ? $"{safeBaseName}_{kitId}" : safeBaseName;
         var partialText = string.Join(",", harmonics.Select(partial => $"{F(partial.Ratio)}:{F(partial.Gain)}"));
 
@@ -287,9 +335,18 @@ public static class ZynInstrumentReader
             matched.Add(new($"{featurePrefix}filter_lpf_q", F(lowPassQ), "Mapped Zyn analog low-pass Q into Aquarium filter damping."));
             matched.Add(new($"{featurePrefix}filter_lpf_order", lowPassOrder.ToString(CultureInfo.InvariantCulture), "Mapped Zyn analog LP1/LP2 and stage count into Aquarium low-pass order."));
         }
+        if (highPass > 0)
+        {
+            matched.Add(new($"{featurePrefix}filter_hpf", F(highPass), "Mapped static Zyn PAD global high-pass frequency into Aquarium layer filtering."));
+            matched.Add(new($"{featurePrefix}filter_hpf_order", highPassOrder.ToString(CultureInfo.InvariantCulture), "Mapped Zyn analog HP1/HP2 and stage count into Aquarium high-pass order."));
+        }
         if (lowPassEnvelope is not null)
         {
             matched.Add(new($"{featurePrefix}filter_lpf_envelope", "ratelevel", "Mapped Zyn PAD filter envelope octave offsets into Aquarium low-pass cutoff motion."));
+        }
+        if (highPassEnvelope is not null)
+        {
+            matched.Add(new($"{featurePrefix}filter_hpf_envelope", "ratelevel", "Mapped Zyn PAD filter envelope octave offsets into Aquarium high-pass cutoff motion."));
         }
         if (filter?.Element("FILTER_LFO") is { } lfo && IntParam(lfo, "intensity", 0) != 0)
         {
@@ -299,8 +356,12 @@ public static class ZynInstrumentReader
         var filterEnvelopeText = lowPassEnvelope is null
             ? ""
             : $" lpf_env=rl lpf_start={F(lowPassEnvelope.StartLevel)} lpf_rates={F(lowPassEnvelope.Rate1Seconds)},{F(lowPassEnvelope.Rate2Seconds)},{F(lowPassEnvelope.Rate3Seconds)},{F(lowPassEnvelope.Rate4Seconds)} lpf_levels={F(lowPassEnvelope.Level1)},{F(lowPassEnvelope.Level2)},{F(lowPassEnvelope.Level3)},{F(lowPassEnvelope.Level4)} lpf_curves=lin,lin,lin,lin";
+        var highPassEnvelopeText = highPassEnvelope is null
+            ? ""
+            : $" hpf_env=rl hpf_start={F(highPassEnvelope.StartLevel)} hpf_rates={F(highPassEnvelope.Rate1Seconds)},{F(highPassEnvelope.Rate2Seconds)},{F(highPassEnvelope.Rate3Seconds)},{F(highPassEnvelope.Rate4Seconds)} hpf_levels={F(highPassEnvelope.Level1)},{F(highPassEnvelope.Level2)},{F(highPassEnvelope.Level3)},{F(highPassEnvelope.Level4)} hpf_curves=lin,lin,lin,lin";
         var filterQText = lowPass < 1 ? $" lpf_q={F(lowPassQ)}" : "";
-        script.AppendLine($"layer name={safeName} engine=pad gain={F(layerGain)} lpf={F(lowPass)}{filterQText} lpf_order={lowPassOrder}{filterEnvelopeText} env=rl rates={F(attack)},{F(decay)},1,{F(release)} levels=1,1,1,0 curves=lin,lin,lin,lin gate=1.5");
+        var highPassText = highPass > 0 ? $" hpf={F(highPass)} hpf_order={highPassOrder}" : "";
+        script.AppendLine($"layer name={safeName} engine=pad gain={F(layerGain)} lpf={F(lowPass)}{filterQText} lpf_order={lowPassOrder}{highPassText}{filterEnvelopeText}{highPassEnvelopeText} env=rl rates={F(attack)},{F(decay)},1,{F(release)} levels=1,1,1,0 curves=lin,lin,lin,lin gate=1.5");
         script.AppendLine($"spectrum layer={safeName} root={F(tableRootFrequencyHz)} freq={F(noteFrequencyHz)} spread=0 zyn_mode={mode} zyn_bandwidth={bandwidth} zyn_bwscale={bandwidthScale} zyn_profile={profile} zyn_position={position} partials={partialText}");
     }
 
@@ -425,7 +486,7 @@ public static class ZynInstrumentReader
         IntParam(oscillator, "filter_type", 0) != 0 ||
         IntParam(oscillator, "modulation", 0) != 0 ||
         IntParam(oscillator, "spectrum_adjust_type", 0) != 0 ||
-        (IntParam(oscillator, "base_function", 0) == 4 && harmonicMagnitudes.Count > 1) ||
+        (IntParam(oscillator, "base_function", 0) != 0 && harmonicMagnitudes.Count > 1) ||
         IntParam(oscillator, "harmonic_shift", 0) != 0 ||
         IntParam(oscillator, "adaptive_harmonics", 0) != 0;
 
@@ -828,21 +889,16 @@ public static class ZynInstrumentReader
 
     private static float ZynPadLowPass(XElement? filter, float playbackFrequencyHz)
     {
-        if (filter is null)
+        if (filter is null || !TryZynAnalogCutoff(filter, playbackFrequencyHz, out var cutoffHz, out var type))
         {
             return 1;
         }
 
-        var category = DescendantIntParam(filter, "category", 0);
-        var type = DescendantIntParam(filter, "type", 0);
-        if (category != 0 || type is not (1 or 2))
+        if (type is not (0 or 2))
         {
             return 1;
         }
 
-        var cutoffHz = MathF.Pow(2.0f, (DescendantIntParam(filter, "freq", 127) / 64.0f - 1.0f) * 5.0f + 9.96578428f);
-        var trackingPercent = (DescendantIntParam(filter, "freq_track", 64) - 64.0f) / 64.0f;
-        cutoffHz *= MathF.Pow(2.0f, MathF.Log2(playbackFrequencyHz / 440.0f) * trackingPercent);
         return Math.Clamp(cutoffHz / 18000.0f, 20.0f / 18000.0f, 1f);
     }
 
@@ -855,17 +911,50 @@ public static class ZynInstrumentReader
 
         var category = DescendantIntParam(filter, "category", 0);
         var type = DescendantIntParam(filter, "type", 0);
-        if (category != 0)
+        if (category != 0 || type is not (0 or 2))
         {
             return 1;
         }
 
         var poles = type switch
         {
-            1 => 1,
+            0 => 1,
             2 => 2,
             _ => 1
         };
+        return Math.Clamp(poles * (DescendantIntParam(filter, "stages", 0) + 1), 1, 12);
+    }
+
+    private static float ZynPadHighPass(XElement? filter, float playbackFrequencyHz)
+    {
+        if (filter is null || !TryZynAnalogCutoff(filter, playbackFrequencyHz, out var cutoffHz, out var type))
+        {
+            return 0;
+        }
+
+        if (type is not (1 or 3))
+        {
+            return 0;
+        }
+
+        return Math.Clamp(MathF.Sqrt(cutoffHz / 7000.0f), 0f, 1f);
+    }
+
+    private static int ZynPadHighPassOrder(XElement? filter)
+    {
+        if (filter is null)
+        {
+            return 1;
+        }
+
+        var category = DescendantIntParam(filter, "category", 0);
+        var type = DescendantIntParam(filter, "type", 0);
+        if (category != 0 || type is not (1 or 3))
+        {
+            return 1;
+        }
+
+        var poles = type == 1 ? 1 : 2;
         return Math.Clamp(poles * (DescendantIntParam(filter, "stages", 0) + 1), 1, 12);
     }
 
@@ -878,13 +967,29 @@ public static class ZynInstrumentReader
 
         var category = DescendantIntParam(filter, "category", 0);
         var type = DescendantIntParam(filter, "type", 0);
-        if (category != 0 || type is not (1 or 2))
+        if (category != 0 || type is not (0 or 2))
         {
             return 0;
         }
 
         var q = DescendantIntParam(filter, "q", 64) / 127.0f;
         return MathF.Exp(q * q * MathF.Log(1000.0f)) - 0.9f;
+    }
+
+    private static bool TryZynAnalogCutoff(XElement filter, float playbackFrequencyHz, out float cutoffHz, out int type)
+    {
+        var category = DescendantIntParam(filter, "category", 0);
+        type = DescendantIntParam(filter, "type", 0);
+        if (category != 0)
+        {
+            cutoffHz = 0;
+            return false;
+        }
+
+        cutoffHz = MathF.Pow(2.0f, (DescendantIntParam(filter, "freq", 127) / 64.0f - 1.0f) * 5.0f + 9.96578428f);
+        var trackingPercent = (DescendantIntParam(filter, "freq_track", 64) - 64.0f) / 64.0f;
+        cutoffHz *= MathF.Pow(2.0f, MathF.Log2(playbackFrequencyHz / 440.0f) * trackingPercent);
+        return true;
     }
 
     private static RateLevelEnvelope? ZynPadLowPassEnvelope(XElement? filter, float baseLowPass)
@@ -897,6 +1002,44 @@ public static class ZynInstrumentReader
 
         static float OctaveOffset(int value) => (value - 64.0f) / 64.0f * 6.0f;
         float LevelOffset(int value) => Math.Clamp(baseLowPass * MathF.Pow(2.0f, OctaveOffset(value)) - baseLowPass, -1f, 1f);
+
+        var start = LevelOffset(IntParam(envelope, "A_val", 64));
+        var level1 = LevelOffset(IntParam(envelope, "D_val", 64));
+        var level2 = LevelOffset(IntParam(envelope, "S_val", 64));
+        var level4 = LevelOffset(IntParam(envelope, "R_val", 64));
+        if (MathF.Abs(start) < 0.00001f &&
+            MathF.Abs(level1) < 0.00001f &&
+            MathF.Abs(level2) < 0.00001f &&
+            MathF.Abs(level4) < 0.00001f)
+        {
+            return null;
+        }
+
+        return new RateLevelEnvelope(
+            EnvelopeTime(envelope, "A_dt", 0.02f), level1,
+            EnvelopeTime(envelope, "D_dt", 0.42f), level2,
+            1.0f, level2,
+            EnvelopeTime(envelope, "R_dt", 1.2f), level4,
+            StartLevel: start);
+    }
+
+    private static RateLevelEnvelope? ZynPadHighPassEnvelope(XElement? filter, float baseHighPass)
+    {
+        var envelope = filter?.Element("FILTER_ENVELOPE");
+        if (envelope is null || baseHighPass <= 0)
+        {
+            return null;
+        }
+
+        static float OctaveOffset(int value) => (value - 64.0f) / 64.0f * 6.0f;
+
+        float LevelOffset(int value)
+        {
+            var baseCutoffHz = baseHighPass * baseHighPass * 7000.0f;
+            var movedCutoffHz = baseCutoffHz * MathF.Pow(2.0f, OctaveOffset(value));
+            var movedHighPass = MathF.Sqrt(Math.Clamp(movedCutoffHz / 7000.0f, 0f, 1f));
+            return Math.Clamp(movedHighPass - baseHighPass, -1f, 1f);
+        }
 
         var start = LevelOffset(IntParam(envelope, "A_val", 64));
         var level1 = LevelOffset(IntParam(envelope, "D_val", 64));
