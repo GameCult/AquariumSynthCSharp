@@ -89,6 +89,8 @@ public enum ZynEngine
 
 public static class ZynInstrumentReader
 {
+    private const float ZynPadOutputGain = 1.6f;
+
     public static ZynInstrument ParseFile(string path) =>
         Parse(File.ReadAllBytes(path));
 
@@ -183,7 +185,7 @@ public static class ZynInstrumentReader
         script.AppendLine("# Generated from a ZynAddSubFX PAD fixture for parity pressure.");
         script.AppendLine("# Scope: enabled PAD kit items, OSCIL source shaping, PAD table profile, basic volume/envelope.");
         script.AppendLine("patch");
-        script.AppendLine("    gain=1");
+        script.AppendLine($"    gain={F(ZynPadOutputGain)}");
         script.AppendLine("    soft_clip=false");
         script.AppendLine();
         script.AppendLine("defaults");
@@ -194,7 +196,8 @@ public static class ZynInstrumentReader
 
         var matched = new List<ReferenceFeature>
         {
-            new("engine_pad", items.Count.ToString(CultureInfo.InvariantCulture), "Translated enabled PAD kit item layers.")
+            new("engine_pad", items.Count.ToString(CultureInfo.InvariantCulture), "Translated enabled PAD kit item layers."),
+            new("pad_output_gain", F(ZynPadOutputGain), "Calibrated generated Zyn PAD note output against the reference renderer.")
         };
         var missing = new List<ReferenceFeature>();
 
@@ -248,7 +251,7 @@ public static class ZynInstrumentReader
         var layerGain = Math.Clamp(
             MathF.Pow(0.1f, 3.0f * (1.0f - volume / 96.0f)),
             0.001f,
-            1.5f);
+            3.0f);
         var frequency = pad.Element("FREQUENCY_PARAMETERS");
         var noteFrequencyHz = ZynPadPlaybackFrequency(frequency, playbackFrequencyHz);
         var attack = EnvelopeTime(envelope, "A_dt", 0.28f);
@@ -971,7 +974,12 @@ public static class ZynInstrumentReader
     private static float EnvelopeTime(XElement? envelope, string name, float fallback)
     {
         var value = IntParam(envelope, name, -1);
-        return value < 0 ? fallback : Math.Clamp(value / 127f, 0.02f, 1.4f);
+        if (value < 0)
+        {
+            return fallback;
+        }
+
+        return Math.Clamp((MathF.Pow(2.0f, value / 127.0f * 12.0f) - 1.0f) / 100.0f, 0.0f, 41.0f);
     }
 
     private static string SafeIdentifier(string value)

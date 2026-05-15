@@ -122,6 +122,21 @@ Current user-ear correction:
   importer maps `FILTER_ENVELOPE` into it. Latest DoublePadBass after this
   pass: log-mel `0.241993`, envelope distance `0.554658`, RMS ratio `0.456173`,
   score `0.404382`.
+- User then heard the hit level as right but the attack as less sharp, causing
+  a blare. The old Zyn envelope time conversion was also wrong: Aqua used
+  linear `dt/127`, while Zyn's old envelope time is
+  `(2^(dt/127*12)-1)/100`. DoublePadBass kit0 attack `10` is about `0.00925s`,
+  not `0.07874s`. The importer now uses Zyn's logarithmic time curve and the
+  PAD gain cap is relaxed only to `3.0`, not the full raw Zyn volume multiplier.
+  Latest DoublePadBass: log-mel `0.211646`, envelope distance `0.462822`, RMS
+  ratio `0.511669`, score `0.450507`.
+- User then heard the shape as right but Zyn still peaking quite a bit louder.
+  The remaining level delta was batch-wide output calibration, not another
+  DoublePadBass layer issue: latest pre-calibration PAD RMS ratios were
+  `0.51..0.78`. Generated Zyn PAD rebuilds now emit `patch gain=1.6`. Latest
+  DoublePadBass: WAV peak `0.979` against clipped Zyn reference peak `1.0`,
+  log-mel `0.211671`, envelope distance `0.226563`, RMS ratio `0.818669`,
+  score `0.631168`.
 
 Completed this slice:
 

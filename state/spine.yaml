@@ -170,6 +170,31 @@ next_agent_start_here:
 completed_slices:
   - date: 2026-05-15
     summary: >
+      Added generated Zyn PAD output calibration after user listening found the
+      shape right but Zyn still peaking much louder. This is a patch-level
+      calibration for Zyn PAD rebuilds (`patch gain=1.6`), not a table
+      normalization or core DSL change. It corrects a batch-wide note-output
+      level deficit after table/filter/envelope semantics were mapped: latest
+      DoublePadBass candidate WAV peak is `0.979` against the clipped Zyn
+      reference WAV peak `1.0`, log-mel stays `0.211671`, envelope distance
+      improves to `0.226563`, RMS ratio to `0.818669`, and score to `0.631168`.
+      The rest of the current PAD batch stays in a plausible RMS range
+      (`0.94..1.24` except DoublePadBass at `0.82`).
+    verification: "dotnet test AquariumSynthCSharp.slnx --no-restore: 104 passed"
+  - date: 2026-05-15
+    summary: >
+      Corrected Zyn PAD envelope timing after user listening reported that
+      DoublePadBass hit hard enough but the attack was too soft and blared.
+      The importer had been using linear `dt/127`; Zyn's old envelope time curve
+      is `(2^(dt/127*12)-1)/100`, so DoublePadBass kit0 attack `10` should be
+      about `0.00925s`, not `0.07874s`. The PAD gain ceiling is relaxed to
+      `3.0` so loud PADs are no longer amputated, but the raw Zyn `4x` volume
+      multiplier remains cut because it overdrives the whole fixture batch.
+      DoublePadBass improved to log-mel `0.211646`, envelope distance
+      `0.462822`, RMS ratio `0.511669`, score `0.450507`.
+    verification: "dotnet test AquariumSynthCSharp.slnx --no-restore: 104 passed"
+  - date: 2026-05-15
+    summary: >
       Added a general low-pass rate/level envelope surface and mapped Zyn PAD
       `FILTER_ENVELOPE` into it after user listening identified that
       DoublePadBass had the right tone but not Zyn's harder opening hit.
