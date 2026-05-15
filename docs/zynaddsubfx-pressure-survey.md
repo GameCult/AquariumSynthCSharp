@@ -50,9 +50,11 @@ GPL PAD batch through the real Zyn oracle when the renderer is built:
 - `Laba170bank/0098-DoublePadBass.xiz`
 - `Companion/0121-Ghost Ensemble.xiz`
 
-The WAVs and table previews land under
-`artifacts/parity/zyn-upstream-pad-fixtures/`. These are listening and parity
-fixtures, not library candidates.
+Each render lands in a per-synth timestamped folder under
+`artifacts/parity/zyn-upstream-pad-fixtures/`, with Zyn reference WAVs, source
+table WAVs, `report.txt`, and `candidate.aqua`. The Aquarium candidate is the
+current PAD baseline unless the report says a fixture has a specific rebuild.
+These are listening and parity fixtures, not library candidates.
 
 ## Pressure Conclusions
 

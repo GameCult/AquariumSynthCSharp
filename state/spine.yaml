@@ -175,11 +175,15 @@ completed_slices:
       parses 1318 `.xiz` instruments and writes
       `artifacts/parity/zyn-upstream-bank-survey/report.txt`, plus an optional
       oracle render batch for five upstream PAD instruments under
-      `artifacts/parity/zyn-upstream-pad-fixtures/`. The batch includes
-      `Pads/0002-sin2x  pad.xiz`, `Pads/0065-Soft Pad.xiz`,
+      `artifacts/parity/zyn-upstream-pad-fixtures/`. Zyn PAD artifacts now use
+      per-synth timestamped folders with reference WAVs, table WAVs,
+      `candidate.aqua`, and `report.txt`; upstream GPL runs also render the
+      current `ZynStylePadTexture` Aquarium baseline as `candidate-aquarium.wav`
+      while labeling it as a baseline rather than a per-preset rebuild. The
+      batch includes `Pads/0002-sin2x  pad.xiz`, `Pads/0065-Soft Pad.xiz`,
       `Dual/0008-Organ Choir Pad2.xiz`, `Laba170bank/0098-DoublePadBass.xiz`,
       and `Companion/0121-Ghost Ensemble.xiz`.
-    verification: "dotnet test AquariumSynthCSharp.slnx --no-restore --filter FullyQualifiedName~Zyn: 14 passed"
+    verification: "dotnet test AquariumSynthCSharp.slnx --no-restore --filter FullyQualifiedName~ZynReferenceParityTests: 4 passed"
   - date: 2026-05-15
     summary: >
       Added more project-authored PAD fixtures and a Zyn-only PAD fixture
