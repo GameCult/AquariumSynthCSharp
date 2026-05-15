@@ -8,7 +8,15 @@ Purpose:
 - exercise Zyn instrument feature extraction without vendoring unclear preset
   licenses;
 - keep the first Zyn slice focused on structural classification, not audio
-  translation;
+translation;
 - preserve a clean NuGet boundary. Test fixtures are development material only.
+
+Current fixtures:
+
+- `additive-lead.xiz`
+- `pad-pure.xiz`
+- `pad-texture.xiz`
+- `pad-harmonic.xiz`
+- `vocal-layer.xiz`
 
 License: project-authored for AquariumSynthCSharp tests.

@@ -114,6 +114,66 @@ public sealed class ZynReferenceParityTests
         await File.WriteAllLinesAsync(reportPath, report);
     }
 
+    [Fact]
+    public async Task ZynPadReferenceRendererSurveysProjectAuthoredPadFixturesWhenBuilt()
+    {
+        var root = RepositoryRoot();
+        var bash = @"C:\msys64\usr\bin\bash.exe";
+        var renderer = Path.Combine(root, "artifacts", "zyn-reference-build-msys", "src", "Tests", "ZynPadReference.exe");
+        if (!File.Exists(bash) || !File.Exists(renderer))
+        {
+            return;
+        }
+
+        var fixtureDir = Path.Combine(root, "tests", "AquariumSynth.Dsl.Tests", "Fixtures", "ZynAddSubFX", "ProjectAuthored");
+        var artifactDir = Path.Combine(root, "artifacts", "parity", "zyn-pad-fixtures");
+        Directory.CreateDirectory(artifactDir);
+
+        var report = new List<string>
+        {
+            "Zyn PAD fixture survey",
+            $"renderer: {renderer}"
+        };
+
+        foreach (var input in Directory.GetFiles(fixtureDir, "pad-*.xiz").Order(StringComparer.OrdinalIgnoreCase))
+        {
+            var name = Path.GetFileNameWithoutExtension(input);
+            var instrument = ZynInstrumentReader.ParseFile(input);
+            Assert.Contains(instrument.KitItems, item => item.Enabled && item.Engines.Contains(ZynEngine.PadSynth));
+
+            var noteRaw = Path.Combine(artifactDir, $"{name}-zyn.f32");
+            var noteWav = Path.Combine(artifactDir, $"{name}-zyn.wav");
+            var tableRaw = Path.Combine(artifactDir, $"{name}-table0.f32");
+            var tableWav = Path.Combine(artifactDir, $"{name}-table0.wav");
+
+            var note = await RunAsync(bash, ["-lc", ZynPadCommand(root, input, noteRaw, "note", "261.6256", "1.5")]);
+            Assert.Equal(0, note.ExitCode);
+            var table = await RunAsync(bash, ["-lc", ZynPadCommand(root, input, tableRaw, "0")]);
+            Assert.Equal(0, table.ExitCode);
+
+            var noteSamples = await ReadFloat32Async(noteRaw);
+            var tableSamples = await ReadFloat32Async(tableRaw);
+            Assert.True(noteSamples.Length > 0);
+            Assert.True(tableSamples.Length > noteSamples.Length);
+            WriteWav(noteWav, noteSamples, 44100, 0.9f);
+            WriteWav(tableWav, tableSamples, 44100, 0.9f);
+
+            var features = AudioAnalyzer.AnalyzeAudio(noteSamples).Features;
+            report.Add("");
+            report.Add($"fixture: {name}");
+            report.Add($"note_stdout: {note.Stdout.Trim()}");
+            report.Add($"table_stdout: {table.Stdout.Trim()}");
+            report.Add($"peak: {Peak(noteSamples):0.######}");
+            report.Add($"rms: {Rms(noteSamples):0.######}");
+            report.Add($"duration: {features.DurationSeconds:0.######}");
+            report.Add($"centroid: {features.SpectralCentroidHz:0.######}");
+            report.Add($"table_peak: {Peak(tableSamples):0.######}");
+            report.Add($"table_rms: {Rms(tableSamples):0.######}");
+        }
+
+        await File.WriteAllLinesAsync(Path.Combine(artifactDir, "report.txt"), report);
+    }
+
     private static string RepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
@@ -156,6 +216,17 @@ public sealed class ZynReferenceParityTests
     }
 
     private static string BashQuote(string value) => "'" + value.Replace("'", "'\\''") + "'";
+
+    private static string ZynPadCommand(string root, string input, string output, params string[] modeArguments) =>
+        string.Join(' ', [
+            "export PATH=/mingw64/bin:/usr/bin:/bin:$PATH;",
+            $"cd {BashQuote(ToMsysPath(root))};",
+            "./artifacts/zyn-reference-build-msys/src/Tests/ZynPadReference.exe",
+            BashQuote(ToMsysPath(input)),
+            BashQuote(ToMsysPath(output)),
+            "0",
+            ..modeArguments
+        ]);
 
     private static async Task<float[]> ReadFloat32Async(string path)
     {
