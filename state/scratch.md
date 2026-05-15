@@ -40,11 +40,17 @@ Current slice:
 - The accepted fixtures stayed on the sample-0 root path: DoublePadBass
   log-mel `0.247674`, score `0.650319`; Ghost Ensemble log-mel `0.369402`,
   score `0.57229`; Soft Pad log-mel `0.317897`, score `0.608833`.
+- User listening now accepts the recent Zyn PAD fixture batch as reading the
+  same as the references. Treat the remaining high log-mel values as regression
+  pressure and diagnostic smoke, not as a mandate to keep sanding sounds that
+  have already landed perceptually.
 - Verification: `dotnet test AquariumSynthCSharp.slnx --no-restore`: 107
   passed.
-- Next pressure remains sin2x and broader OscilGen/PAD source-table shape; do
-  not turn the base-function-7 selected-root rule into a global selected-table
-  switch. That was tested and regressed accepted DoublePadBass.
+- Next pressure can leave this Zyn PAD batch and move to the roadmap's next
+  synth/abstraction rung; keep sin2x and broader OscilGen/PAD source-table
+  shape as future regression context, not the active treadmill. Do not turn the
+  base-function-7 selected-root rule into a global selected-table switch. That
+  was tested and regressed accepted DoublePadBass.
 
 - Zyn PAD per-preset rebuilds now carry first-class Zyn PAD table semantics
   instead of only `spread=0` plus harmonic magnitudes.
