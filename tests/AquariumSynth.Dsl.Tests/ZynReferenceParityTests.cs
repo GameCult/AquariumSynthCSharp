@@ -93,8 +93,11 @@ public sealed class ZynReferenceParityTests
             $"zyn_table_rms: {Rms(zynTableSamples):0.######}"
         };
 
-        var aquaExport = FaustEmitter.EmitScript(BuiltInScripts.ZynStylePadTexture, new FaustExportOptions("zyn_pad_texture"));
-        await File.WriteAllTextAsync(Path.Combine(artifactDir, "candidate.aqua"), BuiltInScripts.ZynStylePadTexture);
+        var rebuild = ZynInstrumentReader.RebuildFirstPadAsAquariumScript(input, ParseBaseFrequency(tableReference.Stdout));
+        report.AddRange(rebuild.MatchedFeatures.Select(feature => $"matched_{feature.Name}: {feature.Value}"));
+        report.AddRange(rebuild.MissingFeatures.Select(feature => $"missing_{feature.Name}: {feature.Value} - {feature.Notes}"));
+        var aquaExport = FaustEmitter.EmitScript(rebuild.Script, new FaustExportOptions("zyn_pad_texture"));
+        await File.WriteAllTextAsync(Path.Combine(artifactDir, "candidate.aqua"), rebuild.Script);
         var aquaRender = await FaustCompiler.RenderAsync(aquaExport.Source, new FaustRenderOptions(DurationSeconds: 1.5f));
         if (aquaRender is { Samples.Length: > 0 })
         {
@@ -148,12 +151,13 @@ public sealed class ZynReferenceParityTests
             var noteWav = Path.Combine(runDir, "reference-zyn.wav");
             var tableRaw = Path.Combine(runDir, "reference-zyn-table0.f32");
             var tableWav = Path.Combine(runDir, "reference-zyn-table0.wav");
-            await File.WriteAllTextAsync(Path.Combine(runDir, "candidate.aqua"), BuiltInScripts.ZynStylePadTexture);
 
             var note = await RunAsync(bash, ["-lc", ZynPadCommand(root, input, noteRaw, 0, "note", "261.6256", "1.5")]);
             Assert.Equal(0, note.ExitCode);
             var table = await RunAsync(bash, ["-lc", ZynPadCommand(root, input, tableRaw, 0, "0")]);
             Assert.Equal(0, table.ExitCode);
+            var rebuild = ZynInstrumentReader.RebuildFirstPadAsAquariumScript(input, ParseBaseFrequency(table.Stdout));
+            await File.WriteAllTextAsync(Path.Combine(runDir, "candidate.aqua"), rebuild.Script);
 
             var noteSamples = await ReadFloat32Async(noteRaw);
             var tableSamples = await ReadFloat32Async(tableRaw);
@@ -173,21 +177,23 @@ public sealed class ZynReferenceParityTests
             report.Add($"centroid: {features.SpectralCentroidHz:0.######}");
             report.Add($"table_peak: {Peak(tableSamples):0.######}");
             report.Add($"table_rms: {Rms(tableSamples):0.######}");
-            await File.WriteAllLinesAsync(
-                Path.Combine(runDir, "report.txt"),
-                [
-                    $"fixture: {name}",
-                    $"input: {input}",
-                    $"candidate: current ZynStylePadTexture baseline; not a per-fixture rebuild unless this is pad-texture",
-                    $"note_stdout: {note.Stdout.Trim()}",
-                    $"table_stdout: {table.Stdout.Trim()}",
-                    $"peak: {Peak(noteSamples):0.######}",
-                    $"rms: {Rms(noteSamples):0.######}",
-                    $"duration: {features.DurationSeconds:0.######}",
-                    $"centroid: {features.SpectralCentroidHz:0.######}",
-                    $"table_peak: {Peak(tableSamples):0.######}",
-                    $"table_rms: {Rms(tableSamples):0.######}"
-                ]);
+            var runReport = new List<string>
+            {
+                $"fixture: {name}",
+                $"input: {input}",
+                $"candidate: generated first-pass Zyn PAD rebuild",
+                $"note_stdout: {note.Stdout.Trim()}",
+                $"table_stdout: {table.Stdout.Trim()}",
+                $"peak: {Peak(noteSamples):0.######}",
+                $"rms: {Rms(noteSamples):0.######}",
+                $"duration: {features.DurationSeconds:0.######}",
+                $"centroid: {features.SpectralCentroidHz:0.######}",
+                $"table_peak: {Peak(tableSamples):0.######}",
+                $"table_rms: {Rms(tableSamples):0.######}"
+            };
+            runReport.AddRange(rebuild.MatchedFeatures.Select(feature => $"matched_{feature.Name}: {feature.Value}"));
+            runReport.AddRange(rebuild.MissingFeatures.Select(feature => $"missing_{feature.Name}: {feature.Value} - {feature.Notes}"));
+            await File.WriteAllLinesAsync(Path.Combine(runDir, "report.txt"), runReport);
         }
 
         await File.WriteAllLinesAsync(Path.Combine(artifactDir, $"survey-{Timestamp()}.txt"), report);
@@ -246,12 +252,13 @@ public sealed class ZynReferenceParityTests
             var tableRaw = Path.Combine(runDir, "reference-zyn-table0.f32");
             var tableWav = Path.Combine(runDir, "reference-zyn-table0.wav");
             var aquaWav = Path.Combine(runDir, "candidate-aquarium.wav");
-            await File.WriteAllTextAsync(Path.Combine(runDir, "candidate.aqua"), BuiltInScripts.ZynStylePadTexture);
 
             var note = await RunAsync(bash, ["-lc", ZynPadCommand(root, input, noteRaw, kitIndex, "note", "261.6256", "1.5")]);
             Assert.Equal(0, note.ExitCode);
             var table = await RunAsync(bash, ["-lc", ZynPadCommand(root, input, tableRaw, kitIndex, "0")]);
             Assert.Equal(0, table.ExitCode);
+            var rebuild = ZynInstrumentReader.RebuildFirstPadAsAquariumScript(input, ParseBaseFrequency(table.Stdout));
+            await File.WriteAllTextAsync(Path.Combine(runDir, "candidate.aqua"), rebuild.Script);
 
             var noteSamples = await ReadFloat32Async(noteRaw);
             var tableSamples = await ReadFloat32Async(tableRaw);
@@ -260,7 +267,7 @@ public sealed class ZynReferenceParityTests
             WriteWav(noteWav, noteSamples, 44100, 0.9f);
             WriteWav(tableWav, tableSamples, 44100, 0.9f);
             var aquaRender = await FaustCompiler.RenderAsync(
-                FaustEmitter.EmitScript(BuiltInScripts.ZynStylePadTexture, new FaustExportOptions("zyn_upstream_pad_baseline")).Source,
+                FaustEmitter.EmitScript(rebuild.Script, new FaustExportOptions("zyn_upstream_pad_candidate")).Source,
                 new FaustRenderOptions(DurationSeconds: 1.5f));
 
             var features = AudioAnalyzer.AnalyzeAudio(noteSamples).Features;
@@ -270,7 +277,7 @@ public sealed class ZynReferenceParityTests
                 $"instrument: {instrument.Name}",
                 $"input: {input}",
                 $"kit_index: {kitIndex}",
-                $"candidate: current ZynStylePadTexture baseline, not a per-preset rebuild",
+                $"candidate: generated first-pass Zyn PAD rebuild",
                 $"note_stdout: {note.Stdout.Trim()}",
                 $"table_stdout: {table.Stdout.Trim()}",
                 $"peak: {Peak(noteSamples):0.######}",
@@ -280,6 +287,8 @@ public sealed class ZynReferenceParityTests
                 $"table_peak: {Peak(tableSamples):0.######}",
                 $"table_rms: {Rms(tableSamples):0.######}"
             };
+            runReport.AddRange(rebuild.MatchedFeatures.Select(feature => $"matched_{feature.Name}: {feature.Value}"));
+            runReport.AddRange(rebuild.MissingFeatures.Select(feature => $"missing_{feature.Name}: {feature.Value} - {feature.Notes}"));
             report.Add("");
             report.Add($"fixture: {relative}");
             report.Add($"instrument: {instrument.Name}");
@@ -293,11 +302,13 @@ public sealed class ZynReferenceParityTests
             report.Add($"table_peak: {Peak(tableSamples):0.######}");
             report.Add($"table_rms: {Rms(tableSamples):0.######}");
             report.Add($"artifact_dir: {runDir}");
+            report.AddRange(rebuild.MatchedFeatures.Select(feature => $"matched_{feature.Name}: {feature.Value}"));
+            report.AddRange(rebuild.MissingFeatures.Select(feature => $"missing_{feature.Name}: {feature.Value} - {feature.Notes}"));
             if (aquaRender is { Samples.Length: > 0 })
             {
                 WriteWav(aquaWav, aquaRender.Samples, aquaRender.SampleRate, 0.9f);
                 var comparison = AudioAnalyzer.CompareAudio(noteSamples, aquaRender.Samples);
-                report.Add($"candidate: current ZynStylePadTexture baseline, not a per-preset rebuild");
+                report.Add($"candidate: generated first-pass Zyn PAD rebuild");
                 report.Add($"log_mel_distance: {comparison.LogMelDistance:0.######}");
                 report.Add($"envelope_distance: {comparison.EnvelopeDistance:0.######}");
                 report.Add($"rms_ratio: {comparison.RmsRatio:0.######}");
@@ -380,6 +391,18 @@ public sealed class ZynReferenceParityTests
 
     private static string Timestamp() =>
         DateTimeOffset.UtcNow.ToString("yyyyMMddTHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static float ParseBaseFrequency(string stdout)
+    {
+        const string marker = "basefreq=";
+        var start = stdout.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (start < 0) throw new InvalidOperationException($"Zyn PAD table stdout did not include basefreq: {stdout}");
+        start += marker.Length;
+        var end = start;
+        while (end < stdout.Length && !char.IsWhiteSpace(stdout[end])) end++;
+        var value = stdout[start..end];
+        return float.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
+    }
 
     private static async Task<float[]> ReadFloat32Async(string path)
     {

@@ -1,5 +1,7 @@
 using System.IO.Compression;
+using System.Globalization;
 using System.Security.Cryptography;
+using System.Text;
 using System.Xml.Linq;
 
 namespace AquariumSynth.Dsl;
@@ -70,6 +72,13 @@ public sealed record ZynInstrumentSurveyItem(
     int ComplexityScore,
     IReadOnlyList<ReferenceFeature> Features);
 
+public sealed record ZynPadRebuild(
+    string InstrumentName,
+    int KitItemId,
+    string Script,
+    IReadOnlyList<ReferenceFeature> MatchedFeatures,
+    IReadOnlyList<ReferenceFeature> MissingFeatures);
+
 public enum ZynEngine
 {
     AddSynth,
@@ -84,7 +93,7 @@ public static class ZynInstrumentReader
 
     public static ZynInstrument Parse(ReadOnlySpan<byte> bytes)
     {
-        var document = XDocument.Parse(XmlText(bytes).TrimStart(), LoadOptions.None);
+        var document = ParseDocument(bytes);
         var instrument = document.Descendants("INSTRUMENT").FirstOrDefault()
             ?? throw new ArgumentException("Zyn instrument XML is missing INSTRUMENT");
         var info = instrument.Element("INFO");
@@ -102,6 +111,90 @@ public static class ZynInstrumentReader
 
     public static ReferenceSource SourceForBytes(string uri, string license, ReadOnlySpan<byte> bytes, string notes = "") =>
         new("zyn-xiz", uri, license, Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant(), notes);
+
+    public static ZynPadRebuild RebuildFirstPadAsAquariumScript(
+        string path,
+        float tableRootFrequencyHz,
+        float playbackFrequencyHz = 261.6256f) =>
+        RebuildFirstPadAsAquariumScript(File.ReadAllBytes(path), tableRootFrequencyHz, playbackFrequencyHz);
+
+    public static ZynPadRebuild RebuildFirstPadAsAquariumScript(
+        ReadOnlySpan<byte> bytes,
+        float tableRootFrequencyHz,
+        float playbackFrequencyHz = 261.6256f)
+    {
+        if (tableRootFrequencyHz <= 0) throw new ArgumentOutOfRangeException(nameof(tableRootFrequencyHz));
+        if (playbackFrequencyHz <= 0) throw new ArgumentOutOfRangeException(nameof(playbackFrequencyHz));
+
+        var document = ParseDocument(bytes);
+        var instrument = document.Descendants("INSTRUMENT").FirstOrDefault()
+            ?? throw new ArgumentException("Zyn instrument XML is missing INSTRUMENT");
+        var name = StringValue(instrument.Element("INFO"), "name", "unnamed");
+        var item = instrument
+            .Descendants("INSTRUMENT_KIT_ITEM")
+            .FirstOrDefault(IsEnabledPadItem)
+            ?? throw new ArgumentException("Zyn instrument XML has no enabled PAD kit item");
+        var pad = item.Element("PAD_SYNTH_PARAMETERS")
+            ?? throw new ArgumentException("Enabled PAD kit item is missing PAD_SYNTH_PARAMETERS");
+        var amplitude = pad.Element("AMPLITUDE_PARAMETERS");
+        var envelope = amplitude?.Element("AMPLITUDE_ENVELOPE");
+        var harmonics = pad.Element("OSCIL")?.Element("HARMONICS")?.Elements("HARMONIC")
+            .Select(ParsePadHarmonic)
+            .Where(partial => partial.Gain > 0)
+            .OrderBy(partial => partial.Ratio)
+            .Take(32)
+            .ToList() ?? [];
+        if (harmonics.Count == 0)
+        {
+            harmonics.Add(new HarmonicPartial(1, 0.16f));
+        }
+
+        var volume = IntParam(amplitude, "volume", 90);
+        var layerGain = Math.Clamp(volume / 500f, 0.02f, 0.4f);
+        var attack = EnvelopeTime(envelope, "A_dt", 0.28f);
+        var decay = EnvelopeTime(envelope, "D_dt", 0.42f);
+        var release = EnvelopeTime(envelope, "R_dt", 1.2f);
+        var safeName = SafeIdentifier(string.IsNullOrWhiteSpace(name) ? $"pad_{IntAttribute(item, "id")}" : name);
+        var partialText = string.Join(",", harmonics.Select(partial => $"{F(partial.Ratio)}:{F(partial.Gain)}"));
+
+        var matched = new List<ReferenceFeature>
+        {
+            new("engine_pad", "1", "Translated first enabled PAD kit item."),
+            new("pad_oscillator_harmonics", harmonics.Count.ToString(CultureInfo.InvariantCulture), "Mapped OSCIL/HARMONICS magnitudes into Aquarium spectrum partials."),
+            new("pad_table_root", F(tableRootFrequencyHz), "Root frequency comes from the Zyn oracle generated sample basefreq."),
+            new("pad_volume", volume.ToString(CultureInfo.InvariantCulture), "Mapped PAD amplitude volume into Aquarium layer gain.")
+        };
+        var missing = new List<ReferenceFeature>();
+        if (IntParam(pad, "bandwidth", 0) > 0)
+        {
+            missing.Add(new("pad_bandwidth_profile", IntParam(pad, "bandwidth", 0).ToString(CultureInfo.InvariantCulture), "Aquarium spread is kept at zero until Zyn bandwidth/profile semantics are calibrated."));
+        }
+        if (pad.Element("HARMONIC_PROFILE") is { } profile)
+        {
+            missing.Add(new("pad_harmonic_profile", IntParam(profile, "base_type", 0).ToString(CultureInfo.InvariantCulture), "Zyn harmonic profile shaping is not yet lowered; explicit OSCIL harmonics are used as the first spectral rung."));
+        }
+        if (pad.Element("FILTER_PARAMETERS") is not null)
+        {
+            missing.Add(new("pad_filter_parameters", "present", "Filter envelope/LFO lowering remains separate pressure."));
+        }
+
+        var script = new StringBuilder();
+        script.AppendLine("# Generated from a ZynAddSubFX PAD fixture for parity pressure.");
+        script.AppendLine("# Scope: first enabled PAD kit item, OSCIL harmonic magnitudes, basic volume/envelope.");
+        script.AppendLine("patch");
+        script.AppendLine("    gain=1");
+        script.AppendLine("    soft_clip=false");
+        script.AppendLine();
+        script.AppendLine("defaults");
+        script.AppendLine("    wave=sine");
+        script.AppendLine("    lpf=1");
+        script.AppendLine("    hpf=0");
+        script.AppendLine();
+        script.AppendLine($"layer name={safeName} engine=pad gain={F(layerGain)} env=rl rates={F(attack)},{F(decay)},1,{F(release)} levels=1,1,1,0 curves=lin,lin,lin,lin gate=1.5");
+        script.AppendLine($"spectrum layer={safeName} root={F(tableRootFrequencyHz)} freq={F(playbackFrequencyHz)} spread=0 partials={partialText}");
+
+        return new ZynPadRebuild(name, IntAttribute(item, "id"), script.ToString(), matched, missing);
+    }
 
     private static ZynKitItem ParseKitItem(XElement item)
     {
@@ -139,11 +232,17 @@ public static class ZynInstrumentReader
         return System.Text.Encoding.UTF8.GetString(bytes);
     }
 
+    private static XDocument ParseDocument(ReadOnlySpan<byte> bytes) =>
+        XDocument.Parse(XmlText(bytes).TrimStart(), LoadOptions.None);
+
     private static int CountElements(XElement root, Func<string, bool> predicate) =>
         root.Descendants().Count(element => predicate(element.Name.LocalName));
 
     private static bool EngineEnabled(XElement item, string flagName, string sectionName) =>
         BoolParamValue(item, flagName) ?? item.Element(sectionName) is not null;
+
+    private static bool IsEnabledPadItem(XElement item) =>
+        BoolParam(item, "enabled") && EngineEnabled(item, "pad_enabled", "PAD_SYNTH_PARAMETERS");
 
     private static string StringValue(XElement? root, string name, string fallback) =>
         root?.Elements("string")
@@ -170,6 +269,41 @@ public static class ZynInstrumentReader
 
     private static string? AttributeValue(XElement element, string name) =>
         element.Attribute(name)?.Value;
+
+    private static HarmonicPartial ParsePadHarmonic(XElement harmonic)
+    {
+        var id = IntAttribute(harmonic, "id");
+        var ratio = Math.Max(1, id);
+        var magnitude = IntParam(harmonic, "mag", 0);
+        return new HarmonicPartial(ratio, 0.16f * Math.Clamp(magnitude / 127f, 0, 1));
+    }
+
+    private static int IntParam(XElement? root, string name, int fallback)
+    {
+        var value = root?.Elements("par")
+            .FirstOrDefault(element => AttributeValue(element, "name") == name)
+            ?.Attribute("value")
+            ?.Value;
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) ? parsed : fallback;
+    }
+
+    private static float EnvelopeTime(XElement? envelope, string name, float fallback)
+    {
+        var value = IntParam(envelope, name, -1);
+        return value < 0 ? fallback : Math.Clamp(value / 127f, 0.02f, 1.4f);
+    }
+
+    private static string SafeIdentifier(string value)
+    {
+        var chars = value
+            .Select(ch => char.IsLetterOrDigit(ch) ? char.ToLowerInvariant(ch) : '_')
+            .ToArray();
+        var safe = string.Join("_", new string(chars).Split('_', StringSplitOptions.RemoveEmptyEntries));
+        return string.IsNullOrWhiteSpace(safe) ? "pad" : safe;
+    }
+
+    private static string F(float value) =>
+        value.ToString("0.######", CultureInfo.InvariantCulture);
 }
 
 public static class ZynInstrumentSurvey

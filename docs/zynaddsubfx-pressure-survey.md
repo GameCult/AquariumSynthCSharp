@@ -52,9 +52,13 @@ GPL PAD batch through the real Zyn oracle when the renderer is built:
 
 Each render lands in a per-synth timestamped folder under
 `artifacts/parity/zyn-upstream-pad-fixtures/`, with Zyn reference WAVs, source
-table WAVs, `report.txt`, and `candidate.aqua`. The Aquarium candidate is the
-current PAD baseline unless the report says a fixture has a specific rebuild.
-These are listening and parity fixtures, not library candidates.
+table WAVs, `report.txt`, and `candidate.aqua`. The candidate is now generated
+per preset by `ZynInstrumentReader.RebuildFirstPadAsAquariumScript`: first
+enabled PAD kit item, OSCIL harmonic magnitudes, oracle-reported table
+basefreq, and basic volume/envelope scaffolding. The report names missing
+semantics such as Zyn harmonic profile shaping, bandwidth/profile behavior, and
+filter envelope/LFO lowering. These are listening and parity fixtures, not
+library candidates.
 
 ## Pressure Conclusions
 

@@ -148,6 +148,24 @@ public sealed class ZynInstrumentTests
     }
 
     [Fact]
+    public void RebuildsProjectAuthoredPadAsAquariumSpectrumScript()
+    {
+        var path = FixturePath("ZynAddSubFX", "ProjectAuthored", "pad-harmonic.xiz");
+
+        var rebuild = ZynInstrumentReader.RebuildFirstPadAsAquariumScript(path, tableRootFrequencyHz: 77.7813f);
+        var patch = PatchScript.Parse(rebuild.Script);
+
+        Assert.Equal("AQ Pad Harmonic", rebuild.InstrumentName);
+        Assert.Equal(0, rebuild.KitItemId);
+        Assert.Contains("spectrum", rebuild.Script);
+        Assert.Contains("root=77.7813", rebuild.Script);
+        var bank = Assert.Single(patch.SpectralBanks);
+        Assert.Equal(77.7813f, bank.RootFrequencyHz, precision: 4);
+        Assert.Contains(bank.Partials, partial => Math.Abs(partial.Ratio - 2) < 0.0001f && partial.Gain > 0);
+        Assert.Contains(rebuild.MatchedFeatures, feature => feature.Name == "pad_oscillator_harmonics");
+    }
+
+    [Fact]
     public async Task SurveysUpstreamGplInstrumentBankWhenAvailable()
     {
         var root = RepositoryRoot();
