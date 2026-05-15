@@ -170,6 +170,18 @@ next_agent_start_here:
 completed_slices:
   - date: 2026-05-15
     summary: >
+      Reworked the first Zyn OscilGen approximation into a sampled stage-order
+      path for PAD presets with live oscillator processing: base waveform,
+      optional oscillator filter/waveshaper order, modulation, harmonic shift,
+      and spectrum adjustment before extracting partials. Direct harmonic PAD
+      presets now stay on the simple readable path capped at 32 partials
+      instead of exploding into base-function-only frequency combs. This
+      improves the processed `sin2x pad` target versus the previous subset
+      while keeping the pass honest: DoublePadBass and Organ Choir Pad2 still
+      miss badly, so Zyn PAD parity remains open pressure.
+    verification: "dotnet test tests\\AquariumSynth.Dsl.Tests\\AquariumSynth.Dsl.Tests.csproj --no-restore --filter FullyQualifiedName~ZynReferenceParityTests: 4 passed"
+  - date: 2026-05-15
+    summary: >
       Promoted explicit Zyn PAD table semantics into the Aquarium model and
       parser. `SpectralBank` now carries `PadSpectrumProfile`; patch scripts can
       express Zyn PAD mode, bandwidth, bandwidth scale, harmonic profile, and

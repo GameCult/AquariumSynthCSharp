@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Globalization;
+using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Xml.Linq;
@@ -287,32 +288,18 @@ public static class ZynInstrumentReader
             return [];
         }
 
-        var baseFunction = IntParam(oscillator, "base_function", 0);
-        if (baseFunction == 0)
+        if (!NeedsOscilGenWaveformExpansion(oscillator))
         {
-            return harmonicMagnitudes
+            return oscillator?.Element("HARMONICS")?.Elements("HARMONIC")
+                .Select(ParsePadDirectHarmonic)
                 .Where(partial => partial.Gain > 0)
-                .Take(maxHarmonics)
-                .ToArray();
+                .OrderBy(partial => partial.Ratio)
+                .Take(Math.Min(maxHarmonics, 32))
+                .ToArray() ?? [];
         }
 
-        var baseSpectrum = ZynBaseFunctionSpectrum(
-            baseFunction,
-            IntParam(oscillator, "base_function_par", 64),
-            maxHarmonics);
-        var gains = new double[maxHarmonics + 1];
-        foreach (var harmonic in harmonicMagnitudes)
-        {
-            var harmonicNumber = (int)Math.Round(harmonic.Ratio);
-            if (harmonicNumber <= 0) continue;
-            for (var baseHarmonic = 1; baseHarmonic < baseSpectrum.Length; baseHarmonic++)
-            {
-                var target = baseHarmonic * harmonicNumber;
-                if (target > maxHarmonics) break;
-                gains[target] += baseSpectrum[baseHarmonic] * harmonic.Gain;
-            }
-        }
-
+        var freqs = ZynOscilGenFrequencies(oscillator, harmonicMagnitudes, maxHarmonics);
+        var gains = freqs.Select(value => value.Magnitude).ToArray();
         ApplyZynSpectrumAdjust(
             gains,
             IntParam(oscillator, "spectrum_adjust_type", 0),
@@ -324,8 +311,248 @@ public static class ZynInstrumentReader
             .Select((gain, index) => new { gain, index })
             .Where(item => item.index > 0 && Math.Abs(item.gain) > max * 0.0001)
             .Select(item => new HarmonicPartial(item.index, (float)(0.16 * Math.Abs(item.gain) / max)))
-            .Take(maxHarmonics)
+            .Take(Math.Min(maxHarmonics, 32))
             .ToArray();
+    }
+
+    private static bool NeedsOscilGenWaveformExpansion(XElement? oscillator) =>
+        IntParam(oscillator, "wave_shaping_function", 0) != 0 ||
+        IntParam(oscillator, "filter_type", 0) != 0 ||
+        IntParam(oscillator, "modulation", 0) != 0 ||
+        IntParam(oscillator, "spectrum_adjust_type", 0) != 0 ||
+        IntParam(oscillator, "harmonic_shift", 0) != 0 ||
+        IntParam(oscillator, "adaptive_harmonics", 0) != 0;
+
+    private static Complex[] ZynOscilGenFrequencies(
+        XElement? oscillator,
+        IReadOnlyList<HarmonicPartial> harmonicMagnitudes,
+        int maxHarmonics)
+    {
+        var freqs = Dft(ZynOscilGenBaseSamples(oscillator, harmonicMagnitudes), maxHarmonics);
+        if (NullableBoolParamValue(oscillator, "harmonic_shift_first") ?? false)
+        {
+            ApplyZynHarmonicShift(freqs, IntParam(oscillator, "harmonic_shift", 0));
+        }
+
+        var filterBeforeWaveShaping = IntParam(oscillator, "filter_before_wave_shaping", 0) != 0;
+        if (filterBeforeWaveShaping)
+        {
+            ApplyZynOscilFilter(freqs, oscillator);
+            freqs = ApplyZynWaveShape(freqs, oscillator, maxHarmonics);
+        }
+        else
+        {
+            freqs = ApplyZynWaveShape(freqs, oscillator, maxHarmonics);
+            ApplyZynOscilFilter(freqs, oscillator);
+        }
+
+        freqs = ApplyZynOscilModulation(freqs, oscillator, maxHarmonics);
+        if (!(NullableBoolParamValue(oscillator, "harmonic_shift_first") ?? false))
+        {
+            ApplyZynHarmonicShift(freqs, IntParam(oscillator, "harmonic_shift", 0));
+        }
+
+        return freqs;
+    }
+
+    private static double[] ZynOscilGenBaseSamples(XElement? oscillator, IReadOnlyList<HarmonicPartial> harmonicMagnitudes)
+    {
+        const int sampleCount = 4096;
+        var samples = new double[sampleCount];
+        var baseFunction = IntParam(oscillator, "base_function", 0);
+        var parameter = IntParam(oscillator, "base_function_par", 64);
+        var parameterValue = parameter == 64 ? 0.5 : (parameter + 0.5) / 128.0;
+
+        foreach (var harmonic in harmonicMagnitudes)
+        {
+            var harmonicNumber = Math.Max(1, (int)Math.Round(harmonic.Ratio));
+            for (var i = 0; i < sampleCount; i++)
+            {
+                var t = i / (double)sampleCount * harmonicNumber;
+                var sample = baseFunction == 0
+                    ? -Math.Sin(Math.Tau * t)
+                    : ZynBaseFunction(baseFunction, t, parameterValue);
+                samples[i] += sample * harmonic.Gain;
+            }
+        }
+
+        NormalizePeak(samples);
+        return samples;
+    }
+
+    private static Complex[] Dft(IReadOnlyList<double> samples, int maxHarmonics)
+    {
+        var freqs = new Complex[maxHarmonics + 1];
+        for (var harmonic = 1; harmonic <= maxHarmonics; harmonic++)
+        {
+            var sum = Complex.Zero;
+            for (var i = 0; i < samples.Count; i++)
+            {
+                var angle = -Math.Tau * harmonic * i / samples.Count;
+                sum += samples[i] * Complex.FromPolarCoordinates(1.0, angle);
+            }
+            freqs[harmonic] = sum / samples.Count;
+        }
+        return freqs;
+    }
+
+    private static double[] IDft(Complex[] freqs, int sampleCount)
+    {
+        var samples = new double[sampleCount];
+        for (var i = 0; i < sampleCount; i++)
+        {
+            var sum = Complex.Zero;
+            for (var harmonic = 1; harmonic < freqs.Length; harmonic++)
+            {
+                var angle = Math.Tau * harmonic * i / sampleCount;
+                sum += freqs[harmonic] * Complex.FromPolarCoordinates(1.0, angle);
+            }
+            samples[i] = 2.0 * sum.Real;
+        }
+        return samples;
+    }
+
+    private static void ApplyZynOscilFilter(Complex[] freqs, XElement? oscillator)
+    {
+        var type = IntParam(oscillator, "filter_type", 0);
+        if (type == 0) return;
+        var par = 1.0 - IntParam(oscillator, "filter_par1", 64) / 128.0;
+        var par2 = IntParam(oscillator, "filter_par2", 64) / 127.0;
+        for (var harmonic = 1; harmonic < freqs.Length; harmonic++)
+        {
+            freqs[harmonic] *= ZynOscilFilterGain(type, harmonic, par, par2);
+        }
+        NormalizeComplexPeak(freqs);
+    }
+
+    private static double ZynOscilFilterGain(int type, int harmonic, double par, double par2)
+    {
+        var i = Math.Max(0, harmonic - 1);
+        return type switch
+        {
+            1 => ZynOscilLowPass(i, par, par2),
+            2 => Math.Pow(1.0 - Math.Pow(1.0 - par * par, i + 1), par2 * 2.0 + 0.1),
+            6 => (i + 1 > Math.Pow(2.0, (1.0 - par) * 10.0) ? 0.0 : 1.0) * par2 + (1.0 - par2),
+            7 => (i + 1 > Math.Pow(2.0, (1.0 - par) * 7.0) ? 1.0 : 0.0) * par2 + (1.0 - par2),
+            13 => i == (int)Math.Pow(2.0, (1.0 - par) * 7.2) ? Math.Pow(2.0, par2 * par2 * 8.0) : 1.0,
+            _ => 1.0
+        };
+    }
+
+    private static double ZynOscilLowPass(int i, double par, double par2)
+    {
+        var gain = Math.Pow(1.0 - par * par * par * 0.99, i);
+        var tmp = Math.Pow(par2, 4.0) * 0.5 + 0.0001;
+        return gain < tmp ? Math.Pow(gain, 10.0) / Math.Pow(tmp, 9.0) : gain;
+    }
+
+    private static Complex[] ApplyZynWaveShape(Complex[] freqs, XElement? oscillator, int maxHarmonics)
+    {
+        var type = IntParam(oscillator, "wave_shaping_function", 0);
+        if (type == 0) return freqs;
+        var samples = IDft(freqs, 4096);
+        NormalizePeak(samples);
+        var drive = IntParam(oscillator, "wave_shaping", 64) / 127.0;
+        for (var i = 0; i < samples.Length; i++)
+        {
+            samples[i] = ZynWaveShapeSample(samples[i], type, drive);
+        }
+        return Dft(samples, maxHarmonics);
+    }
+
+    private static double ZynWaveShapeSample(double sample, int type, double drive)
+    {
+        return type switch
+        {
+            1 => Math.Atan(sample * (Math.Pow(10.0, drive * drive * 3.0) - 1.0 + 0.001)) / Math.Atan(Math.Pow(10.0, drive * drive * 3.0) - 1.0 + 0.001),
+            4 => ZynSineWaveShape(sample, drive),
+            7 => Math.Clamp(sample, -Math.Pow(2.0, -drive * drive * 8.0), Math.Pow(2.0, -drive * drive * 8.0)) / Math.Pow(2.0, -drive * drive * 8.0),
+            11 => sample * (Math.Pow(5.0, drive * drive) - 0.5) * 0.9999 - Math.Floor(0.5 + sample * (Math.Pow(5.0, drive * drive) - 0.5) * 0.9999),
+            15 => sample * (drive * drive * 35.0 + 1.0) / Math.Pow(1.0 + Math.Pow(Math.Abs(sample * (drive * drive * 35.0 + 1.0)), 2.5), 1.0 / 2.5),
+            _ => sample
+        };
+    }
+
+    private static double ZynSineWaveShape(double sample, double drive)
+    {
+        var ws = drive * drive * drive * 32.0 + 0.0001;
+        var divisor = ws < 1.57 ? Math.Sin(ws) : 1.0;
+        return Math.Sin(sample * ws) / divisor;
+    }
+
+    private static Complex[] ApplyZynOscilModulation(Complex[] freqs, XElement? oscillator, int maxHarmonics)
+    {
+        var type = IntParam(oscillator, "modulation", 0);
+        if (type == 0) return freqs;
+        var samples = IDft(freqs, 4096);
+        NormalizePeak(samples);
+        var output = new double[samples.Length];
+        var par1 = IntParam(oscillator, "modulation_par1", 64) / 127.0;
+        var par2 = 0.5 - IntParam(oscillator, "modulation_par2", 64) / 127.0;
+        var par3 = IntParam(oscillator, "modulation_par3", 32) / 127.0;
+        (par1, par3) = type switch
+        {
+            1 => ((Math.Pow(2.0, par1 * 7.0) - 1.0) / 100.0, Math.Floor(Math.Pow(2.0, par3 * 5.0) - 1.0) < 0.9999 ? -1.0 : Math.Floor(Math.Pow(2.0, par3 * 5.0) - 1.0)),
+            2 => ((Math.Pow(2.0, par1 * 7.0) - 1.0) / 100.0, 1.0 + Math.Floor(Math.Pow(2.0, par3 * 5.0) - 1.0)),
+            3 => ((Math.Pow(2.0, par1 * 9.0) - 1.0) / 100.0, 0.01 + (Math.Pow(2.0, par3 * 16.0) - 1.0) / 10.0),
+            _ => (par1, par3)
+        };
+        for (var i = 0; i < output.Length; i++)
+        {
+            var t = i / (double)output.Length;
+            t = type switch
+            {
+                1 => t * par3 + Math.Sin((t + par2) * Math.Tau) * par1,
+                2 => t + Math.Sin((t * par3 + par2) * Math.Tau) * par1,
+                3 => t + Math.Pow((1.0 - Math.Cos((t + par2) * Math.Tau)) * 0.5, par3) * par1,
+                _ => t
+            };
+            output[i] = InterpolateWrap(samples, t * samples.Length);
+        }
+        return Dft(output, maxHarmonics);
+    }
+
+    private static double InterpolateWrap(IReadOnlyList<double> samples, double position)
+    {
+        position -= Math.Floor(position / samples.Count) * samples.Count;
+        var index = (int)Math.Floor(position);
+        var frac = position - index;
+        return samples[index] * (1.0 - frac) + samples[(index + 1) % samples.Count] * frac;
+    }
+
+    private static void ApplyZynHarmonicShift(Complex[] freqs, int shift)
+    {
+        if (shift == 0) return;
+        var copy = freqs.ToArray();
+        Array.Clear(freqs);
+        for (var i = 1; i < copy.Length; i++)
+        {
+            var target = i - shift;
+            if (target > 0 && target < freqs.Length)
+            {
+                freqs[target] = copy[i];
+            }
+        }
+    }
+
+    private static void NormalizePeak(double[] samples)
+    {
+        var peak = samples.Select(Math.Abs).DefaultIfEmpty(0).Max();
+        if (peak < 0.00001) peak = 1.0;
+        for (var i = 0; i < samples.Length; i++)
+        {
+            samples[i] /= peak;
+        }
+    }
+
+    private static void NormalizeComplexPeak(Complex[] freqs)
+    {
+        var peak = freqs.Select(value => value.Magnitude).DefaultIfEmpty(0).Max();
+        if (peak < 0.00001) peak = 1.0;
+        for (var i = 0; i < freqs.Length; i++)
+        {
+            freqs[i] /= peak;
+        }
     }
 
     private static HarmonicPartial ParsePadHarmonicMagnitude(XElement harmonic)
@@ -342,32 +569,12 @@ public static class ZynInstrumentReader
         return new HarmonicPartial(ratio, gain);
     }
 
-    private static double[] ZynBaseFunctionSpectrum(int baseFunction, int parameter, int maxHarmonics)
+    private static HarmonicPartial ParsePadDirectHarmonic(XElement harmonic)
     {
-        const int sampleCount = 4096;
-        var parameterValue = parameter == 64 ? 0.5 : (parameter + 0.5) / 128.0;
-        var magnitudes = new double[maxHarmonics + 1];
-        for (var harmonic = 1; harmonic <= maxHarmonics; harmonic++)
-        {
-            var real = 0.0;
-            var imaginary = 0.0;
-            for (var i = 0; i < sampleCount; i++)
-            {
-                var t = i / (double)sampleCount;
-                var sample = ZynBaseFunction(baseFunction, t, parameterValue);
-                var angle = -Math.Tau * harmonic * t;
-                real += sample * Math.Cos(angle);
-                imaginary += sample * Math.Sin(angle);
-            }
-            magnitudes[harmonic] = Math.Sqrt(real * real + imaginary * imaginary) / sampleCount;
-        }
-
-        var max = magnitudes.DefaultIfEmpty(0).Max();
-        if (max > 0)
-        {
-            for (var i = 0; i < magnitudes.Length; i++) magnitudes[i] /= max;
-        }
-        return magnitudes;
+        var id = IntAttribute(harmonic, "id");
+        var ratio = Math.Max(1, id);
+        var magnitude = IntParam(harmonic, "mag", 0);
+        return new HarmonicPartial(ratio, 0.16f * Math.Clamp(magnitude / 127f, 0, 1));
     }
 
     private static double ZynBaseFunction(int function, double x, double a)

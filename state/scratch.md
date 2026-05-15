@@ -49,6 +49,28 @@ Current slice:
   approximation to the cases it truly owns. Do not present the mixed OscilGen
   subset as passing parity.
 
+Current follow-up:
+
+- Reworked Zyn PAD OscilGen partial extraction into a sampled stage-order
+  pipeline for presets with live oscillator processing: base waveform,
+  optional oscillator filter/waveshaper order, modulation, harmonic shift, then
+  spectrum adjustment. The implementation covers a useful subset of oscillator
+  filter types and waveshapers instead of pretending base-function convolution
+  alone is the synth.
+- Gated that pipeline so direct harmonic presets remain readable and capped at
+  32 partials. This cuts the earlier mistake where base-function-only presets
+  grew huge partial lists without improving parity.
+- Latest upstream PAD batch after this pass:
+  `sin2x pad` log-mel `0.455193`, score `0.405637` (better than the previous
+  OscilGen subset's `0.524421`);
+  `Soft Pad` log-mel `0.342738`, score `0.443083`;
+  `Ghost Ensemble` log-mel `0.40922`, score `0.421156`;
+  `Organ Choir Pad2` log-mel `0.664699`, score `0.369231`;
+  `DoublePadBass` log-mel `0.655288`, score `0.246664`.
+- This is still not passing Zyn PAD parity. The likely next missing owners are
+  full OscilGen filter/waveshape coverage, adaptive harmonics, and note/global
+  filter/envelope behavior. Do not tune thresholds around these numbers.
+
 Completed this slice:
 
 - Added PAD spectral-cloud syntax attached to named layers:
