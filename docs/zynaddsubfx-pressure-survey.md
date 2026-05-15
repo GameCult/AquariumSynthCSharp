@@ -6,16 +6,17 @@ Find the ZynAddSubFX instruments most likely to break Aquarium's current patch
 language before spending time on syntax polish.
 
 This is a feature-pressure survey, not an audio parity claim. The upstream Zyn
-instrument bank is not vendored in this repo because preset-level license and
-provenance are not explicit enough at the bank root. The survey records derived
-metadata only.
+instrument bank is GPL reference feedstock through the pinned Zyn submodule
+tree. It is development/test material only: useful for reports, parity renders,
+and pressure selection, never package content or Aquarium patch-library stock.
 
 ## Source Checked
 
 - Repository: `https://github.com/zynaddsubfx/instruments`
-- Observed commit: `e9f64a9 Add files via upload`
-- Files scanned: `1358` `.xiz` instruments
-- Reader result after hardening: `1358` parsed, `0` errors
+- Observed commit: `c5c912131b31df5fdf372d2f06a25aaf2375837f`
+- Files scanned: `1318` `.xiz` instruments
+- Reader result after hardening: `1318` parsed, `0` errors
+- Local path: `external/zynaddsubfx/instruments/banks`
 
 ## Scoring
 
@@ -37,6 +38,21 @@ thesis.
 | 251 | `Companion/0121-Ghost Ensemble.xiz` | Ghost Ensemble | ADD/SUB/PAD all active, layered, 50 envelopes, 30 LFOs, 11 filters, 11 formant filters. Good broad-spectrum stress target. |
 | 220 | `Drums/0001-Drums Kit1.xiz` | Drums Kit | 11 enabled kit items, ADD/SUB mix, 30 envelopes, 11 free envelopes, 15 LFOs, 12 filters. A smaller drum-kit target than Oliver's monster. |
 | 181 | `olivers-100/0124-Simple Clonewheel.xiz` | Simple Clonewheel | 8 enabled kit items with 7 PAD engines. Best early pressure for layered PAD routing without drum semantics. |
+
+## Upstream PAD Listening Batch
+
+`ZynPadReferenceRendererSurveysUpstreamGplPadFixturesWhenBuilt` renders a small
+GPL PAD batch through the real Zyn oracle when the renderer is built:
+
+- `Pads/0002-sin2x  pad.xiz`
+- `Pads/0065-Soft Pad.xiz`
+- `Dual/0008-Organ Choir Pad2.xiz`
+- `Laba170bank/0098-DoublePadBass.xiz`
+- `Companion/0121-Ghost Ensemble.xiz`
+
+The WAVs and table previews land under
+`artifacts/parity/zyn-upstream-pad-fixtures/`. These are listening and parity
+fixtures, not library candidates.
 
 ## Pressure Conclusions
 

@@ -147,9 +147,61 @@ public sealed class ZynInstrumentTests
         Assert.Contains(survey[0].Features, feature => feature.Name == "formant_filter_count" && feature.Value == "1");
     }
 
+    [Fact]
+    public async Task SurveysUpstreamGplInstrumentBankWhenAvailable()
+    {
+        var root = RepositoryRoot();
+        var bankRoot = Path.Combine(root, "external", "zynaddsubfx", "instruments", "banks");
+        if (!Directory.Exists(bankRoot))
+        {
+            return;
+        }
+
+        var files = Directory.GetFiles(bankRoot, "*.xiz", SearchOption.AllDirectories);
+        if (files.Length == 0)
+        {
+            return;
+        }
+
+        var survey = ZynInstrumentSurvey.RankDirectory(bankRoot, take: 20);
+        Assert.NotEmpty(survey);
+        Assert.Contains(survey, item => item.Features.Any(feature => feature.Name == "engine_pad" && feature.Value != "0"));
+
+        var artifactDir = Path.Combine(root, "artifacts", "parity", "zyn-upstream-bank-survey");
+        Directory.CreateDirectory(artifactDir);
+        var report = new List<string>
+        {
+            "ZynAddSubFX upstream GPL instrument bank survey",
+            "source: https://github.com/zynaddsubfx/instruments",
+            "license: GPL test/development corpus via upstream ZynAddSubFX instruments submodule",
+            "usage: feature pressure and parity fixtures only; never NuGet/package content",
+            $"bank_root: {bankRoot}",
+            $"xiz_count: {files.Length}",
+            ""
+        };
+        foreach (var item in survey)
+        {
+            var features = item.Features.ToDictionary(feature => feature.Name, feature => feature.Value);
+            report.Add($"{item.ComplexityScore}\t{item.Path}\t{item.Name}\tpad={features["engine_pad"]} add={features["engine_add"]} sub={features["engine_sub"]} layers={features["enabled_kit_items"]} env={features["envelope_count"]} free={features["free_envelope_count"]} lfo={features["lfo_count"]} filter={features["filter_count"]} formant={features["formant_filter_count"]} fx={features["effect_count"]}");
+        }
+
+        await File.WriteAllLinesAsync(Path.Combine(artifactDir, "report.txt"), report);
+    }
+
     private static void AssertFeature(ZynInstrument instrument, string name, string value) =>
         Assert.Contains(instrument.Features(), feature => feature.Name == name && feature.Value == value);
 
     private static string FixturePath(params string[] parts) =>
         Path.Combine([AppContext.BaseDirectory, "Fixtures", .. parts]);
+
+    private static string RepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AquariumSynthCSharp.slnx")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.FullName ?? throw new InvalidOperationException("could not find repository root");
+    }
 }

@@ -17,6 +17,7 @@ surfaces:
   reference_roadmap: docs/reference-synth-roadmap.md
   dx7_public_domain_fixtures: tests/AquariumSynth.Dsl.Tests/Fixtures/Dx7/PublicDomain
   zyn_reference_source: external/zynaddsubfx
+  zyn_upstream_instrument_bank: external/zynaddsubfx/instruments
   zyn_reference_build_script: tools/zyn-reference/build-zyn-reference.ps1
   zyn_pad_reference_renderer: tools/zyn-reference/ZynPadReference.cpp
   zyn_reference_build_patches: tools/zyn-reference/patches
@@ -60,3 +61,4 @@ checks:
   faust_validation: automatic in tests when Faust is installed
   dexed_py_reference: optional in tests when AQUARIUM_DX7_PYTHON or a Python with dexed-py is available
   zyn_reference_source: pinned submodule used only for parity tests; never package content
+  zyn_upstream_instrument_bank: nested GPL submodule used only for test/development pressure surveys and oracle renders; never package content
