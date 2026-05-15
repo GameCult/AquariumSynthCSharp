@@ -1,6 +1,6 @@
 project: AquariumSynthCSharp
 spine_version: 1
-updated: 2026-05-15T02:35:00+01:00
+updated: 2026-05-15T08:10:00+01:00
 
 prime_directive: >
   Build coherent synth machinery. References exist to reveal missing structure,
@@ -80,7 +80,7 @@ live_invariants:
   - Named `layer` declarations own Zyn-style kit/layer identity: engine tag, optional key range metadata, default gain, and effect-send labels. They lower to ordinary voices for now; do not smuggle PAD/free-envelope/effect behavior into them.
   - Additive `harmonics` declarations own authored ratio/gain partial banks under named layers. They lower to ordinary voices for now; do not pretend this covers Zyn ADDsynth phase, bandwidth, oscillator shaping, or free-envelope semantics.
   - Normal voices may use staged `env=rl` rate/level envelopes. Notes still own gate timing; envelopes own level shape. This is not arbitrary Zyn free-envelope point editing.
-  - PAD `spectrum` declarations own authored partial clouds under named layers and split table root from playback pitch: `root` is source/base frequency, while `freq` is the note played by the spectral voice. They generate PADsynth-style FFT wavetables with frequency-domain spreading and deterministic random phase, then emit Faust table readers before ordinary voice treatment. Do not pretend this covers every Zyn PAD harmonic profile, randomness control, or pitch-zone table behavior.
+  - PAD `spectrum` declarations own authored partial clouds under named layers and split table root from playback pitch: `root` is source/base frequency, while `freq` is the note played by the spectral voice. They generate PADsynth-style FFT wavetables with frequency-domain spreading and deterministic random phase, then emit Faust table readers before ordinary voice treatment. Zyn-fed PAD banks may additionally carry `zyn_mode`, `zyn_bandwidth`, `zyn_bwscale`, `zyn_profile`, and `zyn_position`; those fields belong to the spectral table generator, not to parity-test side channels. Do not pretend this covers every Zyn OscilGen modulation/waveshaping/filter/adaptive-harmonic path yet.
   - Structured `.aqua` stock lives under `patches/` as development source material. Every library patch must parse/export, and the patch library must stay out of the NuGet package unless intentionally promoted.
   - Project-authored Dexed patches may be generated inside tests for calibration; do not ship them in the NuGet package or treat them as runtime dependencies.
   - Harsh calibration probes belong in tests and ignored artifacts, not in the patch library unless they are musically useful stock.
@@ -168,6 +168,21 @@ next_agent_start_here:
     - "dotnet test AquariumSynthCSharp.slnx --no-restore"
 
 completed_slices:
+  - date: 2026-05-15
+    summary: >
+      Promoted explicit Zyn PAD table semantics into the Aquarium model and
+      parser. `SpectralBank` now carries `PadSpectrumProfile`; patch scripts can
+      express Zyn PAD mode, bandwidth, bandwidth scale, harmonic profile, and
+      harmonic-position warp through readable `zyn_*` fields, and
+      `PadSynthWaveform` lowers those banks with Zyn-style profile/bandwidth
+      math while preserving the old generic `spectrum` path. Zyn PAD rebuilds
+      now emit those fields, use Zyn's exponential PAD volume curve, and expand
+      a first OscilGen base-function/spectrum-adjust subset into partials. The
+      OscilGen subset is mixed evidence rather than solved parity: Soft Pad and
+      Organ Choir Pad2 improve, while sin2x, DoublePadBass, and Ghost Ensemble
+      regress, so the next cut must either complete more OscilGen semantics or
+      gate the approximation to the cases it owns.
+    verification: "dotnet test tests\\AquariumSynth.Dsl.Tests\\AquariumSynth.Dsl.Tests.csproj --no-restore --filter \"FullyQualifiedName~ZynInstrumentTests|FullyQualifiedName~ZynReferenceParityTests\": 13 passed"
   - date: 2026-05-15
     summary: >
       Initialized the upstream GPL ZynAddSubFX instrument bank submodule and

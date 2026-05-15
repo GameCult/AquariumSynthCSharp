@@ -212,6 +212,7 @@ public static class PatchScript
             {
                 throw new PatchScriptException(line, "spectral spread must be at least zero and less than one");
             }
+            var profile = ParsePadSpectrumProfile(fields, line);
 
             var partials = ParseHarmonicPartials(
                 GetAny(fields, ["partials", "bank", "tones"], ""),
@@ -231,6 +232,18 @@ public static class PatchScript
                 "spread",
                 "width",
                 "detune",
+                "pad_mode",
+                "zyn_mode",
+                "pad_bandwidth",
+                "zyn_bandwidth",
+                "bandwidth",
+                "pad_bwscale",
+                "zyn_bwscale",
+                "bwscale",
+                "pad_profile",
+                "zyn_profile",
+                "pad_position",
+                "zyn_position",
                 "partials",
                 "bank",
                 "tones");
@@ -243,7 +256,7 @@ public static class PatchScript
                 ExpandVoiceFields(treatmentFields, line),
                 SpectralPath(_spectralBanks.Count),
                 line);
-            _spectralBanks.Add(new SpectralBank(layerName, rootFrequency, spread, partials, treatment));
+            _spectralBanks.Add(new SpectralBank(layerName, rootFrequency, spread, partials, treatment, profile));
         }
 
         private static string SpectralPath(int spectralIndex) => $"/spectral/{spectralIndex}";
@@ -814,6 +827,142 @@ public static class PatchScript
                 .ToArray();
         }
 
+        private static PadSpectrumProfile ParsePadSpectrumProfile(IReadOnlyDictionary<string, string> fields, int line)
+        {
+            var hasZynFields =
+                HasAny(fields,
+                    "pad_mode", "zyn_mode",
+                    "pad_bandwidth", "zyn_bandwidth", "bandwidth",
+                    "pad_bwscale", "zyn_bwscale", "bwscale",
+                    "pad_profile", "zyn_profile",
+                    "pad_position", "zyn_position");
+            if (!hasZynFields)
+            {
+                return PadSpectrumProfile.Generic;
+            }
+
+            var mode = TryGetAny(fields, ["pad_mode", "zyn_mode"], out var modeText)
+                ? ParsePadSpectrumMode(modeText, line)
+                : PadSpectrumMode.ZynBandwidth;
+            var bandwidth = GetInt(fields, line, 500, "pad_bandwidth", "zyn_bandwidth", "bandwidth");
+            var bandwidthScale = GetInt(fields, line, 0, "pad_bwscale", "zyn_bwscale", "bwscale");
+            if (bandwidth < 0) throw new PatchScriptException(line, "PAD bandwidth must be zero or greater");
+            return new PadSpectrumProfile(
+                mode,
+                Math.Clamp(bandwidth, 0, 1000),
+                Math.Clamp(bandwidthScale, 0, 7),
+                TryGetAny(fields, ["pad_profile", "zyn_profile"], out var profileText)
+                    ? ParseZynHarmonicProfile(profileText, line)
+                    : new ZynHarmonicProfile(),
+                TryGetAny(fields, ["pad_position", "zyn_position"], out var positionText)
+                    ? ParseZynHarmonicPosition(positionText, line)
+                    : new ZynHarmonicPosition());
+        }
+
+        private static PadSpectrumMode ParsePadSpectrumMode(string value, int line) => value.ToLowerInvariant() switch
+        {
+            "generic" => PadSpectrumMode.Generic,
+            "bandwidth" or "zyn" or "zyn_bandwidth" => PadSpectrumMode.ZynBandwidth,
+            "discrete" or "other" => PadSpectrumMode.ZynDiscrete,
+            "continuous" => PadSpectrumMode.ZynContinuous,
+            _ => throw new PatchScriptException(line, $"unknown PAD spectrum mode `{value}`")
+        };
+
+        private static ZynHarmonicProfile ParseZynHarmonicProfile(string value, int line)
+        {
+            var pieces = value.Split(':', StringSplitOptions.TrimEntries);
+            if (pieces.Length != 12)
+            {
+                throw new PatchScriptException(line, "Zyn harmonic profile needs 12 colon-separated fields");
+            }
+
+            return new ZynHarmonicProfile(
+                ParseProfileBaseType(pieces[0], line),
+                ParseByteish(pieces[1], line),
+                ParseByteish(pieces[2], line),
+                ParseByteish(pieces[3], line),
+                ParseByteish(pieces[4], line),
+                ParseByteish(pieces[5], line),
+                ParseProfileAmplitudeType(pieces[6], line),
+                ParseProfileAmplitudeMode(pieces[7], line),
+                ParseByteish(pieces[8], line),
+                ParseByteish(pieces[9], line),
+                ParseBool(pieces[10], line),
+                ParseProfileHalf(pieces[11], line));
+        }
+
+        private static ZynHarmonicPosition ParseZynHarmonicPosition(string value, int line)
+        {
+            var pieces = value.Split(':', StringSplitOptions.TrimEntries);
+            if (pieces.Length != 4)
+            {
+                throw new PatchScriptException(line, "Zyn harmonic position needs 4 colon-separated fields");
+            }
+
+            return new ZynHarmonicPosition(
+                ParseHarmonicPositionType(pieces[0], line),
+                ParseByteish(pieces[1], line, 255),
+                ParseByteish(pieces[2], line, 255),
+                ParseByteish(pieces[3], line, 255));
+        }
+
+        private static int ParseByteish(string value, int line, int max = 127)
+        {
+            var parsed = ParseInt(value, line);
+            if (parsed < 0 || parsed > max)
+            {
+                throw new PatchScriptException(line, $"Zyn parameter `{value}` is outside 0..{max}");
+            }
+            return parsed;
+        }
+
+        private static ZynProfileBaseType ParseProfileBaseType(string value, int line) => value.ToLowerInvariant() switch
+        {
+            "0" or "gauss" or "gaussian" => ZynProfileBaseType.Gaussian,
+            "1" or "square" or "rect" or "rectangular" => ZynProfileBaseType.Square,
+            "2" or "double" or "double_exp" or "doubleexponential" => ZynProfileBaseType.DoubleExponential,
+            _ => throw new PatchScriptException(line, $"unknown Zyn profile base type `{value}`")
+        };
+
+        private static ZynProfileAmplitudeType ParseProfileAmplitudeType(string value, int line) => value.ToLowerInvariant() switch
+        {
+            "0" or "off" or "none" => ZynProfileAmplitudeType.Off,
+            "1" or "gauss" or "gaussian" => ZynProfileAmplitudeType.Gaussian,
+            "2" or "sine" => ZynProfileAmplitudeType.Sine,
+            "3" or "flat" => ZynProfileAmplitudeType.Flat,
+            _ => throw new PatchScriptException(line, $"unknown Zyn profile amplitude type `{value}`")
+        };
+
+        private static ZynProfileAmplitudeMode ParseProfileAmplitudeMode(string value, int line) => value.ToLowerInvariant() switch
+        {
+            "0" or "sum" => ZynProfileAmplitudeMode.Sum,
+            "1" or "mult" or "multiply" => ZynProfileAmplitudeMode.Mult,
+            "2" or "div1" => ZynProfileAmplitudeMode.Div1,
+            "3" or "div2" => ZynProfileAmplitudeMode.Div2,
+            _ => throw new PatchScriptException(line, $"unknown Zyn profile amplitude mode `{value}`")
+        };
+
+        private static ZynProfileHalf ParseProfileHalf(string value, int line) => value.ToLowerInvariant() switch
+        {
+            "0" or "full" => ZynProfileHalf.Full,
+            "1" or "upper" => ZynProfileHalf.Upper,
+            "2" or "lower" => ZynProfileHalf.Lower,
+            _ => throw new PatchScriptException(line, $"unknown Zyn profile half `{value}`")
+        };
+
+        private static ZynHarmonicPositionType ParseHarmonicPositionType(string value, int line) => value.ToLowerInvariant() switch
+        {
+            "0" or "harmonic" => ZynHarmonicPositionType.Harmonic,
+            "1" or "shiftu" or "shift_up" => ZynHarmonicPositionType.ShiftUp,
+            "2" or "shiftl" or "shift_down" => ZynHarmonicPositionType.ShiftDown,
+            "3" or "poweru" or "power_up" => ZynHarmonicPositionType.PowerUp,
+            "4" or "powerl" or "power_down" => ZynHarmonicPositionType.PowerDown,
+            "5" or "sine" => ZynHarmonicPositionType.Sine,
+            "6" or "power" => ZynHarmonicPositionType.Power,
+            "7" or "shift" => ZynHarmonicPositionType.Shift,
+            _ => throw new PatchScriptException(line, $"unknown Zyn harmonic position type `{value}`")
+        };
+
         private ParsedEnvelope ParseRateLevelEnvelope(IReadOnlyDictionary<string, string> fields, int line, string fieldPath)
         {
             var rates = ParseFloatList(Required(fields, "rates", line), line, "rates");
@@ -1154,6 +1303,9 @@ public static class PatchScript
 
     private static float GetFloat(IReadOnlyDictionary<string, string> fields, int line, float fallback, params string[] keys) =>
         TryGetAny(fields, keys, out var value) ? ParseFloat(value, line) : fallback;
+
+    private static int GetInt(IReadOnlyDictionary<string, string> fields, int line, int fallback, params string[] keys) =>
+        TryGetAny(fields, keys, out var value) ? ParseInt(value, line) : fallback;
 
     private static float ParseFloat(string value, int line) =>
         float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)

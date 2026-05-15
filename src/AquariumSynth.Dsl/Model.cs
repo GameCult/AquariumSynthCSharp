@@ -201,12 +201,100 @@ public sealed record HarmonicBank(
     float RootFrequencyHz,
     IReadOnlyList<HarmonicPartial> Partials);
 
+public enum PadSpectrumMode
+{
+    Generic,
+    ZynBandwidth,
+    ZynDiscrete,
+    ZynContinuous
+}
+
+public enum ZynProfileBaseType
+{
+    Gaussian = 0,
+    Square = 1,
+    DoubleExponential = 2
+}
+
+public enum ZynProfileAmplitudeType
+{
+    Off = 0,
+    Gaussian = 1,
+    Sine = 2,
+    Flat = 3
+}
+
+public enum ZynProfileAmplitudeMode
+{
+    Sum = 0,
+    Mult = 1,
+    Div1 = 2,
+    Div2 = 3
+}
+
+public enum ZynProfileHalf
+{
+    Full = 0,
+    Upper = 1,
+    Lower = 2
+}
+
+public enum ZynHarmonicPositionType
+{
+    Harmonic = 0,
+    ShiftUp = 1,
+    ShiftDown = 2,
+    PowerUp = 3,
+    PowerDown = 4,
+    Sine = 5,
+    Power = 6,
+    Shift = 7
+}
+
+public sealed record ZynHarmonicProfile(
+    ZynProfileBaseType BaseType = ZynProfileBaseType.Gaussian,
+    int BaseParameter = 80,
+    int FrequencyMultiplier = 0,
+    int ModulatorParameter = 0,
+    int ModulatorFrequency = 30,
+    int Width = 127,
+    ZynProfileAmplitudeType AmplitudeType = ZynProfileAmplitudeType.Off,
+    ZynProfileAmplitudeMode AmplitudeMode = ZynProfileAmplitudeMode.Sum,
+    int AmplitudeParameter1 = 80,
+    int AmplitudeParameter2 = 64,
+    bool AutoScale = true,
+    ZynProfileHalf Half = ZynProfileHalf.Full);
+
+public sealed record ZynHarmonicPosition(
+    ZynHarmonicPositionType Type = ZynHarmonicPositionType.Harmonic,
+    int Parameter1 = 0,
+    int Parameter2 = 0,
+    int Parameter3 = 0);
+
+public sealed record PadSpectrumProfile(
+    PadSpectrumMode Mode = PadSpectrumMode.Generic,
+    int Bandwidth = 500,
+    int BandwidthScale = 0,
+    ZynHarmonicProfile ZynProfile = null!,
+    ZynHarmonicPosition ZynPosition = null!)
+{
+    public static PadSpectrumProfile Generic { get; } = new();
+
+    public ZynHarmonicProfile ZynProfile { get; init; } = ZynProfile ?? new();
+
+    public ZynHarmonicPosition ZynPosition { get; init; } = ZynPosition ?? new();
+}
+
 public sealed record SpectralBank(
     string LayerName,
     float RootFrequencyHz,
     float SpreadRatio,
     IReadOnlyList<HarmonicPartial> Partials,
-    Voice Treatment);
+    Voice Treatment,
+    PadSpectrumProfile Profile = null!)
+{
+    public PadSpectrumProfile Profile { get; init; } = Profile ?? PadSpectrumProfile.Generic;
+}
 
 public sealed record ReferencePatch(
     string Id,

@@ -181,7 +181,7 @@ public sealed class ZynReferenceParityTests
             {
                 $"fixture: {name}",
                 $"input: {input}",
-                $"candidate: generated first-pass Zyn PAD rebuild",
+                $"candidate: generated Zyn PAD rebuild",
                 $"note_stdout: {note.Stdout.Trim()}",
                 $"table_stdout: {table.Stdout.Trim()}",
                 $"peak: {Peak(noteSamples):0.######}",
@@ -277,7 +277,7 @@ public sealed class ZynReferenceParityTests
                 $"instrument: {instrument.Name}",
                 $"input: {input}",
                 $"kit_index: {kitIndex}",
-                $"candidate: generated first-pass Zyn PAD rebuild",
+                $"candidate: generated Zyn PAD rebuild",
                 $"note_stdout: {note.Stdout.Trim()}",
                 $"table_stdout: {table.Stdout.Trim()}",
                 $"peak: {Peak(noteSamples):0.######}",
@@ -308,7 +308,7 @@ public sealed class ZynReferenceParityTests
             {
                 WriteWav(aquaWav, aquaRender.Samples, aquaRender.SampleRate, 0.9f);
                 var comparison = AudioAnalyzer.CompareAudio(noteSamples, aquaRender.Samples);
-                report.Add($"candidate: generated first-pass Zyn PAD rebuild");
+                report.Add($"candidate: generated Zyn PAD rebuild");
                 report.Add($"log_mel_distance: {comparison.LogMelDistance:0.######}");
                 report.Add($"envelope_distance: {comparison.EnvelopeDistance:0.######}");
                 report.Add($"rms_ratio: {comparison.RmsRatio:0.######}");

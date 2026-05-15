@@ -19,16 +19,35 @@ Doctrine update:
 
 Current slice:
 
-- Added ZynAddSubFX as a submodule at `external/zynaddsubfx`.
-- Added guard tests proving the pinned Zyn source exists, keeps its GPL license,
-  exposes the PAD implementation files, and is fixed to the expected commit.
-- Tightened the package-boundary test so `external/`, C++ sources, and headers
-  do not ship in `AquariumSynth.Dsl.nupkg`.
-- Full verification:
-  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
-  95 passed.
-- Next coherent cut: build a test-only Zyn PAD reference renderer/wrapper from
-  the pinned source and compare it to the Aquarium `spectrum` rebuild.
+- Zyn PAD per-preset rebuilds now carry first-class Zyn PAD table semantics
+  instead of only `spread=0` plus harmonic magnitudes.
+- `SpectralBank` owns `PadSpectrumProfile`, including Zyn PAD mode,
+  bandwidth, bandwidth scale, harmonic profile, and harmonic-position warp.
+  `PadSynthWaveform` uses the Zyn PAD profile/bandwidth formulas for those
+  banks and keeps the old generic PADsynth path for ordinary `spectrum`.
+- `ZynInstrumentReader.RebuildFirstPadAsAquariumScript` now emits readable
+  `zyn_mode=`, `zyn_bandwidth=`, `zyn_bwscale=`, `zyn_profile=...`, and
+  `zyn_position=...` fields, and maps Zyn PAD volume with the source
+  exponential gain curve instead of the old tiny linear `/500` guess.
+- The translator now expands a useful subset of Zyn OscilGen base-function
+  harmonic content plus spectrum adjustment before feeding PAD synthesis. This
+  is a coherent source-table owner, but current parity is mixed: it improves
+  Soft Pad and Organ Choir Pad2 log-mel, while sin2x/DoublePadBass/Ghost
+  regress. Treat it as live pressure on OscilGen coverage, not solved Zyn
+  oscillator parity.
+- Latest focused verification:
+  `dotnet test tests\AquariumSynth.Dsl.Tests\AquariumSynth.Dsl.Tests.csproj --no-restore --filter "FullyQualifiedName~ZynInstrumentTests|FullyQualifiedName~ZynReferenceParityTests"`:
+  13 passed.
+- Latest upstream PAD batch after OscilGen subset:
+  `Soft Pad` log-mel `0.342738`, score `0.443083`;
+  `Organ Choir Pad2` log-mel `0.573216`, score `0.434351`;
+  `sin2x pad` log-mel `0.524421`, score `0.360653`;
+  `DoublePadBass` log-mel `0.689315`, score `0.226566`;
+  `Ghost Ensemble` log-mel `0.482155`, score `0.400393`.
+- Next coherent cut: either complete more OscilGen semantics
+  (modulation/waveshaping/filter/adaptive harmonics) or gate the current
+  approximation to the cases it truly owns. Do not present the mixed OscilGen
+  subset as passing parity.
 
 Completed this slice:
 

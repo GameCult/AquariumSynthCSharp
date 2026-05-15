@@ -425,6 +425,26 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
+    public void SpectralBankParsesZynPadProfileFields()
+    {
+        var patch = PatchScript.Parse("""
+            layer name=pad engine=pad gain=.08
+            spectrum layer=pad root=77.7813 freq=261.6256 zyn_mode=bandwidth zyn_bandwidth=485 zyn_bwscale=3 zyn_profile=gaussian:99:8:12:55:127:sine:mult:80:20:yes:full zyn_position=sine:20:40:60 partials=1:.08,2:.04
+            """);
+
+        var bank = Assert.Single(patch.SpectralBanks);
+        Assert.Equal(PadSpectrumMode.ZynBandwidth, bank.Profile.Mode);
+        Assert.Equal(485, bank.Profile.Bandwidth);
+        Assert.Equal(3, bank.Profile.BandwidthScale);
+        Assert.Equal(ZynProfileBaseType.Gaussian, bank.Profile.ZynProfile.BaseType);
+        Assert.Equal(8, bank.Profile.ZynProfile.FrequencyMultiplier);
+        Assert.Equal(ZynProfileAmplitudeType.Sine, bank.Profile.ZynProfile.AmplitudeType);
+        Assert.Equal(ZynProfileAmplitudeMode.Mult, bank.Profile.ZynProfile.AmplitudeMode);
+        Assert.Equal(ZynHarmonicPositionType.Sine, bank.Profile.ZynPosition.Type);
+        Assert.Equal(60, bank.Profile.ZynPosition.Parameter3);
+    }
+
+    [Fact]
     public void SpectralBankSyntaxRejectsUnknownLayerOrBadSpread()
     {
         Assert.Throws<PatchScriptException>(() =>

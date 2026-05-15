@@ -138,22 +138,26 @@ public static class ZynInstrumentReader
             ?? throw new ArgumentException("Enabled PAD kit item is missing PAD_SYNTH_PARAMETERS");
         var amplitude = pad.Element("AMPLITUDE_PARAMETERS");
         var envelope = amplitude?.Element("AMPLITUDE_ENVELOPE");
-        var harmonics = pad.Element("OSCIL")?.Element("HARMONICS")?.Elements("HARMONIC")
-            .Select(ParsePadHarmonic)
-            .Where(partial => partial.Gain > 0)
-            .OrderBy(partial => partial.Ratio)
-            .Take(32)
-            .ToList() ?? [];
+        var oscillator = pad.Element("OSCIL");
+        var harmonics = ParsePadOscillatorHarmonics(oscillator, maxHarmonics: 64).ToList();
         if (harmonics.Count == 0)
         {
             harmonics.Add(new HarmonicPartial(1, 0.16f));
         }
 
         var volume = IntParam(amplitude, "volume", 90);
-        var layerGain = Math.Clamp(volume / 500f, 0.02f, 0.4f);
+        var layerGain = Math.Clamp(
+            MathF.Pow(0.1f, 3.0f * (1.0f - volume / 96.0f)),
+            0.001f,
+            1.5f);
         var attack = EnvelopeTime(envelope, "A_dt", 0.28f);
         var decay = EnvelopeTime(envelope, "D_dt", 0.42f);
         var release = EnvelopeTime(envelope, "R_dt", 1.2f);
+        var mode = ZynPadMode(IntParam(pad, "mode", 0));
+        var bandwidth = IntParam(pad, "bandwidth", 500);
+        var bandwidthScale = IntParam(pad, "bandwidth_scale", 0);
+        var profile = ZynProfileText(pad.Element("HARMONIC_PROFILE"));
+        var position = ZynPositionText(pad.Element("HARMONIC_POSITION"));
         var safeName = SafeIdentifier(string.IsNullOrWhiteSpace(name) ? $"pad_{IntAttribute(item, "id")}" : name);
         var partialText = string.Join(",", harmonics.Select(partial => $"{F(partial.Ratio)}:{F(partial.Gain)}"));
 
@@ -161,18 +165,16 @@ public static class ZynInstrumentReader
         {
             new("engine_pad", "1", "Translated first enabled PAD kit item."),
             new("pad_oscillator_harmonics", harmonics.Count.ToString(CultureInfo.InvariantCulture), "Mapped OSCIL/HARMONICS magnitudes into Aquarium spectrum partials."),
+            new("pad_oscillator_base_function", IntParam(oscillator, "base_function", 0).ToString(CultureInfo.InvariantCulture), "Expanded Zyn OscilGen base function into harmonic partials before PAD synthesis."),
+            new("pad_oscillator_spectrum_adjust", $"{IntParam(oscillator, "spectrum_adjust_type", 0)}:{IntParam(oscillator, "spectrum_adjust_par", 64)}", "Applied Zyn OscilGen spectrum adjustment to generated harmonic partials."),
             new("pad_table_root", F(tableRootFrequencyHz), "Root frequency comes from the Zyn oracle generated sample basefreq."),
-            new("pad_volume", volume.ToString(CultureInfo.InvariantCulture), "Mapped PAD amplitude volume into Aquarium layer gain.")
+            new("pad_volume", volume.ToString(CultureInfo.InvariantCulture), "Mapped PAD amplitude volume into Aquarium layer gain."),
+            new("pad_bandwidth", bandwidth.ToString(CultureInfo.InvariantCulture), "Mapped Zyn PAD bandwidth into Aquarium spectral table generation."),
+            new("pad_bandwidth_scale", bandwidthScale.ToString(CultureInfo.InvariantCulture), "Mapped Zyn PAD bandwidth scaling exponent selection."),
+            new("pad_harmonic_profile", profile, "Mapped Zyn PAD harmonic profile shape into Aquarium spectral table generation."),
+            new("pad_harmonic_position", position, "Mapped Zyn PAD harmonic position warp into Aquarium spectral table generation.")
         };
         var missing = new List<ReferenceFeature>();
-        if (IntParam(pad, "bandwidth", 0) > 0)
-        {
-            missing.Add(new("pad_bandwidth_profile", IntParam(pad, "bandwidth", 0).ToString(CultureInfo.InvariantCulture), "Aquarium spread is kept at zero until Zyn bandwidth/profile semantics are calibrated."));
-        }
-        if (pad.Element("HARMONIC_PROFILE") is { } profile)
-        {
-            missing.Add(new("pad_harmonic_profile", IntParam(profile, "base_type", 0).ToString(CultureInfo.InvariantCulture), "Zyn harmonic profile shaping is not yet lowered; explicit OSCIL harmonics are used as the first spectral rung."));
-        }
         if (pad.Element("FILTER_PARAMETERS") is not null)
         {
             missing.Add(new("pad_filter_parameters", "present", "Filter envelope/LFO lowering remains separate pressure."));
@@ -191,7 +193,7 @@ public static class ZynInstrumentReader
         script.AppendLine("    hpf=0");
         script.AppendLine();
         script.AppendLine($"layer name={safeName} engine=pad gain={F(layerGain)} env=rl rates={F(attack)},{F(decay)},1,{F(release)} levels=1,1,1,0 curves=lin,lin,lin,lin gate=1.5");
-        script.AppendLine($"spectrum layer={safeName} root={F(tableRootFrequencyHz)} freq={F(playbackFrequencyHz)} spread=0 partials={partialText}");
+        script.AppendLine($"spectrum layer={safeName} root={F(tableRootFrequencyHz)} freq={F(playbackFrequencyHz)} spread=0 zyn_mode={mode} zyn_bandwidth={bandwidth} zyn_bwscale={bandwidthScale} zyn_profile={profile} zyn_position={position} partials={partialText}");
 
         return new ZynPadRebuild(name, IntAttribute(item, "id"), script.ToString(), matched, missing);
     }
@@ -264,18 +266,251 @@ public static class ZynInstrumentReader
                value == "1";
     }
 
+    private static bool? NullableBoolParamValue(XElement? root, string name) =>
+        root is null ? null : BoolParamValue(root, name);
+
     private static int IntAttribute(XElement element, string name) =>
         int.TryParse(AttributeValue(element, name), out var value) ? value : 0;
 
     private static string? AttributeValue(XElement element, string name) =>
         element.Attribute(name)?.Value;
 
-    private static HarmonicPartial ParsePadHarmonic(XElement harmonic)
+    private static IReadOnlyList<HarmonicPartial> ParsePadOscillatorHarmonics(XElement? oscillator, int maxHarmonics)
+    {
+        var harmonicMagnitudes = oscillator?.Element("HARMONICS")?.Elements("HARMONIC")
+            .Select(ParsePadHarmonicMagnitude)
+            .Where(partial => partial.Gain != 0)
+            .OrderBy(partial => partial.Ratio)
+            .ToArray() ?? [];
+        if (harmonicMagnitudes.Length == 0)
+        {
+            return [];
+        }
+
+        var baseFunction = IntParam(oscillator, "base_function", 0);
+        if (baseFunction == 0)
+        {
+            return harmonicMagnitudes
+                .Where(partial => partial.Gain > 0)
+                .Take(maxHarmonics)
+                .ToArray();
+        }
+
+        var baseSpectrum = ZynBaseFunctionSpectrum(
+            baseFunction,
+            IntParam(oscillator, "base_function_par", 64),
+            maxHarmonics);
+        var gains = new double[maxHarmonics + 1];
+        foreach (var harmonic in harmonicMagnitudes)
+        {
+            var harmonicNumber = (int)Math.Round(harmonic.Ratio);
+            if (harmonicNumber <= 0) continue;
+            for (var baseHarmonic = 1; baseHarmonic < baseSpectrum.Length; baseHarmonic++)
+            {
+                var target = baseHarmonic * harmonicNumber;
+                if (target > maxHarmonics) break;
+                gains[target] += baseSpectrum[baseHarmonic] * harmonic.Gain;
+            }
+        }
+
+        ApplyZynSpectrumAdjust(
+            gains,
+            IntParam(oscillator, "spectrum_adjust_type", 0),
+            IntParam(oscillator, "spectrum_adjust_par", 64));
+
+        var max = gains.DefaultIfEmpty(0).Max(Math.Abs);
+        if (max <= 0) return [];
+        return gains
+            .Select((gain, index) => new { gain, index })
+            .Where(item => item.index > 0 && Math.Abs(item.gain) > max * 0.0001)
+            .Select(item => new HarmonicPartial(item.index, (float)(0.16 * Math.Abs(item.gain) / max)))
+            .Take(maxHarmonics)
+            .ToArray();
+    }
+
+    private static HarmonicPartial ParsePadHarmonicMagnitude(XElement harmonic)
     {
         var id = IntAttribute(harmonic, "id");
         var ratio = Math.Max(1, id);
         var magnitude = IntParam(harmonic, "mag", 0);
-        return new HarmonicPartial(ratio, 0.16f * Math.Clamp(magnitude / 127f, 0, 1));
+        var hmagNew = 1.0f - MathF.Abs(magnitude / 64.0f - 1.0f);
+        var gain = magnitude == 64 ? 0 : 1.0f - hmagNew;
+        if (magnitude < 64)
+        {
+            gain = -gain;
+        }
+        return new HarmonicPartial(ratio, gain);
+    }
+
+    private static double[] ZynBaseFunctionSpectrum(int baseFunction, int parameter, int maxHarmonics)
+    {
+        const int sampleCount = 4096;
+        var parameterValue = parameter == 64 ? 0.5 : (parameter + 0.5) / 128.0;
+        var magnitudes = new double[maxHarmonics + 1];
+        for (var harmonic = 1; harmonic <= maxHarmonics; harmonic++)
+        {
+            var real = 0.0;
+            var imaginary = 0.0;
+            for (var i = 0; i < sampleCount; i++)
+            {
+                var t = i / (double)sampleCount;
+                var sample = ZynBaseFunction(baseFunction, t, parameterValue);
+                var angle = -Math.Tau * harmonic * t;
+                real += sample * Math.Cos(angle);
+                imaginary += sample * Math.Sin(angle);
+            }
+            magnitudes[harmonic] = Math.Sqrt(real * real + imaginary * imaginary) / sampleCount;
+        }
+
+        var max = magnitudes.DefaultIfEmpty(0).Max();
+        if (max > 0)
+        {
+            for (var i = 0; i < magnitudes.Length; i++) magnitudes[i] /= max;
+        }
+        return magnitudes;
+    }
+
+    private static double ZynBaseFunction(int function, double x, double a)
+    {
+        x -= Math.Floor(x);
+        return function switch
+        {
+            1 => ZynTriangle(x, a),
+            2 => x < a ? -1.0 : 1.0,
+            3 => ZynSaw(x, a),
+            4 => Math.Pow(x, Math.Exp((a - 0.5) * 10.0)) * 2.0 - 1.0,
+            5 => Math.Exp(-Math.Pow(x * 2.0 - 1.0, 2.0) * (Math.Exp(a * 8.0) + 5.0)) * 2.0 - 1.0,
+            6 => ZynDiode(x, a),
+            7 => Math.Sin(Math.Pow(x, Math.Exp((a - 0.5) * 5.0)) * Math.PI) * 2.0 - 1.0,
+            8 => Math.Sin(Math.Clamp((x - 0.5) * Math.Exp((a - 0.5) * Math.Log(128.0)), -0.5, 0.5) * Math.Tau),
+            9 => -Math.Sin(Math.Sign((x + 0.5) % 1.0 * 2.0 - 1.0) * Math.Pow(Math.Abs((x + 0.5) % 1.0 * 2.0 - 1.0), Math.Pow(3.0, (a - 0.5) * 8.0)) * Math.PI),
+            _ => -Math.Sin(Math.Tau * x)
+        };
+    }
+
+    private static double ZynTriangle(double x, double a)
+    {
+        x = (x + 0.25) % 1.0;
+        a = Math.Max(0.00001, 1.0 - a);
+        x = x < 0.5 ? x * 4.0 - 1.0 : (1.0 - x) * 4.0 - 1.0;
+        return Math.Clamp(x / -a, -1.0, 1.0);
+    }
+
+    private static double ZynSaw(double x, double a)
+    {
+        a = Math.Clamp(a, 0.00001, 0.99999);
+        return x < a ? x / a * 2.0 - 1.0 : (1.0 - x) / (1.0 - a) * 2.0 - 1.0;
+    }
+
+    private static double ZynDiode(double x, double a)
+    {
+        a = Math.Clamp(a, 0.00001, 0.99999) * 2.0 - 1.0;
+        var y = Math.Cos((x + 0.5) * Math.Tau) - a;
+        if (y < 0) y = 0;
+        return y / (1.0 - a) * 2.0 - 1.0;
+    }
+
+    private static void ApplyZynSpectrumAdjust(double[] gains, int type, int parameter)
+    {
+        if (type == 0) return;
+        var max = gains.DefaultIfEmpty(0).Max(Math.Abs);
+        if (max <= 0) return;
+        for (var i = 0; i < gains.Length; i++) gains[i] /= max;
+
+        var par = parameter / 127.0;
+        par = type switch
+        {
+            1 => par <= 0.5
+                ? Math.Pow(5.0, 1.0 - par * 2.0)
+                : Math.Pow(8.0, 1.0 - par * 2.0),
+            2 or 3 => Math.Pow(10.0, (1.0 - par) * 3.0) * 0.001,
+            _ => par
+        };
+
+        for (var i = 0; i < gains.Length; i++)
+        {
+            var sign = Math.Sign(gains[i]);
+            var mag = Math.Abs(gains[i]);
+            mag = type switch
+            {
+                1 => Math.Pow(mag, par),
+                2 => mag < par ? 0.0 : mag,
+                3 => Math.Min(1.0, mag / par),
+                _ => mag
+            };
+            gains[i] = sign * mag;
+        }
+    }
+
+    private static string ZynPadMode(int mode) => mode switch
+    {
+        1 => "discrete",
+        2 => "continuous",
+        _ => "bandwidth"
+    };
+
+    private static string ZynProfileText(XElement? profile)
+    {
+        var baseType = IntParam(profile, "base_type", 0) switch
+        {
+            1 => "square",
+            2 => "double",
+            _ => "gaussian"
+        };
+        var amplitudeType = IntParam(profile, "amplitude_multiplier_type", 0) switch
+        {
+            1 => "gaussian",
+            2 => "sine",
+            3 => "flat",
+            _ => "off"
+        };
+        var amplitudeMode = IntParam(profile, "amplitude_multiplier_mode", 0) switch
+        {
+            1 => "mult",
+            2 => "div1",
+            3 => "div2",
+            _ => "sum"
+        };
+        var half = IntParam(profile, "one_half", 0) switch
+        {
+            1 => "upper",
+            2 => "lower",
+            _ => "full"
+        };
+        var autoscale = NullableBoolParamValue(profile, "autoscale") ?? true;
+        return string.Join(":",
+            baseType,
+            IntParam(profile, "base_par1", 80).ToString(CultureInfo.InvariantCulture),
+            IntParam(profile, "frequency_multiplier", 0).ToString(CultureInfo.InvariantCulture),
+            IntParam(profile, "modulator_par1", 0).ToString(CultureInfo.InvariantCulture),
+            IntParam(profile, "modulator_frequency", 30).ToString(CultureInfo.InvariantCulture),
+            IntParam(profile, "width", 127).ToString(CultureInfo.InvariantCulture),
+            amplitudeType,
+            amplitudeMode,
+            IntParam(profile, "amplitude_multiplier_par1", 80).ToString(CultureInfo.InvariantCulture),
+            IntParam(profile, "amplitude_multiplier_par2", 64).ToString(CultureInfo.InvariantCulture),
+            autoscale ? "yes" : "no",
+            half);
+    }
+
+    private static string ZynPositionText(XElement? position)
+    {
+        var type = IntParam(position, "type", 0) switch
+        {
+            1 => "shift_up",
+            2 => "shift_down",
+            3 => "power_up",
+            4 => "power_down",
+            5 => "sine",
+            6 => "power",
+            7 => "shift",
+            _ => "harmonic"
+        };
+        return string.Join(":",
+            type,
+            IntParam(position, "parameter1", 0).ToString(CultureInfo.InvariantCulture),
+            IntParam(position, "parameter2", 0).ToString(CultureInfo.InvariantCulture),
+            IntParam(position, "parameter3", 0).ToString(CultureInfo.InvariantCulture));
     }
 
     private static int IntParam(XElement? root, string name, int fallback)
