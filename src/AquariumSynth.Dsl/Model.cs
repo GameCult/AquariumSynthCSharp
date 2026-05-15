@@ -58,7 +58,8 @@ public sealed record RateLevelEnvelope(
     RateLevelCurve Curve1 = RateLevelCurve.Linear,
     RateLevelCurve Curve2 = RateLevelCurve.Linear,
     RateLevelCurve Curve3 = RateLevelCurve.Linear,
-    RateLevelCurve Curve4 = RateLevelCurve.Linear);
+    RateLevelCurve Curve4 = RateLevelCurve.Linear,
+    float StartLevel = 0);
 
 public enum NoteSource
 {
@@ -107,7 +108,8 @@ public sealed record Filter(
     float LowPassResonance = 0,
     int LowPassOrder = 1,
     float HighPass = 0,
-    float HighPassRamp = 0);
+    float HighPassRamp = 0,
+    RateLevelEnvelope? LowPassEnvelope = null);
 
 public sealed record Phaser(float OffsetSeconds = 0, float RampSecondsPerSecond = 0);
 

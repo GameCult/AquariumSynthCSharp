@@ -262,6 +262,7 @@ public static class ZynInstrumentReader
         var filter = pad.Element("FILTER_PARAMETERS");
         var lowPass = ZynPadLowPass(filter);
         var lowPassOrder = ZynPadLowPassOrder(filter);
+        var lowPassEnvelope = ZynPadLowPassEnvelope(filter, lowPass);
         var safeName = includeKitSuffix ? $"{safeBaseName}_{kitId}" : safeBaseName;
         var partialText = string.Join(",", harmonics.Select(partial => $"{F(partial.Ratio)}:{F(partial.Gain)}"));
 
@@ -281,12 +282,19 @@ public static class ZynInstrumentReader
             matched.Add(new($"{featurePrefix}filter_lpf", F(lowPass), "Mapped static Zyn PAD global low-pass frequency into Aquarium layer filtering."));
             matched.Add(new($"{featurePrefix}filter_lpf_order", lowPassOrder.ToString(CultureInfo.InvariantCulture), "Mapped Zyn analog LP1/LP2 and stage count into Aquarium low-pass order."));
         }
-        if (filter is not null)
+        if (lowPassEnvelope is not null)
         {
-            missing.Add(new($"{featurePrefix}filter_modulation", "present", "Filter envelope/LFO lowering remains separate pressure."));
+            matched.Add(new($"{featurePrefix}filter_lpf_envelope", "ratelevel", "Mapped Zyn PAD filter envelope octave offsets into Aquarium low-pass cutoff motion."));
+        }
+        if (filter?.Element("FILTER_LFO") is { } lfo && IntParam(lfo, "intensity", 0) != 0)
+        {
+            missing.Add(new($"{featurePrefix}filter_lfo", "present", "Filter LFO lowering remains separate pressure."));
         }
 
-        script.AppendLine($"layer name={safeName} engine=pad gain={F(layerGain)} lpf={F(lowPass)} lpf_order={lowPassOrder} env=rl rates={F(attack)},{F(decay)},1,{F(release)} levels=1,1,1,0 curves=lin,lin,lin,lin gate=1.5");
+        var filterEnvelopeText = lowPassEnvelope is null
+            ? ""
+            : $" lpf_env=rl lpf_start={F(lowPassEnvelope.StartLevel)} lpf_rates={F(lowPassEnvelope.Rate1Seconds)},{F(lowPassEnvelope.Rate2Seconds)},{F(lowPassEnvelope.Rate3Seconds)},{F(lowPassEnvelope.Rate4Seconds)} lpf_levels={F(lowPassEnvelope.Level1)},{F(lowPassEnvelope.Level2)},{F(lowPassEnvelope.Level3)},{F(lowPassEnvelope.Level4)} lpf_curves=lin,lin,lin,lin";
+        script.AppendLine($"layer name={safeName} engine=pad gain={F(layerGain)} lpf={F(lowPass)} lpf_order={lowPassOrder}{filterEnvelopeText} env=rl rates={F(attack)},{F(decay)},1,{F(release)} levels=1,1,1,0 curves=lin,lin,lin,lin gate=1.5");
         script.AppendLine($"spectrum layer={safeName} root={F(tableRootFrequencyHz)} freq={F(noteFrequencyHz)} spread=0 zyn_mode={mode} zyn_bandwidth={bandwidth} zyn_bwscale={bandwidthScale} zyn_profile={profile} zyn_position={position} partials={partialText}");
     }
 
@@ -851,6 +859,37 @@ public static class ZynInstrumentReader
             _ => 1
         };
         return Math.Clamp(poles * (DescendantIntParam(filter, "stages", 0) + 1), 1, 12);
+    }
+
+    private static RateLevelEnvelope? ZynPadLowPassEnvelope(XElement? filter, float baseLowPass)
+    {
+        var envelope = filter?.Element("FILTER_ENVELOPE");
+        if (envelope is null || baseLowPass >= 1)
+        {
+            return null;
+        }
+
+        static float OctaveOffset(int value) => (value - 64.0f) / 64.0f * 6.0f;
+        float LevelOffset(int value) => Math.Clamp(baseLowPass * MathF.Pow(2.0f, OctaveOffset(value)) - baseLowPass, -1f, 1f);
+
+        var start = LevelOffset(IntParam(envelope, "A_val", 64));
+        var level1 = LevelOffset(IntParam(envelope, "D_val", 64));
+        var level2 = LevelOffset(IntParam(envelope, "S_val", 64));
+        var level4 = LevelOffset(IntParam(envelope, "R_val", 64));
+        if (MathF.Abs(start) < 0.00001f &&
+            MathF.Abs(level1) < 0.00001f &&
+            MathF.Abs(level2) < 0.00001f &&
+            MathF.Abs(level4) < 0.00001f)
+        {
+            return null;
+        }
+
+        return new RateLevelEnvelope(
+            EnvelopeTime(envelope, "A_dt", 0.02f), level1,
+            EnvelopeTime(envelope, "D_dt", 0.42f), level2,
+            1.0f, level2,
+            EnvelopeTime(envelope, "R_dt", 1.2f), level4,
+            StartLevel: start);
     }
 
     private static float ZynPadPlaybackFrequency(XElement? frequency, float playbackFrequencyHz)

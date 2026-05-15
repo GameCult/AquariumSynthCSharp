@@ -170,6 +170,19 @@ next_agent_start_here:
 completed_slices:
   - date: 2026-05-15
     summary: >
+      Added a general low-pass rate/level envelope surface and mapped Zyn PAD
+      `FILTER_ENVELOPE` into it after user listening identified that
+      DoublePadBass had the right tone but not Zyn's harder opening hit.
+      `RateLevelEnvelope` now carries an optional start level, Faust emits
+      `rl4_env_from`, and voices can specify `lpf_env=rl` with `lpf_start`,
+      `lpf_rates`, `lpf_levels`, and optional `lpf_curves`. The Zyn importer
+      converts ADSR-filter envelope values into cutoff offsets from the static
+      Zyn cutoff, preserving the immediate open-filter transient. DoublePadBass
+      improved from log-mel `0.259298` / envelope distance `0.631427` to
+      `0.241993` / `0.554658`; remaining pressure is mostly level/RMS.
+    verification: "dotnet test AquariumSynthCSharp.slnx --no-restore: 104 passed"
+  - date: 2026-05-15
+    summary: >
       Mapped two missing Zyn PAD authorities exposed by DoublePadBass listening:
       analog low-pass slope and PAD frequency detune. Aquarium now has a general
       `lpf_order` field which emits Faust `fi.lowpass(order, ...)`; Zyn analog

@@ -443,7 +443,8 @@ public static class PatchScript
                     GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "filter/resonance"), "resonance", "res"),
                     GetBoundInt(fields, line, 1, OwnerField(ownerPath, "filter/lpf_order"), "lpf_order", "lpfo"),
                     GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "filter/hpf"), "hpf", "h"),
-                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "filter/hpf_ramp"), "hpf_ramp", "hr")),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "filter/hpf_ramp"), "hpf_ramp", "hr"),
+                    ParseFilterRateLevelEnvelope(fields, line, ownerPath)),
                 Phaser = new Phaser(
                     GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "phaser/offset"), "phaser", "ph"),
                     GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "phaser/ramp"), "phaser_ramp", "phr")),
@@ -1020,12 +1021,48 @@ public static class PatchScript
                 Math.Max(0, rates[1]), Math.Clamp(levels[1], 0, 4f),
                 Math.Max(0, rates[2]), Math.Clamp(levels[2], 0, 4f),
                 Math.Max(0, rates[3]), Math.Clamp(levels[3], 0, 4f),
-                curves[0], curves[1], curves[2], curves[3]);
+                curves[0], curves[1], curves[2], curves[3],
+                TryGetAny(fields, ["start_level", "start"], out var startText)
+                    ? Math.Clamp(ParseFloat(startText, line), 0, 4f)
+                    : 0);
             var defaultGate = Math.Max(envelope.Rate1Seconds + envelope.Rate2Seconds + envelope.Rate3Seconds, 0.02f);
             return new ParsedEnvelope(
                 new Envelope(envelope.Rate1Seconds, envelope.Rate2Seconds + envelope.Rate3Seconds, envelope.Level3, envelope.Rate4Seconds),
                 GateSeconds(fields, line, defaultGate, fieldPath),
                 envelope);
+        }
+
+        private RateLevelEnvelope? ParseFilterRateLevelEnvelope(IReadOnlyDictionary<string, string> fields, int line, string ownerPath)
+        {
+            if (!TryGetAny(fields, ["lpf_env", "filter_env"], out var env) || env is not ("rl" or "ratelevel"))
+            {
+                return null;
+            }
+
+            var rates = ParseFloatList(Required(fields, "lpf_rates", line), line, "lpf_rates");
+            var levels = ParseFloatList(Required(fields, "lpf_levels", line), line, "lpf_levels");
+            if (rates.Count != 4 || levels.Count != 4)
+            {
+                throw new PatchScriptException(line, "filter rate/level envelope needs four rates and four levels");
+            }
+
+            var curves = TryGetAny(fields, ["lpf_curves", "lpf_curve"], out var curveText)
+                ? ParseCurveList(curveText, line)
+                : [RateLevelCurve.Linear, RateLevelCurve.Linear, RateLevelCurve.Linear, RateLevelCurve.Linear];
+            if (curves.Count != 4)
+            {
+                throw new PatchScriptException(line, "filter rate/level envelope needs four curves");
+            }
+
+            return new RateLevelEnvelope(
+                Math.Max(0, rates[0]), Math.Clamp(levels[0], -1, 1),
+                Math.Max(0, rates[1]), Math.Clamp(levels[1], -1, 1),
+                Math.Max(0, rates[2]), Math.Clamp(levels[2], -1, 1),
+                Math.Max(0, rates[3]), Math.Clamp(levels[3], -1, 1),
+                curves[0], curves[1], curves[2], curves[3],
+                TryGetAny(fields, ["lpf_start", "filter_start"], out var startText)
+                    ? Math.Clamp(ParseFloat(startText, line), -1, 1)
+                    : 0);
         }
 
         private static IReadOnlyList<RateLevelCurve> ParseCurveList(string value, int line)

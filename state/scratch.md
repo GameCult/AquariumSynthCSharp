@@ -114,6 +114,14 @@ Current user-ear correction:
   Faust `fi.lowpass(2, ...)` instead of pretending all low-passes are first
   order. Latest DoublePadBass: log-mel `0.259298`, score `0.370218`, centroid
   ratio `1.027115`; remaining pressure is loudness/envelope recovery.
+- User then heard the tone as right but the Zyn reference hitting harder at the
+  beginning. The missing authority was Zyn's PAD filter envelope: Aqua had only
+  the static cutoff, while Zyn adds ADSR-filter octave offsets before the
+  global filter. Aquarium now has a general low-pass rate/level envelope
+  surface (`lpf_env=rl`, `lpf_start`, `lpf_rates`, `lpf_levels`) and the Zyn
+  importer maps `FILTER_ENVELOPE` into it. Latest DoublePadBass after this
+  pass: log-mel `0.241993`, envelope distance `0.554658`, RMS ratio `0.456173`,
+  score `0.404382`.
 
 Completed this slice:
 

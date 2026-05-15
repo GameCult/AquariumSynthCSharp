@@ -667,6 +667,19 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
+    public void VoiceLowPassRateLevelEnvelopeParsesAndExports()
+    {
+        var patch = PatchScript.Parse("v w=saw f=80 lpf=.1 lpf_env=rl lpf_start=.4 lpf_rates=.1,.2,.3,.4 lpf_levels=.3,.2,0,0 lpf_curves=lin,exp,lin,lin");
+        var export = FaustEmitter.Emit(patch);
+
+        var envelope = patch.Voices[0].Filter.LowPassEnvelope;
+        Assert.NotNull(envelope);
+        Assert.Equal(.4f, envelope.StartLevel, 5);
+        Assert.Equal(.3f, envelope.Level1, 5);
+        Assert.Contains("rl4_env_from(0.4", export.Source);
+    }
+
+    [Fact]
     public void VoiceEnvelopeUsesStandardAdsrAndNoteGate()
     {
         var patch = PatchScript.Parse("v w=saw f=220 gate=.4 attack=.01 env_decay=.08 sustain_level=.6 release=.3");
