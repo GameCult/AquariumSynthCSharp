@@ -95,10 +95,16 @@ Current user-ear correction:
   kit0 has filter `category=0 type=2 freq=12`, kit1 has `freq=61`. Static Zyn
   PAD low-pass now maps to layer `lpf`; the helper had to read nested `FILTER`
   params, not direct `FILTER_PARAMETERS` children.
-- Latest DoublePadBass after static LPF mapping: log-mel `0.421699`, score
-  `0.412022`, with generated layers `doublepadbass_0 lpf=0.094488` and
-  `doublepadbass_1 lpf=0.480315`. Filter envelope/LFO still remains explicit
-  missing pressure.
+- User still heard Aqua as all kazoo, while Zyn was deep bass with a tiny kazoo
+  overtone. The linear `freq/127` LPF mapping was wrong: Zyn's old filter
+  cutoff maps through `2^((Pfreq / 64 - 1) * 5 + log2(1000))`. Kit0
+  `freq=12` is roughly 60 Hz, not 1.7 kHz; kit1 `freq=61` is roughly 850 Hz,
+  not 8.6 kHz.
+- Latest DoublePadBass after Zyn filter curve mapping: log-mel `0.334546`,
+  score `0.351535`, RMS ratio `0.464596`, with generated layers
+  `doublepadbass_0 lpf=0.003325` and `doublepadbass_1 lpf=0.047225`. The
+  character should now be deep-bass-first; remaining pressure is filter
+  envelope/level recovery, not more static high-band brightness.
 
 Completed this slice:
 

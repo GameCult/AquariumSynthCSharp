@@ -174,10 +174,11 @@ completed_slices:
       after user listening identified DoublePadBass as over-emphasizing kit0's
       high buzz while the reference character comes from kit1's low rumble.
       The importer now reads nested `FILTER` params under
-      `FILTER_PARAMETERS`; kit0's `freq=12` lowers to `lpf=0.094488`, while
-      kit1's `freq=61` lowers to `lpf=0.480315`. The louder gain-cap
-      experiment stayed cut. Filter envelopes and LFOs remain explicit missing
-      pressure.
+      `FILTER_PARAMETERS` and uses Zyn's old filter cutoff curve
+      `2^((Pfreq / 64 - 1) * 5 + log2(1000))`; kit0's `freq=12` lowers to
+      `lpf=0.003325`, while kit1's `freq=61` lowers to `lpf=0.047225`. The
+      louder gain-cap experiment stayed cut. Filter envelopes and LFOs remain
+      explicit missing pressure.
     verification: "dotnet test tests\\AquariumSynth.Dsl.Tests\\AquariumSynth.Dsl.Tests.csproj --no-restore --filter FullyQualifiedName~ZynReferenceParityTests: 4 passed"
   - date: 2026-05-15
     summary: >

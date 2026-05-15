@@ -821,7 +821,8 @@ public static class ZynInstrumentReader
             return 1;
         }
 
-        return Math.Clamp(DescendantIntParam(filter, "freq", 127) / 127f, 0.02f, 1f);
+        var cutoffHz = MathF.Pow(2.0f, (DescendantIntParam(filter, "freq", 127) / 64.0f - 1.0f) * 5.0f + 9.96578428f);
+        return Math.Clamp(cutoffHz / 18000.0f, 20.0f / 18000.0f, 1f);
     }
 
     private static int IntParam(XElement? root, string name, int fallback)
