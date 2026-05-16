@@ -428,6 +428,23 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
+    public void BandPassAndNotchParseAndExportAsFilterAuthority()
+    {
+        var patch = PatchScript.Parse("v w=saw f=220 bpf=.35 bpf_q=4 bpf_order=3 notch=.6 notch_q=8 notch_order=2");
+        var export = FaustEmitter.Emit(patch);
+
+        var voice = Assert.Single(patch.Voices);
+        Assert.Equal(.35f, voice.Filter.BandPass, 5);
+        Assert.Equal(4, voice.Filter.BandPassQ, 5);
+        Assert.Equal(3, voice.Filter.BandPassOrder);
+        Assert.Equal(.6f, voice.Filter.Notch, 5);
+        Assert.Equal(8, voice.Filter.NotchQ, 5);
+        Assert.Equal(2, voice.Filter.NotchOrder);
+        Assert.Contains("fi.resonbp(max(20.0, clip01(0.35) * 18000.0), max(0.1, 4), 1.0)", export.Source);
+        Assert.Contains("fi.notchw(max(1.0, (max(20.0, clip01(0.6) * 18000.0)) / max(0.1, 8)), max(20.0, clip01(0.6) * 18000.0))", export.Source);
+    }
+
+    [Fact]
     public void SpectralBankSeparatesTableRootFromPlaybackFrequency()
     {
         var patch = PatchScript.Parse("""

@@ -52,6 +52,11 @@ For this repo that means:
 - Prefer deterministic lowering. Same script plus same options must produce the
   same patch and Faust source.
 
+Filters own post-source spectral selection. Low-pass, high-pass, band-pass, and
+notch are native AquaSynth filter authorities. Formants remain vowel/body color,
+and PAD spectrum/profile fields remain source-table construction; do not use
+those surfaces as substitutes for ordinary subtractive filters.
+
 ## Faust Boundary
 
 Faust describes pure DSP: inputs to outputs. Architecture files and host code

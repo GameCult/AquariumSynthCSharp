@@ -111,6 +111,12 @@ public sealed record Filter(
     float HighPass = 0,
     float HighPassRamp = 0,
     int HighPassOrder = 1,
+    float BandPass = 0,
+    float BandPassQ = 1,
+    int BandPassOrder = 1,
+    float Notch = 0,
+    float NotchQ = 1,
+    int NotchOrder = 1,
     RateLevelEnvelope? LowPassEnvelope = null,
     RateLevelEnvelope? HighPassEnvelope = null);
 

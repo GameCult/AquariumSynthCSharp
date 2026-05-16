@@ -446,6 +446,12 @@ public static class PatchScript
                     GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "filter/hpf"), "hpf", "h"),
                     GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "filter/hpf_ramp"), "hpf_ramp", "hr"),
                     GetBoundInt(fields, line, 1, OwnerField(ownerPath, "filter/hpf_order"), "hpf_order", "hpfo"),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "filter/bpf"), "bpf", "bp"),
+                    GetBoundFloat(fields, line, 1, OwnerField(ownerPath, "filter/bpf_q"), "bpf_q", "bpq"),
+                    GetBoundInt(fields, line, 1, OwnerField(ownerPath, "filter/bpf_order"), "bpf_order", "bpfo"),
+                    GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "filter/notch"), "notch", "nt"),
+                    GetBoundFloat(fields, line, 1, OwnerField(ownerPath, "filter/notch_q"), "notch_q", "ntq"),
+                    GetBoundInt(fields, line, 1, OwnerField(ownerPath, "filter/notch_order"), "notch_order", "nto"),
                     ParseFilterRateLevelEnvelope(fields, line, ownerPath, "lpf"),
                     ParseFilterRateLevelEnvelope(fields, line, ownerPath, "hpf")),
                 Phaser = new Phaser(

@@ -271,6 +271,27 @@ public sealed class ZynInstrumentTests
     }
 
     [Fact]
+    public void RebuildMapsZynStateVariablePadBandAndNotchToAquaFilterAuthority()
+    {
+        var band = ZynInstrumentReader.RebuildFirstPadAsAquaSynthScript(Encoding.UTF8.GetBytes(ZynPadWithFilter(category: 2, type: 2)), tableRootFrequencyHz: 77.7813f);
+        var notch = ZynInstrumentReader.RebuildFirstPadAsAquaSynthScript(Encoding.UTF8.GetBytes(ZynPadWithFilter(category: 2, type: 3)), tableRootFrequencyHz: 77.7813f);
+
+        var bandVoice = Assert.Single(PatchScript.Parse(band.Script).SpectralBanks).Treatment;
+        Assert.True(bandVoice.Filter.BandPass > 0);
+        Assert.True(bandVoice.Filter.BandPassQ > 0);
+        Assert.Equal(6, bandVoice.Filter.BandPassOrder);
+        Assert.Equal(0, bandVoice.Filter.Notch);
+        Assert.Contains(band.MatchedFeatures, feature => feature.Name == "pad_filter_bpf");
+
+        var notchVoice = Assert.Single(PatchScript.Parse(notch.Script).SpectralBanks).Treatment;
+        Assert.True(notchVoice.Filter.Notch > 0);
+        Assert.True(notchVoice.Filter.NotchQ > 0);
+        Assert.Equal(6, notchVoice.Filter.NotchOrder);
+        Assert.Equal(0, notchVoice.Filter.BandPass);
+        Assert.Contains(notch.MatchedFeatures, feature => feature.Name == "pad_filter_notch");
+    }
+
+    [Fact]
     public async Task SurveysUpstreamGplInstrumentBankWhenAvailable()
     {
         var root = RepositoryRoot();
@@ -370,8 +391,8 @@ public sealed class ZynInstrumentTests
                           </OSCIL>
                           <FILTER_PARAMETERS>
                             <FILTER>
-                              <par name="category" value="2"/>
-                              <par name="type" value="3"/>
+                              <par name="category" value="1"/>
+                              <par name="type" value="0"/>
                             </FILTER>
                             <FILTER_LFO>
                               <par name="intensity" value="40"/>
@@ -425,7 +446,7 @@ public sealed class ZynInstrumentTests
                 bucket.Key == "14");
             Assert.Contains(report.UnknownBuckets, bucket =>
                 bucket.Area == "pad.filter" &&
-                bucket.Key == "cat=2 type=3");
+                bucket.Key == "cat=1 type=0");
             Assert.Contains(report.CountedBuckets, bucket =>
                 bucket.Area == "pad.filter_lfo" &&
                 bucket.Key == "intensity=40");
@@ -441,6 +462,38 @@ public sealed class ZynInstrumentTests
 
     private static string FixturePath(params string[] parts) =>
         Path.Combine([AppContext.BaseDirectory, "Fixtures", .. parts]);
+
+    private static string ZynPadWithFilter(int category, int type) =>
+        $$"""
+          <?xml version="1.0" encoding="UTF-8"?>
+          <ZynAddSubFX-data>
+            <INSTRUMENT>
+              <INFO><string name="name">Filter PAD</string></INFO>
+              <INSTRUMENT_KIT>
+                <INSTRUMENT_KIT_ITEM id="0">
+                  <par_bool name="enabled" value="yes"/>
+                  <par_bool name="pad_enabled" value="yes"/>
+                  <PAD_SYNTH_PARAMETERS>
+                    <OSCIL>
+                      <HARMONICS>
+                        <HARMONIC id="1"><par name="mag" value="127"/></HARMONIC>
+                      </HARMONICS>
+                    </OSCIL>
+                    <FILTER_PARAMETERS>
+                      <FILTER>
+                        <par name="category" value="{{category}}"/>
+                        <par name="type" value="{{type}}"/>
+                        <par name="freq" value="48"/>
+                        <par name="q" value="32"/>
+                        <par name="stages" value="2"/>
+                      </FILTER>
+                    </FILTER_PARAMETERS>
+                  </PAD_SYNTH_PARAMETERS>
+                </INSTRUMENT_KIT_ITEM>
+              </INSTRUMENT_KIT>
+            </INSTRUMENT>
+          </ZynAddSubFX-data>
+          """;
 
     private static string RepositoryRoot()
     {

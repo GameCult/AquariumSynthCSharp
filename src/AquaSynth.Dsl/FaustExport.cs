@@ -232,6 +232,8 @@ public static class FaustEmitter
             : "";
         var lpf = $"clip01({parameters.Expression(OwnerField(ownerPath, "filter/lpf"), voice.Filter.LowPass)} * (1.0 + {parameters.Expression(OwnerField(ownerPath, "filter/lpf_ramp"), voice.Filter.LowPassRamp)} * age * 1.8){lpfEnvelope} + patch_mod_lpf + {lpfMod})";
         var hpf = $"clip01({parameters.Expression(OwnerField(ownerPath, "filter/hpf"), voice.Filter.HighPass)} * (1.0 + {parameters.Expression(OwnerField(ownerPath, "filter/hpf_ramp"), voice.Filter.HighPassRamp)} * age * 2.0){hpfEnvelope} + patch_mod_hpf + {hpfMod})";
+        var bpf = $"clip01({parameters.Expression(OwnerField(ownerPath, "filter/bpf"), voice.Filter.BandPass)})";
+        var notch = $"clip01({parameters.Expression(OwnerField(ownerPath, "filter/notch"), voice.Filter.Notch)})";
         var highPassOrder = Math.Clamp(voice.Filter.HighPassOrder, 1, 12);
         var hasExplicitQ = voice.Filter.LowPassQ > 0 || parameters.IsBound(OwnerField(ownerPath, "filter/lpf_q"));
         var hasResonance = voice.Filter.LowPassResonance > 0 || parameters.IsBound(OwnerField(ownerPath, "filter/resonance"));
@@ -243,13 +245,27 @@ public static class FaustEmitter
             : hasResonance
             ? $"fi.resonlp(max(20.0, {lpf} * 18000.0), 0.7 + clip01({resonance}) * 18.0, 1.0)"
             : $"fi.lowpass({lowPassOrder}, max(20.0, {lpf} * 18000.0))";
+        var bandpass = BandPassCascade(
+            $"max(20.0, {bpf} * 18000.0)",
+            $"max(0.1, {parameters.Expression(OwnerField(ownerPath, "filter/bpf_q"), voice.Filter.BandPassQ)})",
+            voice.Filter.BandPassOrder);
+        var notchFilter = NotchCascade(
+            $"max(20.0, {notch} * 18000.0)",
+            $"max(1.0, (max(20.0, {notch} * 18000.0)) / max(0.1, {parameters.Expression(OwnerField(ownerPath, "filter/notch_q"), voice.Filter.NotchQ)}))",
+            voice.Filter.NotchOrder);
+        var bandPassStage = voice.Filter.BandPass > 0 || parameters.IsBound(OwnerField(ownerPath, "filter/bpf"))
+            ? $" : {bandpass}"
+            : "";
+        var notchStage = voice.Filter.Notch > 0 || parameters.IsBound(OwnerField(ownerPath, "filter/notch"))
+            ? $" : {notchFilter}"
+            : "";
 
         source.AppendLine($"{name}_freq = {frequency};");
         source.AppendLine($"{name}_osc = {oscillator};");
         source.AppendLine($"{name}_colored = ({name}_osc * (1.0 - {noiseMix}) + no.noise * {noiseMix});");
         source.AppendLine($"{name}_driven = ma.tanh({name}_colored * (1.0 + {driveExpression} * 12.0)) / ma.tanh(1.0 + {driveExpression} * 12.0);");
         source.AppendLine($"{name}_folded = {name}_driven * (1.0 - {foldExpression}) + fold({name}_driven * (1.0 + {foldExpression} * 3.5)) * {foldExpression};");
-        source.AppendLine($"{name}_filtered = {name}_folded : {lowpass} : fi.highpass({highPassOrder}, max(5.0, ({hpf}) * ({hpf}) * 7000.0));");
+        source.AppendLine($"{name}_filtered = {name}_folded : {lowpass} : fi.highpass({highPassOrder}, max(5.0, ({hpf}) * ({hpf}) * 7000.0)){bandPassStage}{notchStage};");
         if (voice.Phaser.OffsetSeconds != 0 || voice.Phaser.RampSecondsPerSecond != 0 ||
             parameters.IsBound(OwnerField(ownerPath, "phaser/offset")) ||
             parameters.IsBound(OwnerField(ownerPath, "phaser/ramp")))
@@ -270,6 +286,18 @@ public static class FaustEmitter
     {
         var stages = Math.Max(1, (order + 1) / 2);
         return string.Join(" : ", Enumerable.Repeat($"fi.resonlp({cutoff}, {q}, 1.0)", stages));
+    }
+
+    private static string BandPassCascade(string center, string q, int order)
+    {
+        var stages = Math.Max(1, (Math.Clamp(order, 1, 12) + 1) / 2);
+        return string.Join(" : ", Enumerable.Repeat($"fi.resonbp({center}, {q}, 1.0)", stages));
+    }
+
+    private static string NotchCascade(string center, string width, int order)
+    {
+        var stages = Math.Max(1, (Math.Clamp(order, 1, 12) + 1) / 2);
+        return string.Join(" : ", Enumerable.Repeat($"fi.notchw({width}, {center})", stages));
     }
 
     private static void EmitSpectralBank(

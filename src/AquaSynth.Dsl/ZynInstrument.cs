@@ -342,6 +342,12 @@ public static class ZynInstrumentReader
         var lowPassOrder = ZynPadLowPassOrder(filter);
         var highPass = ZynPadHighPass(filter, playbackFrequencyHz);
         var highPassOrder = ZynPadHighPassOrder(filter);
+        var bandPass = ZynPadBandPass(filter, playbackFrequencyHz);
+        var bandPassQ = ZynPadFilterQ(filter);
+        var bandPassOrder = ZynPadBandPassOrder(filter);
+        var notch = ZynPadNotch(filter, playbackFrequencyHz);
+        var notchQ = ZynPadFilterQ(filter);
+        var notchOrder = ZynPadNotchOrder(filter);
         var lowPassEnvelope = ZynPadLowPassEnvelope(filter, lowPass);
         var highPassEnvelope = ZynPadHighPassEnvelope(filter, highPass);
         var safeName = includeKitSuffix ? $"{safeBaseName}_{kitId}" : safeBaseName;
@@ -377,6 +383,18 @@ public static class ZynInstrumentReader
             matched.Add(new($"{featurePrefix}filter_hpf", F(highPass), "Mapped static Zyn PAD global high-pass frequency into AquaSynth layer filtering."));
             matched.Add(new($"{featurePrefix}filter_hpf_order", highPassOrder.ToString(CultureInfo.InvariantCulture), "Mapped Zyn high-pass family and stage count into AquaSynth high-pass order."));
         }
+        if (bandPass > 0)
+        {
+            matched.Add(new($"{featurePrefix}filter_bpf", F(bandPass), "Mapped static Zyn PAD global band-pass center into AquaSynth layer filtering."));
+            matched.Add(new($"{featurePrefix}filter_bpf_q", F(bandPassQ), "Mapped Zyn band-pass Q into AquaSynth filter bandwidth."));
+            matched.Add(new($"{featurePrefix}filter_bpf_order", bandPassOrder.ToString(CultureInfo.InvariantCulture), "Mapped Zyn band-pass family and stage count into AquaSynth band-pass order."));
+        }
+        if (notch > 0)
+        {
+            matched.Add(new($"{featurePrefix}filter_notch", F(notch), "Mapped static Zyn PAD global notch center into AquaSynth layer filtering."));
+            matched.Add(new($"{featurePrefix}filter_notch_q", F(notchQ), "Mapped Zyn notch Q into AquaSynth notch width."));
+            matched.Add(new($"{featurePrefix}filter_notch_order", notchOrder.ToString(CultureInfo.InvariantCulture), "Mapped Zyn notch family and stage count into AquaSynth notch order."));
+        }
         if (lowPassEnvelope is not null)
         {
             matched.Add(new($"{featurePrefix}filter_lpf_envelope", "ratelevel", "Mapped Zyn PAD filter envelope octave offsets into AquaSynth low-pass cutoff motion."));
@@ -398,7 +416,9 @@ public static class ZynInstrumentReader
             : $" hpf_env=rl hpf_start={F(highPassEnvelope.StartLevel)} hpf_rates={F(highPassEnvelope.Rate1Seconds)},{F(highPassEnvelope.Rate2Seconds)},{F(highPassEnvelope.Rate3Seconds)},{F(highPassEnvelope.Rate4Seconds)} hpf_levels={F(highPassEnvelope.Level1)},{F(highPassEnvelope.Level2)},{F(highPassEnvelope.Level3)},{F(highPassEnvelope.Level4)} hpf_curves=lin,lin,lin,lin";
         var filterQText = lowPass < 1 ? $" lpf_q={F(lowPassQ)}" : "";
         var highPassText = highPass > 0 ? $" hpf={F(highPass)} hpf_order={highPassOrder}" : "";
-        script.AppendLine($"layer name={safeName} engine=pad gain={F(layerGain)} lpf={F(lowPass)}{filterQText} lpf_order={lowPassOrder}{highPassText}{filterEnvelopeText}{highPassEnvelopeText} env=rl rates={F(attack)},{F(decay)},1,{F(release)} levels=1,1,1,0 curves=lin,lin,lin,lin gate=1.5");
+        var bandPassText = bandPass > 0 ? $" bpf={F(bandPass)} bpf_q={F(bandPassQ)} bpf_order={bandPassOrder}" : "";
+        var notchText = notch > 0 ? $" notch={F(notch)} notch_q={F(notchQ)} notch_order={notchOrder}" : "";
+        script.AppendLine($"layer name={safeName} engine=pad gain={F(layerGain)} lpf={F(lowPass)}{filterQText} lpf_order={lowPassOrder}{highPassText}{bandPassText}{notchText}{filterEnvelopeText}{highPassEnvelopeText} env=rl rates={F(attack)},{F(decay)},1,{F(release)} levels=1,1,1,0 curves=lin,lin,lin,lin gate=1.5");
         script.AppendLine($"spectrum layer={safeName} root={F(tableRootFrequencyHz)} freq={F(noteFrequencyHz)} spread=0 pad_mode={mode} pad_bandwidth={bandwidth} pad_bwscale={bandwidthScale} pad_profile={profile} pad_position={position} partials={partialText}");
     }
 
@@ -1119,6 +1139,36 @@ public static class ZynInstrumentReader
         return Math.Clamp(MathF.Sqrt(cutoffHz / 7000.0f), 0f, 1f);
     }
 
+    private static float ZynPadBandPass(XElement? filter, float playbackFrequencyHz)
+    {
+        if (filter is null || !TryZynPadFilterCutoff(filter, playbackFrequencyHz, out var cutoffHz, out var category, out var type))
+        {
+            return 0;
+        }
+
+        if (!IsZynPadBandPassFilter(category, type))
+        {
+            return 0;
+        }
+
+        return Math.Clamp(cutoffHz / 18000.0f, 20.0f / 18000.0f, 1f);
+    }
+
+    private static float ZynPadNotch(XElement? filter, float playbackFrequencyHz)
+    {
+        if (filter is null || !TryZynPadFilterCutoff(filter, playbackFrequencyHz, out var cutoffHz, out var category, out var type))
+        {
+            return 0;
+        }
+
+        if (!IsZynPadNotchFilter(category, type))
+        {
+            return 0;
+        }
+
+        return Math.Clamp(cutoffHz / 18000.0f, 20.0f / 18000.0f, 1f);
+    }
+
     private static int ZynPadHighPassOrder(XElement? filter)
     {
         if (filter is null)
@@ -1143,6 +1193,40 @@ public static class ZynInstrumentReader
         return Math.Clamp(poles * (DescendantIntParam(filter, "stages", 0) + 1), 1, 12);
     }
 
+    private static int ZynPadBandPassOrder(XElement? filter)
+    {
+        if (filter is null)
+        {
+            return 1;
+        }
+
+        var category = DescendantIntParam(filter, "category", 0);
+        var type = DescendantIntParam(filter, "type", 0);
+        if (!IsZynPadBandPassFilter(category, type))
+        {
+            return 1;
+        }
+
+        return Math.Clamp(2 * (DescendantIntParam(filter, "stages", 0) + 1), 1, 12);
+    }
+
+    private static int ZynPadNotchOrder(XElement? filter)
+    {
+        if (filter is null)
+        {
+            return 1;
+        }
+
+        var category = DescendantIntParam(filter, "category", 0);
+        var type = DescendantIntParam(filter, "type", 0);
+        if (!IsZynPadNotchFilter(category, type))
+        {
+            return 1;
+        }
+
+        return Math.Clamp(2 * (DescendantIntParam(filter, "stages", 0) + 1), 1, 12);
+    }
+
     private static float ZynPadLowPassQ(XElement? filter)
     {
         if (filter is null)
@@ -1155,6 +1239,17 @@ public static class ZynInstrumentReader
         if (!IsZynPadLowPassFilter(category, type))
         {
             return 0;
+        }
+
+        var q = DescendantIntParam(filter, "q", 64) / 127.0f;
+        return MathF.Exp(q * q * MathF.Log(1000.0f)) - 0.9f;
+    }
+
+    private static float ZynPadFilterQ(XElement? filter)
+    {
+        if (filter is null)
+        {
+            return 1;
         }
 
         var q = DescendantIntParam(filter, "q", 64) / 127.0f;
@@ -1184,6 +1279,14 @@ public static class ZynInstrumentReader
     private static bool IsZynPadHighPassFilter(int category, int type) =>
         (category == 0 && type is 1 or 3) ||
         (category == 2 && type == 1);
+
+    private static bool IsZynPadBandPassFilter(int category, int type) =>
+        (category == 0 && type == 4) ||
+        (category == 2 && type == 2);
+
+    private static bool IsZynPadNotchFilter(int category, int type) =>
+        (category == 0 && type == 5) ||
+        (category == 2 && type == 3);
 
     private static RateLevelEnvelope? ZynPadLowPassEnvelope(XElement? filter, float baseLowPass)
     {
@@ -1382,8 +1485,12 @@ public static class ZynInstrumentSurvey
         "cat=0 type=1",
         "cat=0 type=2",
         "cat=0 type=3",
+        "cat=0 type=4",
+        "cat=0 type=5",
         "cat=2 type=0",
-        "cat=2 type=1"
+        "cat=2 type=1",
+        "cat=2 type=2",
+        "cat=2 type=3"
     };
 
     public static IReadOnlyList<ZynInstrumentSurveyItem> RankDirectory(string root, int take = 25)
@@ -1688,7 +1795,7 @@ public static class ZynInstrumentSurvey
                 HandledPadGlobalFilters.Contains(filterKey) ? ZynCoverageStatus.Handled : ZynCoverageStatus.Unknown,
                 relativePath,
                 HandledPadGlobalFilters.Contains(filterKey)
-                    ? "LP/HP PAD filters map to AquaSynth cutoff, order, Q, and envelope fields."
+                    ? "PAD filter category/type maps to AquaSynth native filter fields."
                     : "Observed PAD filter category/type is not translated by the current PAD rebuild path.");
 
             foreach (var filterLfo in filter.Elements("FILTER_LFO"))
