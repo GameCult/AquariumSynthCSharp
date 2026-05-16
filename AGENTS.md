@@ -1,14 +1,14 @@
-# AquariumSynthCSharp Instructions
+# AquaSynth Instructions
 
 ## Purpose
 
-AquariumSynthCSharp is the C# authoring and compiler front-end for Aquarium
+AquaSynth is the C# authoring and compiler front-end for AquaSynth
 synth patches. It owns patch graph models, terse patch scripting, SFXR-derived
 patch mapping, analysis/scoring tools, preset catalogs, and Faust source/code
-generation for the Aquarium/Vortice engine path.
+generation for the AquaSynth/Vortice engine path.
 
-The Rust crate may remain a reference lab and audio renderer. This repo should
-not depend on the Rust branch for reusable authoring, analysis, preset, or Faust
+The AquaSynth-rs branch may remain a reference lab and audio renderer. This repo should
+not depend on AquaSynth-rs for reusable authoring, analysis, preset, or Faust
 compiler behavior.
 
 ## Persistent State

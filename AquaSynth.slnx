@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AquaSynth.Dsl/AquaSynth.Dsl.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AquaSynth.Dsl.Tests/AquaSynth.Dsl.Tests.csproj" />
+  </Folder>
+</Solution>

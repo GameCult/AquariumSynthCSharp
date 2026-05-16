@@ -2,7 +2,7 @@
 
 ## Objective
 
-Make DX7 reference rebuilds prove Aquarium can emulate the machine, not merely
+Make DX7 reference rebuilds prove AquaSynth can emulate the machine, not merely
 draw a similar operator graph. The hard `PRC SYNTH1` target showed the current
 DSL surface is expressive enough to describe the topology, but the importer
 math is still fake in the places that matter perceptually.
@@ -10,7 +10,7 @@ math is still fake in the places that matter perceptually.
 ## Current Mechanism
 
 - `dexed-py` renders lawful public-domain or project-authored DX7 references.
-- Aquarium renders candidate patches through Faust-generated C#.
+- AquaSynth renders candidate patches through Faust-generated C#.
 - Tests compare rendered audio with log-mel, envelope, duration, RMS,
   zero-crossing, centroid, and listening WAV artifacts.
 - `OperatorGraph` owns topology: operators, routes, carriers, feedback, and
@@ -33,11 +33,11 @@ math is still fake in the places that matter perceptually.
    - Render project-authored DX7 algorithm-32 patches with one audible carrier.
    - Sweep operator output levels.
    - Fit output level to linear carrier amplitude.
-   - Verify Aquarium single-carrier renders match relative RMS.
+   - Verify AquaSynth single-carrier renders match relative RMS.
 
 2. **Two-operator modulation index**
    - Render a carrier plus one modulator across modulator output levels.
-   - Fit DX7 output level to Aquarium route/index scaling using log-mel and
+   - Fit DX7 output level to AquaSynth route/index scaling using log-mel and
      harmonic energy, not RMS.
    - Keep carrier amplitude fixed while calibrating modulation index.
 
@@ -46,7 +46,7 @@ math is still fake in the places that matter perceptually.
    - Fit feedback amount separately from route/index scaling.
 
 4. **Ratio detune**
-   - Lower DX7 ratio-mode detune into Aquarium operator ratios.
+   - Lower DX7 ratio-mode detune into AquaSynth operator ratios.
    - Keep detune as frequency behavior, not a modulation or chorus feature.
 
 5. **Algorithm output compensation**
@@ -70,14 +70,14 @@ math is still fake in the places that matter perceptually.
      unlike the current linear `env=rl` approximation.
    - Dexed's rendered audio does not hear that raw state directly. The operator
      path samples EG once per 64-sample block and linearly interpolates the
-     applied gain across the block, so a DX7-capable Aquarium envelope must
+     applied gain across the block, so a DX7-capable AquaSynth envelope must
      model both the rate/level state machine and its block-interpolated output.
-   - Aquarium staged operator envelopes now support per-segment curves, e.g.
+   - AquaSynth staged operator envelopes now support per-segment curves, e.g.
      `env=rl rates=.00145,.0508,.5268,.35 levels=2,.297,.0156,0 curves=lin,exp,exp,exp`.
      This is a general staged-contour feature, not a DX7-specific syntax escape.
    - `Dx7SysEx.ApproximateAppliedRateLevelEnvelope` lowers a DX7 EG into a
      curved staged contour by tracing Dexed-style block-interpolated applied
-     gain and normalizing it against Aquarium's separate operator-output level.
+     gain and normalizing it against AquaSynth's separate operator-output level.
      On `PRC SYNTH1`, this improves log-mel from `0.24476814` to `0.17186502`,
      envelope distance from `0.43700194` to `0.13057204`, and zero-crossing
      ratio from `0.7931764` to `0.7815517` while keeping RMS at unity.
@@ -117,11 +117,11 @@ math is still fake in the places that matter perceptually.
      envelope distance at `<= 0.14`, zero-crossing ratio in `0.8..1.11`, and
      score at `>= 0.6`.
    - `Piano Bass` exposed a real pitch bug: the candidate ignored the DX7 voice
-     transpose byte, so `transpose=12` rendered one octave too high. Aquarium
+     transpose byte, so `transpose=12` rendered one octave too high. AquaSynth
      now uses `Dx7SysEx.NoteFrequencyHz(midiNote, transpose)`, where `24` is
      neutral.
    - `ANLGSYN 1` exposed a second real pitch/frequency bug: DX7 fixed-frequency
-     operators were being lowered as fake note ratios. Aquarium now maps fixed
+     operators were being lowered as fake note ratios. AquaSynth now maps fixed
      operators through the Dexed log-frequency formula and divides the absolute
      Hz by the graph base frequency. This restores the low fixed-frequency
      carrier/modulation buzz for op1/op3 instead of flattening the voice into
@@ -129,13 +129,13 @@ math is still fake in the places that matter perceptually.
    - Community listening then exposed two note-dependent lowering gaps:
      operator key-scaling was computed against hardcoded MIDI note 60, and DX7
      operator rate scaling was parsed but not applied to the block-interpolated
-     envelope trace. Aquarium now lowers both against the effective played
+     envelope trace. AquaSynth now lowers both against the effective played
      MIDI note after voice transpose. This makes `RES SYNTH1` attack much
      closer and improves `Piano Bass` log-mel, with graph gain rebalanced to
      `0.72` for `Piano Bass`.
    - `ANLGSYN 1` also exposed that the previous max-feedback value was too tame
      for audible community patches. DX7 feedback value `7` now lowers to
-     Aquarium feedback `2.2`, while feedback value `5` remains at `0.19` for
+     AquaSynth feedback `2.2`, while feedback value `5` remains at `0.19` for
      the hard PRC target. The hotter value restores much more of the 1.2-5 kHz
      buzzing-harmonic band, with envelope/RMS still imperfect.
    - Listening then caught that the max-feedback candidate still lost punch
@@ -145,7 +145,7 @@ math is still fake in the places that matter perceptually.
      gates `ANLGSYN 1` with a sustained 2.5-5 kHz band-energy check so the
      old drifting version cannot pass by global log-mel score alone.
    - Later listening caught `ANLGSYN 1` and `RES SYNTH1` blowing out into a
-     drone at the modulator peak. Until Aquarium has a more exact DX7 EG/output
+     drone at the modulator peak. Until AquaSynth has a more exact DX7 EG/output
      model, algorithm-2 non-carrier applied envelopes cap only the first staged
      peak at `0.92`. This leaves `Piano Bass` unchanged, improves `RES SYNTH1`,
      and keeps `ANLGSYN 1` judged primarily by log-mel plus sustained high-band

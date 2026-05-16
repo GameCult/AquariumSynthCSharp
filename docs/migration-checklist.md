@@ -1,7 +1,7 @@
 # Migration Checklist
 
-This repo is now the authoring-side home for Aquarium Synth patch scripts and
-Faust generation. The Rust crate remains useful as a reference lab, but the
+This repo is now the authoring-side home for AquaSynth patch scripts and
+Faust generation. The AquaSynth-rs crate remains useful as a reference lab, but the
 current C# surface should not depend on somebody remembering what got built
 there.
 
@@ -21,7 +21,7 @@ there.
   classic 808, FM bell, wobble bass, and advanced layered patches.
 - Abstract SFXR reference script using defaults and templates.
 - SFXR parameter presets, mutation, shorthand atoms, and SFXR-to-patch mapping.
-- Aquarium preset patches: pluck, heartbeat, voice, and SFXR named bridge.
+- AquaSynth preset patches: pluck, heartbeat, voice, and SFXR named bridge.
 - Patch script scoring: terse, readability, and balanced metrics.
 - Audio analysis and comparison: envelope, log-mel spectrogram, spectral
   features, distance metrics, and score.

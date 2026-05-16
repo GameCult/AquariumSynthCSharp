@@ -1,8 +1,8 @@
-# Aquarium Synth Audio Doctrine
+# AquaSynth Audio Doctrine
 
 ## Mission
 
-AquariumSynthCSharp is the authoring and compiler surface for Aquarium synth
+AquaSynth is the authoring and compiler surface for AquaSynth
 patches. It should let us sketch sound quickly, compile to Faust, inspect the
 graph, compare results, and hand stable contracts to the C#/Vortice side.
 
@@ -64,7 +64,7 @@ That separation is the model for this repo:
 - The Faust emitter owns pure signal expression.
 - The engine owns scheduling, buffers, device I/O, threading, and presentation.
 - Patch parameters are runtime controls, not compile-time constants. A compiled
-  DSP must be able to expose stable parameter paths so Aquarium can vary a sound
+  DSP must be able to expose stable parameter paths so AquaSynth can vary a sound
   without recompiling the patch.
 - Host parameters should be smoothed where they cross into signal-rate behavior.
 
@@ -110,7 +110,7 @@ authorities.
   as a general envelope field.
 - Host/MIDI note mode should expose stable note frequency and note gate controls
   that the engine can wire to MIDI note-on/note-off behavior.
-- Faust-managed polyphony is the preferred MIDI path. Aquarium should describe a
+- Faust-managed polyphony is the preferred MIDI path. AquaSynth should describe a
   single voice graph and emit Faust's standard `freq`, `gain`, and `gate`
   controls with `[midi:on][nvoices:n]` options, leaving MIDI decoding and voice
   allocation to Faust architectures unless a concrete target proves that
@@ -122,7 +122,7 @@ authorities.
 ## Metrics
 
 Analysis exists to catch regressions and support search, not to crown winners.
-Aquarium Faust output can be rendered through Faust-generated C# in authoring
+AquaSynth Faust output can be rendered through Faust-generated C# in authoring
 tests, which gives us candidate audio buffers without depending on the old Rust
 renderer. That is only half of parity: reference targets still need a real
 external render or a captured, lawful fixture before the comparison means

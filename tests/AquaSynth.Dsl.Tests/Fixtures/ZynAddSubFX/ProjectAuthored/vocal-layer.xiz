@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE ZynAddSubFX-data>
+<ZynAddSubFX-data version-major="1" version-minor="0">
+  <INSTRUMENT>
+    <INFO>
+      <string name="name">AQ Vocal Layer</string>
+      <string name="author">AquaSynth tests</string>
+      <string name="comments">Project-authored layered vocal/formant fixture.</string>
+      <par name="type" value="0"/>
+    </INFO>
+    <INSTRUMENT_KIT>
+      <INSTRUMENT_KIT_ITEM id="0">
+        <par_bool name="enabled" value="yes"/>
+        <string name="name">Air Layer</string>
+        <par_bool name="add_enabled" value="yes"/>
+        <ADD_SYNTH_PARAMETERS>
+          <FILTER_PARAMETERS>
+            <FORMANT_FILTER>
+              <par name="vowel" value="3"/>
+            </FORMANT_FILTER>
+          </FILTER_PARAMETERS>
+        </ADD_SYNTH_PARAMETERS>
+      </INSTRUMENT_KIT_ITEM>
+      <INSTRUMENT_KIT_ITEM id="1">
+        <par_bool name="enabled" value="yes"/>
+        <string name="name">Body Layer</string>
+        <par_bool name="sub_enabled" value="yes"/>
+        <SUB_SYNTH_PARAMETERS>
+          <FILTER_PARAMETERS>
+            <par name="category" value="1"/>
+          </FILTER_PARAMETERS>
+          <INSTRUMENT_EFFECT>
+            <par name="type" value="reverb"/>
+          </INSTRUMENT_EFFECT>
+        </SUB_SYNTH_PARAMETERS>
+      </INSTRUMENT_KIT_ITEM>
+    </INSTRUMENT_KIT>
+  </INSTRUMENT>
+</ZynAddSubFX-data>

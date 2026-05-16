@@ -1,7 +1,7 @@
-project: AquariumSynthCSharp
+project: AquaSynth
 mission: >
-  C# authoring, analysis, and Faust generation layer for Aquarium synth patches,
-  targeting the Aquarium/Vortice engine path without dragging the Rust renderer
+  C# authoring, analysis, and Faust generation layer for AquaSynth patches,
+  targeting the AquaSynth/Vortice engine path without dragging the Rust renderer
   into runtime dependencies.
 surfaces:
   instructions: AGENTS.md
@@ -10,32 +10,32 @@ surfaces:
   scratch: state/scratch.md
   evidence: state/evidence.jsonl
   spine: state/spine.yaml
-  solution: AquariumSynthCSharp.slnx
-  library: src/AquariumSynth.Dsl
+  solution: AquaSynth.slnx
+  library: src/AquaSynth.Dsl
   patch_library: patches
-  tests: tests/AquariumSynth.Dsl.Tests
+  tests: tests/AquaSynth.Dsl.Tests
   reference_roadmap: docs/reference-synth-roadmap.md
-  dx7_public_domain_fixtures: tests/AquariumSynth.Dsl.Tests/Fixtures/Dx7/PublicDomain
+  dx7_public_domain_fixtures: tests/AquaSynth.Dsl.Tests/Fixtures/Dx7/PublicDomain
   zyn_reference_source: external/zynaddsubfx
   zyn_upstream_instrument_bank: external/zynaddsubfx/instruments
   zyn_reference_build_script: tools/zyn-reference/build-zyn-reference.ps1
   zyn_pad_reference_renderer: tools/zyn-reference/ZynPadReference.cpp
   zyn_reference_build_patches: tools/zyn-reference/patches
-  zyn_project_fixtures: tests/AquariumSynth.Dsl.Tests/Fixtures/ZynAddSubFX/ProjectAuthored
-  package: AquariumSynth.Dsl 0.1.0-aquarium.1
+  zyn_project_fixtures: tests/AquaSynth.Dsl.Tests/Fixtures/ZynAddSubFX/ProjectAuthored
+  package: AquaSynth.Dsl 0.1.0-aquasynth.1
 modules:
-  model: src/AquariumSynth.Dsl/Model.cs
-  parser: src/AquariumSynth.Dsl/PatchScript.cs
-  faust: src/AquariumSynth.Dsl/FaustExport.cs
-  faust_rendering: src/AquariumSynth.Dsl/FaustExport.cs
-  dx7_reference_render_tests: tests/AquariumSynth.Dsl.Tests/Dx7ReferenceParityTests.cs
-  zyn_reference_reader: src/AquariumSynth.Dsl/ZynInstrument.cs
-  package_boundary_tests: tests/AquariumSynth.Dsl.Tests/PackageBoundaryTests.cs
-  sfxr: src/AquariumSynth.Dsl/SfxrParams.cs
-  analysis: src/AquariumSynth.Dsl/AudioAnalysis.cs
-  scoring: src/AquariumSynth.Dsl/ScriptMetrics.cs
-  presets: src/AquariumSynth.Dsl/Presets.cs
-  built_in_scripts: src/AquariumSynth.Dsl/BuiltInScripts.cs
+  model: src/AquaSynth.Dsl/Model.cs
+  parser: src/AquaSynth.Dsl/PatchScript.cs
+  faust: src/AquaSynth.Dsl/FaustExport.cs
+  faust_rendering: src/AquaSynth.Dsl/FaustExport.cs
+  dx7_reference_render_tests: tests/AquaSynth.Dsl.Tests/Dx7ReferenceParityTests.cs
+  zyn_reference_reader: src/AquaSynth.Dsl/ZynInstrument.cs
+  package_boundary_tests: tests/AquaSynth.Dsl.Tests/PackageBoundaryTests.cs
+  sfxr: src/AquaSynth.Dsl/SfxrParams.cs
+  analysis: src/AquaSynth.Dsl/AudioAnalysis.cs
+  scoring: src/AquaSynth.Dsl/ScriptMetrics.cs
+  presets: src/AquaSynth.Dsl/Presets.cs
+  built_in_scripts: src/AquaSynth.Dsl/BuiltInScripts.cs
 boundaries:
   leave_in_rust:
     - sample renderer
@@ -57,8 +57,8 @@ boundaries:
     - structured .aqua patch library
 checks:
   default: dotnet test
-  package: dotnet pack src/AquariumSynth.Dsl/AquariumSynth.Dsl.csproj -c Release
+  package: dotnet pack src/AquaSynth.Dsl/AquaSynth.Dsl.csproj -c Release
   faust_validation: automatic in tests when Faust is installed
-  dexed_py_reference: optional in tests when AQUARIUM_DX7_PYTHON or a Python with dexed-py is available
+  dexed_py_reference: optional in tests when AQUASYNTH_DX7_PYTHON or a Python with dexed-py is available
   zyn_reference_source: pinned submodule used only for parity tests; never package content
   zyn_upstream_instrument_bank: nested GPL submodule used only for test/development pressure surveys and oracle renders; never package content

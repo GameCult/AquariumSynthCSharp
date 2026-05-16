@@ -2,13 +2,13 @@
 
 ## Objective
 
-Find the ZynAddSubFX instruments most likely to break Aquarium's current patch
+Find the ZynAddSubFX instruments most likely to break AquaSynth's current patch
 language before spending time on syntax polish.
 
 This is a feature-pressure survey, not an audio parity claim. The upstream Zyn
 instrument bank is GPL reference feedstock through the pinned Zyn submodule
 tree. It is development/test material only: useful for reports, parity renders,
-and pressure selection, never package content or Aquarium patch-library stock.
+and pressure selection, never package content or AquaSynth patch-library stock.
 
 ## Source Checked
 
@@ -53,7 +53,7 @@ GPL PAD batch through the real Zyn oracle when the renderer is built:
 Each render lands in a per-synth timestamped folder under
 `artifacts/parity/zyn-upstream-pad-fixtures/`, with Zyn reference WAVs, source
 table WAVs, `report.txt`, and `candidate.aqua`. The candidate is now generated
-per preset by `ZynInstrumentReader.RebuildFirstPadAsAquariumScript`: first
+per preset by `ZynInstrumentReader.RebuildFirstPadAsAquaSynthScript`: first
 enabled PAD kit item, OSCIL harmonic magnitudes, oracle-reported table
 basefreq, and basic volume/envelope scaffolding. The report names missing
 semantics such as Zyn harmonic profile shaping, bandwidth/profile behavior, and
@@ -62,7 +62,7 @@ library candidates.
 
 ## Pressure Conclusions
 
-- **Named layers are real.** Anonymous Aquarium voices can sketch small Zyn
+- **Named layers are real.** Anonymous AquaSynth voices can sketch small Zyn
   layers, but drum kits and clonewheel-style instruments need stable layer names,
   key ranges, engine identity, and per-layer routing.
 - **Free envelopes are not optional forever.** Zyn's worst cases use dozens of
@@ -86,7 +86,7 @@ next abstractions risk becoming loose fields on anonymous voices.
 
 ## First Responses
 
-Aquarium now has a minimal `layer` command:
+AquaSynth now has a minimal `layer` command:
 
 ```text
 layer name=pad_low engine=pad min_key=36 max_key=84 gain=.07

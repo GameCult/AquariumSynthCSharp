@@ -1,10 +1,10 @@
 # Reference Synth Roadmap
 
-AquariumSynthCSharp needs external synthesis references for the same reason the
+AquaSynth needs external synthesis references for the same reason the
 SFXR path was useful: a real target prevents the DSL from becoming a pile of
 locally plausible knobs. The goal is not to clone every synth's internals. The
 goal is to use known engines and patch formats as pressure tests, then rebuild
-selected sounds through Aquarium's own graph until the missing abstractions are
+selected sounds through AquaSynth's own graph until the missing abstractions are
 obvious.
 
 ## Objective
@@ -13,18 +13,18 @@ Build a reference-driven synth library workflow:
 
 - Parse or describe external synth patches as structured reference models.
 - Render references when legally and technically practical.
-- Rebuild selected references in Aquarium patch DSL.
+- Rebuild selected references in AquaSynth patch DSL.
 - Compare audio with analysis metrics and listening notes.
 - Promote only the abstractions that make repeated reference rebuilds simpler.
 - Reject reference targets we cannot turn into parity tests. Parsing a format is
-  inventory; proving Aquarium can reproduce the behavior is the point.
+  inventory; proving AquaSynth can reproduce the behavior is the point.
 
 The DSL should grow because a reference target demanded a missing invariant, not
 because a field name seemed maybe useful at 2 AM.
 
 ## Live Invariants
 
-- Aquarium owns its patch graph. External synths are reference targets, not
+- AquaSynth owns its patch graph. External synths are reference targets, not
 runtime dependencies.
 - Expressive parameters are part of the patch contract. Callers must be able to
   change exposed values at runtime through the hosted DSP parameter API instead
@@ -32,10 +32,10 @@ runtime dependencies.
 - Reference importers must preserve source provenance, license status, and the
 source format hash.
 - Tests must compare against rendered fixtures, extracted parameter topology, or
-known structural expectations that prove Aquarium can express the same behavior.
+known structural expectations that prove AquaSynth can express the same behavior.
 Weak "it parsed" tests do not prove expressivity, and references without a
 credible parity test path should not be consumed.
-- Aquarium Faust output can be rendered through Faust-generated C# for candidate
+- AquaSynth Faust output can be rendered through Faust-generated C# for candidate
   audio comparison. Reference audio still needs a real source fixture or renderer;
   do not compare a rebuild only against itself and call that parity.
 - DX7 reference audio uses `dexed-py` when available, with public-domain SysEx
@@ -43,7 +43,7 @@ credible parity test path should not be consumed.
   package content.
 - ZynAddSubFX source is pinned under `external/zynaddsubfx` as GPL
   test/development material. It may be compiled or wrapped only for parity
-  tests; Aquarium must not ship, link, or runtime-depend on it.
+  tests; AquaSynth must not ship, link, or runtime-depend on it.
 - Do not add a generic graph escape hatch until a specific family of references
 forces it.
 - When a reference target exceeds the current voice-centric DSL, document the
@@ -62,7 +62,7 @@ the Yamaha DX7 and accepts SysEx cartridge data. Its `msfa` synth engine remains
 Apache-2.0, which may matter if we use code as a reference rather than only
 format notes.
 
-Pressure on Aquarium DSL:
+Pressure on AquaSynth DSL:
 
 - Operator graph representation.
 - Multi-stage envelopes beyond ADSR.
@@ -76,9 +76,9 @@ First deliverable:
 - Add a `Dx7SysEx` parser for single voice and cartridge payloads.
 - Convert one or two public-domain or project-authored DX7-style voices into
   `ReferencePatch` records.
-- Build an Aquarium DSL approximation using explicit FM templates.
+- Build an AquaSynth DSL approximation using explicit FM templates.
 - Add mel/envelope/spectral comparison against rendered Dexed output from the
-  public-domain fixture. Aquarium candidate rendering and `dexed-py` reference
+  public-domain fixture. AquaSynth candidate rendering and `dexed-py` reference
   rendering exist, and `analog1.syx` voice 13 has the first thresholded parity
   rebuild. The next pressure is a harder voice that actually needs audible
   operator routing rather than a sine-like behavioral match. Staged operator
@@ -103,7 +103,7 @@ synthesis engines. It ships a large instrument library and exposes formant
 filters, state-variable filters, free envelope shapes, layered kits, modulation,
 and effects routing.
 
-Pressure on Aquarium DSL:
+Pressure on AquaSynth DSL:
 
 - Additive harmonic banks.
 - Non-ADSR envelope curves.
@@ -131,7 +131,7 @@ First deliverable:
 
 The upstream ZynAddSubFX engine source is pinned as `external/zynaddsubfx`
 for parity tests, currently at `3ab608c432996ba4d582176572c0b0f82328c825`.
-That checkout is GPL reference machinery, not Aquarium implementation. Do not
+That checkout is GPL reference machinery, not AquaSynth implementation. Do not
 vendor the upstream Zyn instrument-bank submodule until its preset
 license/provenance is explicit enough for this repo. Use project-authored
 fixtures for parser shape and only promote external fixtures with clean source
@@ -144,7 +144,7 @@ PAD, additive banks, or formant motion.
 
 The first language-golf response is `layer`: a named layer declaration owns
 engine tags, optional MIDI key range metadata, default gain, and an effect-send
-label while lowering to ordinary Aquarium voices. It is intentionally only an
+label while lowering to ordinary AquaSynth voices. It is intentionally only an
 ownership/routing scaffold for now; it does not add PAD synthesis, free
 envelopes, or effect buses by stealth.
 
@@ -184,7 +184,7 @@ PAD engine parity across all harmonic profiles, randomness controls, or
 multi-table pitch-zone behavior. `root`, `spread`, and `partials` are
 authoring-time table shape, not runtime controls.
 
-The canonical Aquarium spelling for richer spectral-table shaping is neutral:
+The canonical AquaSynth spelling for richer spectral-table shaping is neutral:
 `pad_mode`, `pad_bandwidth`, `pad_bwscale`, `pad_profile`, and `pad_position`.
 The Zyn importer may populate those fields from Zyn's PAD controls, and the
 parser still accepts older `zyn_*` names in generated parity artifacts, but
@@ -204,7 +204,7 @@ repo contains categorized examples, and the standard libraries include
 oscillators, filters, delays, reverbs, physical models, DX7, virtual analog
 effects, wave-digital models, spatialization, and more.
 
-Pressure on Aquarium DSL:
+Pressure on AquaSynth DSL:
 
 - General signal graph expression.
 - Multichannel routing.
@@ -219,7 +219,7 @@ First deliverable:
   license/provenance, graph family, and expected compile behavior.
 - Select small fixtures from official examples first: comb string, additive
   drum, stereo reverb, physical model, WDF filter.
-- Use Faust references to decide whether Aquarium needs a lower-level graph DSL
+- Use Faust references to decide whether AquaSynth needs a lower-level graph DSL
   beneath the current instrument patch surface.
 
 Sources:
@@ -235,7 +235,7 @@ Sources:
 Surge XT is a modern GPL-3.0 hybrid synth with a large real-world patch corpus.
 It is a strong long-term target, but it is too broad for the first import pass.
 
-Pressure on Aquarium DSL:
+Pressure on AquaSynth DSL:
 
 - Multi-scene patch structure.
 - Multiple oscillator algorithms.
@@ -256,10 +256,10 @@ Source: [Surge XT](https://github.com/surge-synthesizer/surge)
 ### Tier 5: Cardinal/VCV-Style Modular Patches
 
 Cardinal is a GPL-3.0 self-contained open-source modular synth based on VCV Rack
-code. It is the right target once Aquarium needs to prove arbitrary modular graph
+code. It is the right target once AquaSynth needs to prove arbitrary modular graph
 expression.
 
-Pressure on Aquarium DSL:
+Pressure on AquaSynth DSL:
 
 - Module graph representation.
 - Cables as first-class edges.
@@ -288,7 +288,7 @@ public sealed record ReferencePatch(
     ReferenceSource Source,
     IReadOnlyList<ReferenceFeature> Features,
     IReadOnlyList<PatchParameter> Parameters,
-    string? AquariumScript);
+    string? AquaSynthScript);
 
 public sealed record ReferenceSource(
     string Kind,
@@ -310,8 +310,8 @@ public sealed record PatchParameter(
 ```
 
 This keeps source authority and runtime control authority visible. A reference
-can be "known target, not yet translated" without pretending it is an Aquarium
-patch, and an Aquarium patch can say which values callers may vary without
+can be "known target, not yet translated" without pretending it is an AquaSynth
+patch, and an AquaSynth patch can say which values callers may vary without
 changing graph shape.
 
 ## Runtime Parameter Surface
@@ -319,10 +319,10 @@ changing graph shape.
 Faust supports this directly through UI controls such as `hslider`, `vslider`,
 `nentry`, `button`, and `checkbox`. Hosted DSP code can expose a parameter map
 and update control zones with `setParamValue`/`getParamValue` style APIs, so
-Aquarium should compile once for a graph shape and then push parameter values at
+AquaSynth should compile once for a graph shape and then push parameter values at
 runtime.
 
-Aquarium DSL needs an explicit parameter declaration surface, likely separate
+AquaSynth DSL needs an explicit parameter declaration surface, likely separate
 from modulation buses:
 
 ```text
@@ -346,7 +346,7 @@ Lowering rules:
 1. Create reference model contracts, parameter contracts, and tests.
 2. Add explicit patch parameter declarations and Faust parameter emission.
 3. Add DX7 SysEx parser and feature extraction.
-4. Add two DX7-derived Aquarium DSL rebuilds with exposed macro controls.
+4. Add two DX7-derived AquaSynth DSL rebuilds with exposed macro controls.
 5. Add audio fixture workflow for rendered references.
 6. Add Zyn XML feature extraction.
 7. Add Faust reference catalog entries and compile checks.
@@ -361,7 +361,7 @@ Lowering rules:
   of fields.
 - Do not compare only parse success. That proves the parser is lenient, not that
   the DSL can express the sound.
-- Do not use Faust as a hidden escape hatch for Aquarium patches. If a reference
+- Do not use Faust as a hidden escape hatch for AquaSynth patches. If a reference
   requires raw Faust, the DSL is missing an abstraction or the reference belongs
   in a lower-level graph layer.
 
@@ -370,5 +370,5 @@ Lowering rules:
 - A new agent can pick one target family and know where to start.
 - Every reference fixture says what feature pressure it applies.
 - The DSL roadmap is driven by reference failures, not taste fumes.
-- Aquarium can keep using readable reference patches while the synth library
+- AquaSynth can keep using readable reference patches while the synth library
   grows toward serious DSP graph expression.

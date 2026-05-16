@@ -1,18 +1,18 @@
 # Scratch
 
-Current standing order: grow AquariumSynthCSharp through external reference
+Current standing order: grow AquaSynth through external reference
 targets, not through speculative field sprawl. `state/spine.yaml` and
 `docs/reference-synth-roadmap.md` are the handoff surfaces for agents working on
-the synth library while Aquarium work continues elsewhere.
+the synth library while AquaSynth work continues elsewhere.
 
 Doctrine update:
 
-- External synths are parity pressure for Aquarium's DSL, not internals to
+- External synths are parity pressure for AquaSynth's DSL, not internals to
   clone. Only consume targets that can be backed by parity tests proving
-  Aquarium can reproduce the behavior in terse, readable syntax.
+  AquaSynth can reproduce the behavior in terse, readable syntax.
 - Parsing a synth format is inventory. Rebuilding and testing behavior is the
   proof.
-- Pinned reference synths are test-only oracles, not Aquarium organs. ZynAddSubFX
+- Pinned reference synths are test-only oracles, not AquaSynth organs. ZynAddSubFX
   now lives under `external/zynaddsubfx` as GPL development material pinned at
   `3ab608c432996ba4d582176572c0b0f82328c825`; it must not enter the NuGet
   package or runtime dependency graph.
@@ -44,7 +44,7 @@ Current slice:
   same as the references. Treat the remaining high log-mel values as regression
   pressure and diagnostic smoke, not as a mandate to keep sanding sounds that
   have already landed perceptually.
-- Verification: `dotnet test AquariumSynthCSharp.slnx --no-restore`: 107
+- Verification: `dotnet test AquaSynth.slnx --no-restore`: 107
   passed.
 - Next pressure can leave this Zyn PAD batch and move to the roadmap's next
   synth/abstraction rung; keep sin2x and broader OscilGen/PAD source-table
@@ -58,12 +58,12 @@ Current slice:
   bandwidth, bandwidth scale, harmonic profile, and harmonic-position warp.
   `PadSynthWaveform` uses the Zyn PAD profile/bandwidth formulas for those
   banks and keeps the old generic PADsynth path for ordinary `spectrum`.
-- `ZynInstrumentReader.RebuildFirstPadAsAquariumScript` now emits readable
+- `ZynInstrumentReader.RebuildFirstPadAsAquaSynthScript` now emits readable
   neutral `pad_mode=`, `pad_bandwidth=`, `pad_bwscale=`, `pad_profile=...`,
   and `pad_position=...` fields, and maps Zyn PAD volume with the source
   exponential gain curve instead of the old tiny linear `/500` guess. The
   parser still accepts older `zyn_*` aliases for parity artifacts, but authored
-  `.aqua` should use Aquarium-native PAD terms.
+  `.aqua` should use AquaSynth-native PAD terms.
 - The translator now expands a useful subset of Zyn OscilGen base-function
   harmonic content plus spectrum adjustment before feeding PAD synthesis. This
   is a coherent source-table owner, but current parity is mixed: it improves
@@ -71,7 +71,7 @@ Current slice:
   regress. Treat it as live pressure on OscilGen coverage, not solved Zyn
   oscillator parity.
 - Latest focused verification:
-  `dotnet test tests\AquariumSynth.Dsl.Tests\AquariumSynth.Dsl.Tests.csproj --no-restore --filter "FullyQualifiedName~ZynInstrumentTests|FullyQualifiedName~ZynReferenceParityTests"`:
+  `dotnet test tests\AquaSynth.Dsl.Tests\AquaSynth.Dsl.Tests.csproj --no-restore --filter "FullyQualifiedName~ZynInstrumentTests|FullyQualifiedName~ZynReferenceParityTests"`:
   13 passed.
 - Latest upstream PAD batch after OscilGen subset:
   `Soft Pad` log-mel `0.342738`, score `0.443083`;
@@ -119,7 +119,7 @@ Current user-ear correction:
   with two enabled PAD kit items across the full key range. The old parity path
   rendered and rebuilt only kit item 0. The upstream PAD test now sums enabled
   PAD kit notes and passes per-kit table roots into
-  `RebuildEnabledPadsAsAquariumScript`; generated Aqua emits
+  `RebuildEnabledPadsAsAquaSynthScript`; generated Aqua emits
   `doublepadbass_0` and `doublepadbass_1`.
 - Latest DoublePadBass after multi-kit rebuild: log-mel `0.493451`, score
   `0.376854`, RMS ratio `0.826864`. Raising the volume cap to `3.0` worsened it
@@ -152,7 +152,7 @@ Current user-ear correction:
 - User then heard the tone as right but the Zyn reference hitting harder at the
   beginning. The missing authority was Zyn's PAD filter envelope: Aqua had only
   the static cutoff, while Zyn adds ADSR-filter octave offsets before the
-  global filter. Aquarium now has a general low-pass rate/level envelope
+  global filter. AquaSynth now has a general low-pass rate/level envelope
   surface (`lpf_env=rl`, `lpf_start`, `lpf_rates`, `lpf_levels`) and the Zyn
   importer maps `FILTER_ENVELOPE` into it. Latest DoublePadBass after this
   pass: log-mel `0.241993`, envelope distance `0.554658`, RMS ratio `0.456173`,
@@ -179,7 +179,7 @@ Current user-ear correction:
   `log2(note/440) * tracking` rule. Aqua now applies that when importing PAD
   global filters.
 - Ghost still had too much upper tail, so the next cut was not a Ghost-only
-  brightness knob. Aquarium now has explicit low-pass Q via `lpf_q`/`lpq` on
+  brightness knob. AquaSynth now has explicit low-pass Q via `lpf_q`/`lpq` on
   the filter model. Zyn PAD analog low-pass `q` imports through
   `exp((q/127)^2 * ln(1000)) - 0.9`; Ghost emits `lpf_q=0.499021`, which Faust
   lowers through `fi.resonlp(..., max(0.1, lpf_q), 1.0)`.
@@ -219,7 +219,7 @@ Current user-ear correction:
   by ear, with Organ Choir still a bit tinny and sin2x still overdoing a high
   harmonic. The sin2x issue was a real OscilGen indexing bug, not a fixture
   brightness preference: Zyn oscillator filters receive one-based harmonic
-  indices (`filter(1)` is the first harmonic), while Aquarium had translated
+  indices (`filter(1)` is the first harmonic), while AquaSynth had translated
   them through a zero-based index and moved the type-13 spike filter from h2 to
   h3. `ZynOscilFilterGain` now preserves Zyn's one-based index, and the
   upstream sin2x regression asserts h2 dominates h3 by more than 10x.
@@ -252,16 +252,16 @@ Completed this slice:
   randomness control, or pitch-zone behavior. It is a source-level FFT
   partial-cloud authority for readable PAD rebuilds.
 - Focused verification before wavetable replacement passed:
-  `dotnet test tests\AquariumSynth.Dsl.Tests\AquariumSynth.Dsl.Tests.csproj --no-restore --filter "FullyQualifiedName~SpectralBank|FullyQualifiedName~ZynStyleReferenceRebuildsParseExportAndDeclarePressure|FullyQualifiedName~BuiltInReferenceScriptsParseAndExportFaust"`:
+  `dotnet test tests\AquaSynth.Dsl.Tests\AquaSynth.Dsl.Tests.csproj --no-restore --filter "FullyQualifiedName~SpectralBank|FullyQualifiedName~ZynStyleReferenceRebuildsParseExportAndDeclarePressure|FullyQualifiedName~BuiltInReferenceScriptsParseAndExportFaust"`:
   4 passed.
 - Wavetable replacement verification:
-  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
   94 passed.
 - FFT table generator focused verification:
-  `dotnet test tests\AquariumSynth.Dsl.Tests\AquariumSynth.Dsl.Tests.csproj --no-restore --filter "FullyQualifiedName~SpectralBank|FullyQualifiedName~FaustCompilerValidatesSpectralBank|FullyQualifiedName~ZynStyleReferenceRebuildsParseExportAndDeclarePressure"`:
+  `dotnet test tests\AquaSynth.Dsl.Tests\AquaSynth.Dsl.Tests.csproj --no-restore --filter "FullyQualifiedName~SpectralBank|FullyQualifiedName~FaustCompilerValidatesSpectralBank|FullyQualifiedName~ZynStyleReferenceRebuildsParseExportAndDeclarePressure"`:
   4 passed.
 - Full verification after FFT table generator:
-  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
   94 passed.
 
 Previous slice:
@@ -276,10 +276,10 @@ Previous slice:
 - Arbitrary Zyn free-envelope point curves remain missing pressure. This slice
   is the coherent staged-envelope rung, not a free-mode clone.
 - Focused verification passed:
-  `dotnet test tests\AquariumSynth.Dsl.Tests\AquariumSynth.Dsl.Tests.csproj --no-restore --filter "FullyQualifiedName~LayeredVoiceRateLevelEnvelope|FullyQualifiedName~ZynStyleReferenceRebuildsParseExportAndDeclarePressure|FullyQualifiedName~BuiltInReferenceScriptsParseAndExportFaust"`:
+  `dotnet test tests\AquaSynth.Dsl.Tests\AquaSynth.Dsl.Tests.csproj --no-restore --filter "FullyQualifiedName~LayeredVoiceRateLevelEnvelope|FullyQualifiedName~ZynStyleReferenceRebuildsParseExportAndDeclarePressure|FullyQualifiedName~BuiltInReferenceScriptsParseAndExportFaust"`:
   3 passed.
 - Full verification with bundled Python/dexed-py:
-  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
   91 passed.
 
 Previous slice:
@@ -294,7 +294,7 @@ Previous slice:
 - This is not Zyn ADDsynth parity theater. Phase, bandwidth, oscillator
   shaping, and exact free-envelope behavior remain explicit pressure.
 - Verified with bundled Python/dexed-py still wired:
-  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
   90 passed.
 
 Previous slice:
@@ -309,7 +309,7 @@ Previous slice:
   Future additive-bank, PAD-source, free-envelope, and formant-motion syntax
   now has somewhere coherent to attach.
 - Verified with bundled Python/dexed-py still wired:
-  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
   88 passed.
 
 Previous slice:
@@ -328,12 +328,12 @@ Previous slice:
 - Survey conclusion: named kit/layer routing should probably precede syntax
   golf for additive banks, PAD sources, or formant motion.
 - Verified with bundled Python/dexed-py still wired:
-  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
   86 passed.
 
 Previous slice:
 
-- Added first Zyn-style Aquarium rebuilds for the project-authored additive
+- Added first Zyn-style AquaSynth rebuilds for the project-authored additive
   lead, PAD texture, and vocal/formant layer fixtures. They live in
   `BuiltInScripts` and `ReferenceRebuildCatalog.ZynRebuilds`.
 - The rebuild tests parse/export every Zyn script and compare matched feature
@@ -343,7 +343,7 @@ Previous slice:
   normal voices, named kit/layer routing with per-layer effect sends, and richer
   formant/vowel morphing. No new runtime surface was added yet.
 - Verified with bundled Python/dexed-py still wired:
-  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
   83 passed.
 
 Previous slice:
@@ -353,13 +353,13 @@ Previous slice:
   gzip-compressed XML, extracts instrument metadata and kit items, and emits
   neutral `ReferencePatch` features.
 - Added project-authored Zyn fixtures under
-  `tests/AquariumSynth.Dsl.Tests/Fixtures/ZynAddSubFX/ProjectAuthored` instead
+  `tests/AquaSynth.Dsl.Tests/Fixtures/ZynAddSubFX/ProjectAuthored` instead
   of vendoring upstream preset-bank files with unclear root provenance.
 - Current Zyn classifier detects active ADD/SUB/PAD engines, enabled kit items,
   layering, envelopes, free envelopes, LFOs, filters, formant filters, and
   effects. This is inventory for choosing rebuild targets, not translation yet.
 - Verified with bundled Python/dexed-py still wired:
-  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
   81 passed.
 
 Previous slice:
@@ -392,7 +392,7 @@ Previous slice:
   too aggressively and broke PRC, `Piano Bass`, `RES SYNTH1`, and `ANLGSYN 1`;
   release duration remains part of the broader DX7 envelope model pressure.
 - Verified with bundled Python/dexed-py:
-  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
   76 passed.
 
 Previous slice:
@@ -414,7 +414,7 @@ Previous slice:
   and does not deserve to live. Mooger's "too hard" harmonics remain unresolved
   overtone-emphasis pressure, not a solved high-band-energy problem.
 - Focused verification with bundled Python/dexed-py:
-  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore --filter "Dx7SysExTests|PublicDomainDx7MoogerAndPianoBassMeetRenderedParityWhenInstalled|PublicDomainDx7AnlgSyn1KeepsBuzzingModulationWhenInstalled|PublicDomainDx7MellowSoloWritesPressureWavsWhenInstalled|PublicDomainDx7PrcSynth1WritesListeningWavsWhenInstalled"`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore --filter "Dx7SysExTests|PublicDomainDx7MoogerAndPianoBassMeetRenderedParityWhenInstalled|PublicDomainDx7AnlgSyn1KeepsBuzzingModulationWhenInstalled|PublicDomainDx7MellowSoloWritesPressureWavsWhenInstalled|PublicDomainDx7PrcSynth1WritesListeningWavsWhenInstalled"`:
   28 passed.
 
 Previous slice:
@@ -436,7 +436,7 @@ Previous slice:
   more Dexed-shaped on paper, but worsened `MELLOWSOLO` and `ANLGSYN 1`, so it
   does not belong in the live machine yet.
 - Focused verification with bundled Python/dexed-py:
-  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore --filter "Dx7SysExTests|PublicDomainDx7MoogerAndPianoBassMeetRenderedParityWhenInstalled|PublicDomainDx7AnlgSyn1KeepsBuzzingModulationWhenInstalled|PublicDomainDx7MellowSoloWritesPressureWavsWhenInstalled|PublicDomainDx7PrcSynth1WritesListeningWavsWhenInstalled"`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore --filter "Dx7SysExTests|PublicDomainDx7MoogerAndPianoBassMeetRenderedParityWhenInstalled|PublicDomainDx7AnlgSyn1KeepsBuzzingModulationWhenInstalled|PublicDomainDx7MellowSoloWritesPressureWavsWhenInstalled|PublicDomainDx7PrcSynth1WritesListeningWavsWhenInstalled"`:
   28 passed.
 
 Previous slice:
@@ -456,7 +456,7 @@ Previous slice:
   `DX1 LEAD B` score `.45156077`, log-mel `.43533683`, RMS `.8193191`;
   `MELLOWSOLO` score `.5359293`, log-mel `.39420125`, RMS `.99559265`.
 - Verified with bundled Python/dexed-py:
-  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
   74 passed.
 
 Previous slice:
@@ -476,7 +476,7 @@ Previous slice:
 - Fresh `ANLGSYN 1`: score `.7245976`, log-mel `.18460114`, envelope
   `.119950555`, RMS `.97143364`, zero-crossing `.97149533`.
 - Verified with bundled Python/dexed-py:
-  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
   74 passed.
 
 Earlier slice:
@@ -505,7 +505,7 @@ Earlier slice:
   - 1.2-2.5 kHz candidate/reference energy: `.008 -> .656`
   - 2.5-5 kHz candidate/reference energy: near zero -> `.321`
 - Verified with bundled Python/dexed-py:
-  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
   73 passed.
 
 Earlier slice:
@@ -523,13 +523,13 @@ Earlier slice:
   focused gates. Latest metrics: log-mel `.19427659`, envelope `.14924917`,
   zero-crossing `.94662774`, centroid `.9182808`, score `.659334`.
 - Verified with bundled Python/dexed-py:
-  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
   73 passed.
 
 Previous slice:
 
 - Fixed the `Piano Bass` octave bug. The parsed voice has `transpose=12`; the
-  old generated Aquarium script hardcoded `freq=261.6256`, so it rendered an
+  old generated AquaSynth script hardcoded `freq=261.6256`, so it rendered an
   octave too high. `Dx7SysEx.NoteFrequencyHz(midiNote, transpose)` now treats
   transpose `24` as neutral and transpose `12` as one octave down.
 - `Dx7VoiceProbeScript` now uses the voice transpose for graph frequency and
@@ -540,14 +540,14 @@ Previous slice:
 - Fixed `Piano Bass` metrics: log-mel `.16180529`, envelope `.13544041`,
   zero-crossing `.905511`, score `.64267576`.
 - Verified with bundled Python/dexed-py:
-  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
   71 passed.
 
 Previous slice:
 
 - Added `PublicDomainDx7AnalogCommunityVoicesMeetBroadRenderedParityWhenInstalled`,
   which renders actual public-domain `analog1.syx` community voices through
-  Dexed and the current Aquarium DX7 lowering. Kept four broad parity voices:
+  Dexed and the current AquaSynth DX7 lowering. Kept four broad parity voices:
   `ANLGSYN 1`, `{ Mooger }`, `Piano Bass`, and `RES SYNTH1`.
 - The test writes WAVs/reports under
   `artifacts/parity/dx7-community-analog1/<voice>/` and gates log-mel
@@ -561,7 +561,7 @@ Previous slice:
   from the passing gate because log-mel and zero-crossing mismatch were too
   large. That is pressure, not library stock.
 - Verified with bundled Python/dexed-py:
-  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
   70 passed.
 
 Previous slice:
@@ -582,7 +582,7 @@ Previous slice:
   intentionally not part of the patch library: they are useful measuring tools,
   not pleasant or reusable stock.
 - Verified with bundled Python/dexed-py:
-  `AQUARIUM_DX7_PYTHON=<bundled python> dotnet test AquariumSynthCSharp.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
   69 passed.
 
 Previous slice:
@@ -600,7 +600,7 @@ Previous slice:
 - Added a test contract: every `.aqua` under `patches/` must parse through
   `PatchScript.Parse` and export Faust, while package-boundary tests keep
   `patches/` and `.aqua` files out of the NuGet package.
-- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 67 passed.
+- Verified with `dotnet test AquaSynth.slnx --no-restore`: 67 passed.
 
 Previous slice:
 
@@ -614,7 +614,7 @@ Previous slice:
   `0.9912135`, zero-crossing ratio `0.95325506`, centroid ratio `1.1156512`,
   score `0.7546445`.
 - Added `Dx7SysEx.ApproximateAppliedRateLevelEnvelope`, which traces the
-  Dexed-style block-interpolated applied EG gain and lowers it into Aquarium's
+  Dexed-style block-interpolated applied EG gain and lowers it into AquaSynth's
   curved staged envelope surface, normalized so operator output level remains a
   separate authority.
 - Retried hard `PRC SYNTH1` with the applied-envelope lowering. Latest focused
@@ -638,8 +638,8 @@ Previous slice:
   `artifacts/parity/dx7-envelope-trace/egstep.csv`. The first rows show both
   DX7 raw state and applied gain: raw jumps to `2` immediately, while applied
   gain ramps from `.03125` to `2` over the first 64-sample block and remains
-  near `1` around 20 ms. Aquarium `env=rl` is a different contour entirely.
-  The artifact now also includes a curved Aquarium staged-envelope candidate
+  near `1` around 20 ms. AquaSynth `env=rl` is a different contour entirely.
+  The artifact now also includes a curved AquaSynth staged-envelope candidate
   that tracks the applied-gain contour far more closely.
 - Tried adding a first `env=dx7` runtime lowering, then cut it. The trace
   matched the Python `graph.py` envelope but not Dexed plugin audio, so the
@@ -690,7 +690,7 @@ Previous slice:
 Previous slice:
 
 - Completed the feedback calibration rung. Isolated Dexed feedback sweeps fit a
-  nonlinear Aquarium feedback table: `0, .01, .02, .05, .10, .19, .38, .66`
+  nonlinear AquaSynth feedback table: `0, .01, .02, .05, .10, .19, .38, .66`
   for DX7 feedback values `0..7`.
 - Added `Dx7SysEx.OperatorFeedbackAmount` and moved the PRC feedback lowering
   off the old `voice.Feedback * 0.04` constant. PRC barely changed because
@@ -701,7 +701,7 @@ Previous slice:
 
 - Completed the second calibration rung for isolated two-operator FM. A Dexed
   sweep fits full-scale DX7 modulation at about `12.55` radians. Given the
-  current Aquarium Faust formula, that maps to an Aquarium route index of
+  current AquaSynth Faust formula, that maps to an AquaSynth route index of
   `6.275` for a full-level modulator.
 - Added `Dx7SysEx.OperatorModulationRouteIndex` and a regression test for the
   calibrated phase-deviation scale. The hard PRC probe applies that scale only
@@ -737,7 +737,7 @@ Previous slice:
   `<= 0.255` plus a loose aggregate score floor instead of treating aggregate
   score as the main judge.
 - Spectral diagnosis showed the Dexed reference has dominant peaks around
-  `393`, `131`, `524`, and `656` Hz. The prior Aquarium candidate had too
+  `393`, `131`, `524`, and `656` Hz. The prior AquaSynth candidate had too
   little `80-160` Hz body when based at `392`, while the corrected DX7 note
   basis restored the low body but exposed weak mid harmonic structure and high
   centroid/zero-crossing mismatch.
@@ -769,7 +769,7 @@ Previous slice:
 - Added a hard DX7 `PRC SYNTH1` rendered parity probe that writes listening
   artifacts when `dexed-py` and Faust are available:
   `artifacts/parity/dx7-prc-synth1/reference-dexed.wav`,
-  `candidate-aquarium.wav`, `candidate.aqua`, and `report.txt`.
+  `candidate-aquasynth.wav`, `candidate.aqua`, and `report.txt`.
 - The probe rebuilds `analog1.syx` voice 17 with readable operator graph syntax
   and staged `env=rl` operator envelopes. It asserts a modest hard-target score
   floor instead of pretending exact DX7 parity is solved.
@@ -792,7 +792,7 @@ Previous slice:
   that emits staged envelope script specs from four-rate/four-level operator EG
   data.
 - Verified the surface structurally and through the render path:
-  `dotnet test AquariumSynthCSharp.slnx --no-restore`: 53 passed.
+  `dotnet test AquaSynth.slnx --no-restore`: 53 passed.
 - Retried the hard `PRC SYNTH1` probe with direct DX7 rate/level lowering. The
   best quick score was only ~0.316, worse than the hand-tweaked ADSR candidate.
   The DSL can now express the missing contour shape, but DX7 EG timing/gain
@@ -801,33 +801,33 @@ Previous slice:
 Previous slice:
 
 - Added `Dx7OperatorLevelApproximation`, which distills DX7 operator output
-  level plus key/velocity scaling into a normal Aquarium `level=`-style value.
+  level plus key/velocity scaling into a normal AquaSynth `level=`-style value.
   This remains DX7 reference-import knowledge, not a generic DSL feature.
 - Retried `PRC SYNTH1` with effective levels and envelope tweaks. Static level
   mapping alone did not rescue the hard target: quick probes moved from ~0.24
   to ~0.34, and envelope tweaks reached ~0.42. The next missing pressure is
   DX7-style operator envelope/gain evolution, not just static operator levels.
-- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 50 passed.
+- Verified with `dotnet test AquaSynth.slnx --no-restore`: 50 passed.
 
 Previous slice:
 
 - Tried the harder `analog1.syx` voice 17, `PRC SYNTH1` (algorithm 8). The
-  initial routed Aquarium candidate scored badly (~0.23), which exposed a real
+  initial routed AquaSynth candidate scored badly (~0.23), which exposed a real
   missing invariant rather than a threshold-tuning problem.
 - Reworked operator feedback emission from a cyclic smoothed self-reference to
   a renderable Faust feedback expression using delayed recursion. Added
   `FaustCompilerRendersOperatorFeedbackWhenInstalled`.
 - Exact DX7 feedback scaling and EG behavior are still not solved, but feedback
   no longer makes the Faust render path fall over.
-- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 49 passed.
+- Verified with `dotnet test AquaSynth.slnx --no-restore`: 49 passed.
 
 Previous slice:
 
 - Added the first thresholded DX7 rendered-audio parity rebuild:
   `BuiltInScripts.Dx7StylePublicDomainMcMm53` maps public-domain
-  `analog1.syx` voice 13, `MC-MM 5-3`, to a terse Aquarium sine patch.
+  `analog1.syx` voice 13, `MC-MM 5-3`, to a terse AquaSynth sine patch.
 - Added `PublicDomainDx7McMm53MeetsFirstRenderedParityThresholdWhenInstalled`,
-  which renders the DX7 reference through `dexed-py`, renders the Aquarium
+  which renders the DX7 reference through `dexed-py`, renders the AquaSynth
   candidate through Faust-generated C#, and asserts score, log-mel distance,
   envelope distance, duration/RMS ratios, zero-crossing ratio, and centroid
   ratio.
@@ -835,43 +835,43 @@ Previous slice:
   DX7 operator execution. The next DX7 pressure should be a harder voice that
   audibly needs the operator graph.
 - Verified with bundled Python plus `dexed-py`: parity test passed.
-- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 48 passed.
+- Verified with `dotnet test AquaSynth.slnx --no-restore`: 48 passed.
 
 Previous slice:
 
 - Added a public-domain DX7 SysEx fixture from Musical Artifacts artifact 152:
-  `tests/AquariumSynth.Dsl.Tests/Fixtures/Dx7/PublicDomain/analog1.syx`, with
+  `tests/AquaSynth.Dsl.Tests/Fixtures/Dx7/PublicDomain/analog1.syx`, with
   provenance and SHA-256 recorded beside it.
 - Added a test-only `dexed-py` reference renderer. It uses
-  `AQUARIUM_DX7_PYTHON` when set, otherwise probes `py`, `python`, and
+  `AQUASYNTH_DX7_PYTHON` when set, otherwise probes `py`, `python`, and
   `python3`; if `dexed-py` is absent, the render test returns without turning
   optional tooling into a hard dependency.
-- Added a `.nupkg` boundary test that packs `AquariumSynth.Dsl` and asserts
+- Added a `.nupkg` boundary test that packs `AquaSynth.Dsl` and asserts
   test fixtures, SysEx banks, and Python helpers are not shipped.
 - Verified with bundled Python plus `dexed-py`: the DX7 fixture renders through
   Dexed successfully.
-- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 47 passed.
+- Verified with `dotnet test AquaSynth.slnx --no-restore`: 47 passed.
 
 Previous slice:
 
-- Added `FaustCompiler.RenderAsync`, which compiles Aquarium Faust output to
+- Added `FaustCompiler.RenderAsync`, which compiles AquaSynth Faust output to
   Faust-generated C#, runs it in a temp .NET project, and returns a mono float
   sample buffer for analysis.
-- Added a render test that proves a generated Aquarium patch produces non-silent
+- Added a render test that proves a generated AquaSynth patch produces non-silent
   audio and can be compared through `AudioAnalyzer`.
 - DX7 audio parity is still not claimed: the candidate renderer exists, but the
   reference side needs Dexed output or a captured licensed fixture.
-- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 44 passed.
+- Verified with `dotnet test AquaSynth.slnx --no-restore`: 44 passed.
 
 Previous slice:
 
 - Added `Dx7EnvelopeApproximation`, which lowers a DX7 four-rate/four-level EG
-  to a labeled Aquarium ADSR approximation plus gate duration.
+  to a labeled AquaSynth ADSR approximation plus gate duration.
 - Reference rebuilds now record `operator_envelope_approximation` as matched
   pressure and `operator_envelope_exactness` as still missing.
 - Doctrine now states that DX7 EG approximation is not exact DX7 envelope
   execution.
-- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 43 passed.
+- Verified with `dotnet test AquaSynth.slnx --no-restore`: 43 passed.
 
 Previous slice:
 
@@ -882,7 +882,7 @@ Previous slice:
   the exact `/opgraphs/...` field paths.
 - Fixed AD operator envelope binding to use `/env/decay` for the second AD
   value, matching the ADSR model instead of calling it release by accident.
-- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 42 passed.
+- Verified with `dotnet test AquaSynth.slnx --no-restore`: 42 passed.
 
 Previous slice:
 
@@ -892,7 +892,7 @@ Previous slice:
   `[midi:on][nvoices:8]` option and `freq`, `gain`, `gate` controls.
 - Host/MIDI playback no longer emits per-voice `/voices/0/note/frequency` and
   `/voices/0/note/gate` controls; Faust architecture owns allocation.
-- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 41 passed.
+- Verified with `dotnet test AquaSynth.slnx --no-restore`: 41 passed.
 
 Previous slice:
 
@@ -905,7 +905,7 @@ Previous slice:
 - Added host note mode for MIDI-oriented patches through stable note frequency
   and note gate controls in generated Faust.
 - Moved built-in authoring examples off `punch=` and onto `sustain_level=`.
-- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 40 passed.
+- Verified with `dotnet test AquaSynth.slnx --no-restore`: 40 passed.
 
 Previous slice:
 
@@ -915,7 +915,7 @@ Previous slice:
   envelope forms for operator declarations.
 - Kept compact `ops=`/`edges=` syntax as parser/interchange scaffolding, but it
   is no longer the built-in authoring example.
-- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 36 passed.
+- Verified with `dotnet test AquaSynth.slnx --no-restore`: 36 passed.
 
 Previous slice:
 
@@ -927,21 +927,21 @@ Previous slice:
 - Updated the DX7 algorithm-8 rebuild to use a real operator graph for the
   topology. The remaining missing feature is exact DX7 feedback-register timing
   and DX7 rate/level envelopes, not graph ownership.
-- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 35 passed.
+- Verified with `dotnet test AquaSynth.slnx --no-restore`: 35 passed.
 
 Earlier rebuild slice:
 
 - Added `ReferenceRebuild` and `ReferenceRebuildCatalog` for explicit
   reference-target rebuild attempts.
-- Added two DX7-style Aquarium DSL rebuilds:
+- Added two DX7-style AquaSynth DSL rebuilds:
   - `dx7/algo32-additive-organ`: algorithm 32's six-carrier additive shape,
-    which maps cleanly to six Aquarium voices.
+    which maps cleanly to six AquaSynth voices.
   - `dx7/algo8-bright-pair`: algorithm 8's two-carrier FM shape, which is only
     an approximation because the current voice DSL cannot express
     `6->5`, `4+5->3`, `2->1`, or operator-local self-feedback.
 - Added matched/missing feature records so topology mismatch becomes evidence
   instead of being hidden inside prose.
-- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 34 passed.
+- Verified with `dotnet test AquaSynth.slnx --no-restore`: 34 passed.
 
 Earlier topology slice:
 
@@ -954,7 +954,7 @@ Earlier topology slice:
   `modulation_edge_count`, `feedback_sources`, and
   `self_feedback_operators`.
 - Representative tests cover algorithm 8, algorithm 16, and algorithm 32.
-- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 31 passed.
+- Verified with `dotnet test AquaSynth.slnx --no-restore`: 31 passed.
 
 Earlier slice:
 
@@ -965,7 +965,7 @@ Earlier slice:
 - Added `Dx7Voice.ToReferencePatch` and structural feature extraction so DX7
   voices can pressure the reference model before translation exists.
 - Checksum validation rejects bad wrapped SysEx payloads.
-- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 28 passed.
+- Verified with `dotnet test AquaSynth.slnx --no-restore`: 28 passed.
 
 Parameter slice:
 
@@ -982,7 +982,7 @@ Parameter slice:
   parameter default as the graph value.
 - Faust emission substitutes the parameter expression only at the bound field
   site. Unbound parameters still emit a warning.
-- Verified with `dotnet test AquariumSynthCSharp.slnx --no-restore`: 23 passed.
+- Verified with `dotnet test AquaSynth.slnx --no-restore`: 23 passed.
 
 Next likely slice:
 

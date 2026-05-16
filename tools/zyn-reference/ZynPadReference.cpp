@@ -1,8 +1,8 @@
 /*
-  Test-only AquariumSynthCSharp ZynAddSubFX PAD oracle.
+  Test-only AquaSynth ZynAddSubFX PAD oracle.
 
   This file links against the pinned ZynAddSubFX reference source in an ignored
-  artifact build. It is development/parity tooling, not Aquarium runtime code.
+  artifact build. It is development/parity tooling, not AquaSynth runtime code.
 */
 
 #include "../globals.h"

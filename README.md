@@ -1,12 +1,12 @@
-# Aquarium Synth CSharp
+# AquaSynth
 
-C# front-end for Aquarium Synth patch scripts. It parses the Aquarium patch DSL
+C# front-end for AquaSynth patch scripts. It parses the AquaSynth patch DSL
 into a serializable patch graph, emits Faust `.dsp`, and can ask an installed
 Faust compiler to generate backend code such as C#, C++, C, or Rust.
 
-This repo is the C# bridge for Aquarium/Vortice-land. Rust remains the reference
+This repo is the C# bridge for AquaSynth/Vortice-land. Rust remains the reference
 lab; this project is the tool that lets the engine script Faust without dragging
-the Rust crate into the room by the ankle.
+the AquaSynth-rs crate into the room by the ankle.
 
 ## Run
 
@@ -15,7 +15,7 @@ dotnet test
 ```
 
 DX7 reference-render tests use `dexed-py` when a Python with `dexed` and
-`numpy` is available. Set `AQUARIUM_DX7_PYTHON` to that interpreter to force a
+`numpy` is available. Set `AQUASYNTH_DX7_PYTHON` to that interpreter to force a
 specific runtime; otherwise the tests skip the render path and still parse the
 vendored public-domain fixture.
 
@@ -26,23 +26,23 @@ ZynAddSubFX is pinned as a GPL test/development reference under
 git submodule update --init --recursive
 ```
 
-That source is a parity oracle only. Aquarium does not ship Zyn code, link it
-from `AquariumSynth.Dsl`, or treat it as runtime machinery.
+That source is a parity oracle only. AquaSynth does not ship Zyn code, link it
+from `AquaSynth.Dsl`, or treat it as runtime machinery.
 
 ## Package Boundary
 
-Aquarium consumes this library as a pinned `AquariumSynth.Dsl` NuGet package,
-not as a live project reference. Breaking synth-library work should happen here
-freely, then Aquarium should intentionally update only after a new package
-version is packed and tested.
+Downstream consumers should pin this library as an `AquaSynth.Dsl` NuGet
+package, not use it as a live project reference. Breaking synth-library work
+should happen here freely, then consumers should intentionally update only after
+a new package version is packed and tested.
 
 ```powershell
-dotnet pack src\AquariumSynth.Dsl\AquariumSynth.Dsl.csproj -c Release
+dotnet pack src\AquaSynth.Dsl\AquaSynth.Dsl.csproj -c Release
 ```
 
 The test suite verifies that development fixtures, Python render helpers,
 external reference synth sources, and SysEx banks do not ship in
-`AquariumSynth.Dsl.nupkg`.
+`AquaSynth.Dsl.nupkg`.
 
 ## Shape
 
@@ -55,7 +55,7 @@ external reference synth sources, and SysEx banks do not ship in
   references for testing and for judging whether the DSL can express useful
   sound designs cleanly.
 - `SfxrParams`, `PatchScriptScoring`, `AudioAnalyzer`, and `Presets` carry the
-  reusable Rust-side analysis, scoring, SFXR, and preset tools.
+  reusable AquaSynth-rs-side analysis, scoring, SFXR, and preset tools.
 
 Faust `2.85.5` supports `-lang csharp`, so the intended hot path is:
 

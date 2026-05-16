@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE ZynAddSubFX-data>
+<ZynAddSubFX-data version-major="1" version-minor="0">
+  <INSTRUMENT>
+    <INFO>
+      <string name="name">AQ Pad Pure</string>
+      <string name="author">AquaSynth tests</string>
+      <string name="comments">Project-authored default PAD fixture for pure source-table parity.</string>
+      <par name="type" value="0"/>
+    </INFO>
+    <INSTRUMENT_KIT>
+      <INSTRUMENT_KIT_ITEM id="0">
+        <par_bool name="enabled" value="yes"/>
+        <string name="name">Pure PAD</string>
+        <par_bool name="pad_enabled" value="yes"/>
+        <PAD_SYNTH_PARAMETERS>
+          <AMPLITUDE_PARAMETERS>
+            <AMPLITUDE_ENVELOPE>
+              <par_bool name="free_mode" value="yes"/>
+            </AMPLITUDE_ENVELOPE>
+          </AMPLITUDE_PARAMETERS>
+        </PAD_SYNTH_PARAMETERS>
+      </INSTRUMENT_KIT_ITEM>
+    </INSTRUMENT_KIT>
+  </INSTRUMENT>
+</ZynAddSubFX-data>
