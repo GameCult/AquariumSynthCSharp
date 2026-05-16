@@ -73,6 +73,35 @@ public sealed record ZynInstrumentSurveyItem(
     int ComplexityScore,
     IReadOnlyList<ReferenceFeature> Features);
 
+public enum ZynCoverageStatus
+{
+    Handled,
+    Counted,
+    Unknown
+}
+
+public sealed record ZynCoverageBucket(
+    string Area,
+    string Key,
+    ZynCoverageStatus Status,
+    int Count,
+    IReadOnlyList<string> Examples,
+    string Notes);
+
+public sealed record ZynCoverageReport(
+    int FileCount,
+    int ParsedFileCount,
+    int EnabledKitItemCount,
+    int LayeredInstrumentCount,
+    IReadOnlyList<ZynCoverageBucket> Buckets)
+{
+    public IReadOnlyList<ZynCoverageBucket> UnknownBuckets =>
+        Buckets.Where(bucket => bucket.Status == ZynCoverageStatus.Unknown).ToList();
+
+    public IReadOnlyList<ZynCoverageBucket> CountedBuckets =>
+        Buckets.Where(bucket => bucket.Status == ZynCoverageStatus.Counted).ToList();
+}
+
 public sealed record ZynPadRebuild(
     string InstrumentName,
     int KitItemId,
@@ -411,6 +440,9 @@ public static class ZynInstrumentReader
 
     private static XDocument ParseDocument(ReadOnlySpan<byte> bytes) =>
         XDocument.Parse(XmlText(bytes).TrimStart(), LoadOptions.None);
+
+    internal static XDocument ParseDocumentForSurvey(ReadOnlySpan<byte> bytes) =>
+        ParseDocument(bytes);
 
     private static int CountElements(XElement root, Func<string, bool> predicate) =>
         root.Descendants().Count(element => predicate(element.Name.LocalName));
@@ -1309,6 +1341,34 @@ public static class ZynInstrumentReader
 
 public static class ZynInstrumentSurvey
 {
+    private static readonly HashSet<string> HandledPadOscilFilters = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "0",
+        "1",
+        "2",
+        "6",
+        "7",
+        "13"
+    };
+
+    private static readonly HashSet<string> HandledPadWaveShapes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "0",
+        "1",
+        "4",
+        "7",
+        "11",
+        "15"
+    };
+
+    private static readonly HashSet<string> HandledPadGlobalFilters = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "cat=0 type=0",
+        "cat=0 type=1",
+        "cat=0 type=2",
+        "cat=0 type=3"
+    };
+
     public static IReadOnlyList<ZynInstrumentSurveyItem> RankDirectory(string root, int take = 25)
     {
         return Directory.GetFiles(root, "*.xiz", SearchOption.AllDirectories)
@@ -1345,5 +1405,381 @@ public static class ZynInstrumentSurvey
                Int("effect_count") * 3;
 
         int Int(string name) => int.TryParse(byName.GetValueOrDefault(name), out var value) ? value : 0;
+    }
+
+    public static ZynCoverageReport CoverageDirectory(string root, int examplesPerBucket = 3)
+    {
+        if (examplesPerBucket < 1) throw new ArgumentOutOfRangeException(nameof(examplesPerBucket));
+
+        var files = Directory.GetFiles(root, "*.xiz", SearchOption.AllDirectories);
+        var buckets = new Dictionary<(string Area, string Key), CoverageAccumulator>();
+        var parsed = 0;
+        var enabledItems = 0;
+        var layeredInstruments = 0;
+
+        foreach (var file in files)
+        {
+            XDocument document;
+            try
+            {
+                document = ZynInstrumentReader.ParseDocumentForSurvey(File.ReadAllBytes(file));
+                parsed++;
+            }
+            catch
+            {
+                AddBucket(
+                    buckets,
+                    "file",
+                    "parse_error",
+                    ZynCoverageStatus.Unknown,
+                    Path.GetRelativePath(root, file),
+                    "The survey could not parse this .xiz file.");
+                continue;
+            }
+
+            var relativePath = Path.GetRelativePath(root, file);
+            var instrument = document.Descendants("INSTRUMENT").FirstOrDefault();
+            if (instrument is null)
+            {
+                AddBucket(
+                    buckets,
+                    "file",
+                    "missing_instrument",
+                    ZynCoverageStatus.Unknown,
+                    relativePath,
+                    "The .xiz file has no INSTRUMENT block.");
+                continue;
+            }
+
+            var enabledInFile = 0;
+            foreach (var item in instrument.Descendants("INSTRUMENT_KIT_ITEM"))
+            {
+                if (!BoolParam(item, "enabled"))
+                {
+                    continue;
+                }
+
+                enabledItems++;
+                enabledInFile++;
+                var engines = EnabledEngines(item).ToList();
+                AddEngineBuckets(buckets, engines, relativePath);
+                AddElementPressureBuckets(buckets, item, relativePath);
+
+                if (engines.Contains(ZynEngine.PadSynth))
+                {
+                    AddPadPressureBuckets(buckets, item, relativePath);
+                }
+            }
+
+            if (enabledInFile > 1)
+            {
+                layeredInstruments++;
+                AddBucket(
+                    buckets,
+                    "kit",
+                    "multi_item_layering",
+                    ZynCoverageStatus.Handled,
+                    relativePath,
+                    "Named layer declarations own kit/layer identity; richer routing still needs target-specific parity.");
+            }
+        }
+
+        return new ZynCoverageReport(
+            files.Length,
+            parsed,
+            enabledItems,
+            layeredInstruments,
+            buckets.Values
+                .Select(bucket => bucket.ToBucket(examplesPerBucket))
+                .OrderBy(bucket => bucket.Status)
+                .ThenBy(bucket => bucket.Area, StringComparer.OrdinalIgnoreCase)
+                .ThenByDescending(bucket => bucket.Count)
+                .ThenBy(bucket => bucket.Key, StringComparer.OrdinalIgnoreCase)
+                .ToList());
+    }
+
+    public static string CoverageMarkdown(ZynCoverageReport report)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("# ZynAddSubFX Coverage Survey");
+        builder.AppendLine();
+        builder.AppendLine($"Files: {report.FileCount}");
+        builder.AppendLine($"Parsed: {report.ParsedFileCount}");
+        builder.AppendLine($"Enabled kit items: {report.EnabledKitItemCount}");
+        builder.AppendLine($"Layered instruments: {report.LayeredInstrumentCount}");
+        builder.AppendLine();
+
+        foreach (var status in new[] { ZynCoverageStatus.Unknown, ZynCoverageStatus.Counted, ZynCoverageStatus.Handled })
+        {
+            builder.AppendLine($"## {status}");
+            builder.AppendLine();
+            foreach (var bucket in report.Buckets.Where(bucket => bucket.Status == status))
+            {
+                var examples = bucket.Examples.Count == 0 ? "" : $" Examples: {string.Join("; ", bucket.Examples)}.";
+                builder.AppendLine($"- `{bucket.Area}:{bucket.Key}` count={bucket.Count}. {bucket.Notes}{examples}");
+            }
+            builder.AppendLine();
+        }
+
+        return builder.ToString();
+    }
+
+    private static void AddEngineBuckets(
+        Dictionary<(string Area, string Key), CoverageAccumulator> buckets,
+        IReadOnlyList<ZynEngine> engines,
+        string relativePath)
+    {
+        if (engines.Count == 0)
+        {
+            AddBucket(buckets, "engine", "none", ZynCoverageStatus.Unknown, relativePath, "Enabled kit item has no active ADD/SUB/PAD engine.");
+            return;
+        }
+
+        foreach (var engine in engines)
+        {
+            var (key, status, notes) = engine switch
+            {
+                ZynEngine.PadSynth => ("pad", ZynCoverageStatus.Handled, "PAD layers have generated spectrum rebuilds and parity pressure."),
+                ZynEngine.AddSynth => ("add", ZynCoverageStatus.Counted, "ADD is counted and hand-sketched in rebuilds, but not parity-translated from Zyn."),
+                ZynEngine.SubSynth => ("sub", ZynCoverageStatus.Counted, "SUB is counted and hand-sketched in rebuilds, but not parity-translated from Zyn."),
+                _ => ("unknown", ZynCoverageStatus.Unknown, "Unknown Zyn engine.")
+            };
+            AddBucket(buckets, "engine", key, status, relativePath, notes);
+        }
+
+        if (engines.Count > 1)
+        {
+            AddBucket(
+                buckets,
+                "engine",
+                string.Join("+", engines.Select(EngineKey).Order(StringComparer.OrdinalIgnoreCase)),
+                ZynCoverageStatus.Counted,
+                relativePath,
+                "Mixed engines are counted; only PAD members are generated by the current parity translator.");
+        }
+    }
+
+    private static void AddElementPressureBuckets(
+        Dictionary<(string Area, string Key), CoverageAccumulator> buckets,
+        XElement item,
+        string relativePath)
+    {
+        foreach (var envelope in item.Descendants().Where(element => element.Name.LocalName.EndsWith("_ENVELOPE", StringComparison.OrdinalIgnoreCase)))
+        {
+            var free = BoolParam(envelope, "free_mode");
+            AddBucket(
+                buckets,
+                "envelope",
+                free ? $"{envelope.Name.LocalName}.free" : $"{envelope.Name.LocalName}.staged",
+                free ? ZynCoverageStatus.Counted : ZynCoverageStatus.Handled,
+                relativePath,
+                free
+                    ? "Free-mode envelopes are counted pressure; AquaSynth has staged rate/level contours, not arbitrary Zyn point envelopes."
+                    : "Standard ADSR-ish Zyn envelopes can be approximated by AquaSynth staged rate/level or ADSR surfaces.");
+        }
+
+        foreach (var lfo in item.Descendants().Where(element => element.Name.LocalName.EndsWith("_LFO", StringComparison.OrdinalIgnoreCase)))
+        {
+            var intensity = IntParam(lfo, "intensity", 0);
+            var status = intensity == 0 ? ZynCoverageStatus.Handled : ZynCoverageStatus.Counted;
+            AddBucket(
+                buckets,
+                "lfo",
+                lfo.Name.LocalName,
+                status,
+                relativePath,
+                intensity == 0
+                    ? "Inactive or neutral LFO block."
+                    : "LFO presence is counted; Zyn LFO routing and waveform semantics are not parity-translated.");
+        }
+
+        foreach (var formant in item.Descendants("FORMANT_FILTER"))
+        {
+            AddBucket(
+                buckets,
+                "formant",
+                "FORMANT_FILTER",
+                ZynCoverageStatus.Counted,
+                relativePath,
+                "Static formant intent can be sketched; Zyn vowel/formant morphing remains parity pressure.");
+        }
+
+        foreach (var effect in item.Descendants().Where(element => element.Name.LocalName.Contains("EFFECT", StringComparison.OrdinalIgnoreCase)))
+        {
+            AddBucket(
+                buckets,
+                "effect",
+                effect.Name.LocalName,
+                ZynCoverageStatus.Counted,
+                relativePath,
+                "Effects are inventory only; AquaSynth does not translate Zyn effect chains.");
+        }
+    }
+
+    private static void AddPadPressureBuckets(
+        Dictionary<(string Area, string Key), CoverageAccumulator> buckets,
+        XElement item,
+        string relativePath)
+    {
+        var pad = item.Element("PAD_SYNTH_PARAMETERS");
+        if (pad is null)
+        {
+            AddBucket(buckets, "pad", "missing_parameters", ZynCoverageStatus.Unknown, relativePath, "PAD engine is enabled but PAD_SYNTH_PARAMETERS is absent.");
+            return;
+        }
+
+        AddBucket(buckets, "pad", $"mode={IntParam(pad, "mode", 0)}", ZynCoverageStatus.Handled, relativePath, "PAD mode is represented by AquaSynth pad_mode table-generation syntax.");
+        AddBucket(buckets, "pad", $"bandwidth_scale={IntParam(pad, "bandwidth_scale", 0)}", ZynCoverageStatus.Handled, relativePath, "PAD bandwidth scale is represented by AquaSynth pad_bwscale syntax.");
+
+        var oscillator = pad.Element("OSCIL");
+        AddBucket(buckets, "pad.oscil.base_function", IntParam(oscillator, "base_function", 0).ToString(CultureInfo.InvariantCulture), ZynCoverageStatus.Handled, relativePath, "Base functions are approximated during PAD harmonic extraction.");
+        AddBucket(buckets, "pad.oscil.base_modulation", IntParam(oscillator, "base_function_modulation", 0).ToString(CultureInfo.InvariantCulture), ZynCoverageStatus.Handled, relativePath, "Base-function modulation is approximated before PAD table spreading.");
+        AddBucket(buckets, "pad.oscil.modulation", IntParam(oscillator, "modulation", 0).ToString(CultureInfo.InvariantCulture), ZynCoverageStatus.Handled, relativePath, "OscilGen modulation is approximated during source-table extraction.");
+        AddBucket(buckets, "pad.oscil.adaptive", IntParam(oscillator, "adaptive_harmonics", 0).ToString(CultureInfo.InvariantCulture), ZynCoverageStatus.Handled, relativePath, "Adaptive harmonics are approximated at the PAD table root.");
+        AddBucket(buckets, "pad.oscil.spectrum_adjust", IntParam(oscillator, "spectrum_adjust_type", 0).ToString(CultureInfo.InvariantCulture), ZynCoverageStatus.Handled, relativePath, "Spectrum adjustment is approximated after source-table extraction.");
+
+        var oscilFilter = IntParam(oscillator, "filter_type", 0).ToString(CultureInfo.InvariantCulture);
+        AddBucket(
+            buckets,
+            "pad.oscil.filter_type",
+            oscilFilter,
+            HandledPadOscilFilters.Contains(oscilFilter) ? ZynCoverageStatus.Handled : ZynCoverageStatus.Unknown,
+            relativePath,
+            HandledPadOscilFilters.Contains(oscilFilter)
+                ? "This OscilGen filter type has an AquaSynth approximation."
+                : "Observed OscilGen filter type is not implemented in AquaSynth's Zyn PAD source extractor.");
+
+        var waveShape = IntParam(oscillator, "wave_shaping_function", 0).ToString(CultureInfo.InvariantCulture);
+        AddBucket(
+            buckets,
+            "pad.oscil.wave_shape",
+            waveShape,
+            HandledPadWaveShapes.Contains(waveShape) ? ZynCoverageStatus.Handled : ZynCoverageStatus.Unknown,
+            relativePath,
+            HandledPadWaveShapes.Contains(waveShape)
+                ? "This waveshaper has an AquaSynth approximation."
+                : "Observed OscilGen waveshaper is not implemented in AquaSynth's Zyn PAD source extractor.");
+
+        var filter = pad.Element("FILTER_PARAMETERS");
+        if (filter is not null)
+        {
+            var filterKey = $"cat={DescendantIntParam(filter, "category", 0)} type={DescendantIntParam(filter, "type", 0)}";
+            AddBucket(
+                buckets,
+                "pad.filter",
+                filterKey,
+                HandledPadGlobalFilters.Contains(filterKey) ? ZynCoverageStatus.Handled : ZynCoverageStatus.Unknown,
+                relativePath,
+                HandledPadGlobalFilters.Contains(filterKey)
+                    ? "Analog LP/HP PAD filters map to AquaSynth cutoff, order, Q, and envelope fields."
+                    : "Observed PAD filter category/type is not translated by the current PAD rebuild path.");
+
+            foreach (var filterLfo in filter.Elements("FILTER_LFO"))
+            {
+                AddBucket(
+                    buckets,
+                    "pad.filter_lfo",
+                    $"intensity={IntParam(filterLfo, "intensity", 0)}",
+                    IntParam(filterLfo, "intensity", 0) == 0 ? ZynCoverageStatus.Handled : ZynCoverageStatus.Counted,
+                    relativePath,
+                    IntParam(filterLfo, "intensity", 0) == 0
+                        ? "Neutral PAD filter LFO."
+                        : "PAD filter LFO is reported by rebuilds as missing lowering pressure.");
+            }
+        }
+    }
+
+    private static IEnumerable<ZynEngine> EnabledEngines(XElement item)
+    {
+        if (EngineEnabled(item, "add_enabled", "ADD_SYNTH_PARAMETERS")) yield return ZynEngine.AddSynth;
+        if (EngineEnabled(item, "sub_enabled", "SUB_SYNTH_PARAMETERS")) yield return ZynEngine.SubSynth;
+        if (EngineEnabled(item, "pad_enabled", "PAD_SYNTH_PARAMETERS")) yield return ZynEngine.PadSynth;
+    }
+
+    private static bool EngineEnabled(XElement item, string flagName, string sectionName) =>
+        BoolParamValue(item, flagName) ?? item.Element(sectionName) is not null;
+
+    private static bool BoolParam(XElement root, string name) =>
+        BoolParamValue(root, name) ?? false;
+
+    private static bool? BoolParamValue(XElement root, string name)
+    {
+        var value = root.Elements("par_bool")
+            .FirstOrDefault(element => AttributeValue(element, "name") == name)
+            ?.Attribute("value")
+            ?.Value;
+        if (value is null) return null;
+        return value.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
+               value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+               value == "1";
+    }
+
+    private static int IntParam(XElement? root, string name, int fallback)
+    {
+        var value = root?.Elements("par")
+            .FirstOrDefault(element => AttributeValue(element, "name") == name)
+            ?.Attribute("value")
+            ?.Value;
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) ? parsed : fallback;
+    }
+
+    private static int DescendantIntParam(XElement? root, string name, int fallback)
+    {
+        var value = root?.Descendants("par")
+            .FirstOrDefault(element => AttributeValue(element, "name") == name)
+            ?.Attribute("value")
+            ?.Value;
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) ? parsed : fallback;
+    }
+
+    private static string? AttributeValue(XElement element, string name) =>
+        element.Attribute(name)?.Value;
+
+    private static string EngineKey(ZynEngine engine) => engine switch
+    {
+        ZynEngine.AddSynth => "add",
+        ZynEngine.SubSynth => "sub",
+        ZynEngine.PadSynth => "pad",
+        _ => "unknown"
+    };
+
+    private static void AddBucket(
+        Dictionary<(string Area, string Key), CoverageAccumulator> buckets,
+        string area,
+        string key,
+        ZynCoverageStatus status,
+        string example,
+        string notes)
+    {
+        var bucketKey = (area, key);
+        if (!buckets.TryGetValue(bucketKey, out var bucket))
+        {
+            bucket = new CoverageAccumulator(area, key, status, notes);
+            buckets.Add(bucketKey, bucket);
+        }
+
+        bucket.Count++;
+        if (status > bucket.Status)
+        {
+            bucket.Status = status;
+            bucket.Notes = notes;
+        }
+        if (bucket.Examples.Count < 10 && !bucket.Examples.Contains(example, StringComparer.OrdinalIgnoreCase))
+        {
+            bucket.Examples.Add(example);
+        }
+    }
+
+    private sealed class CoverageAccumulator(string area, string key, ZynCoverageStatus status, string notes)
+    {
+        public string Area { get; } = area;
+        public string Key { get; } = key;
+        public ZynCoverageStatus Status { get; set; } = status;
+        public int Count { get; set; }
+        public List<string> Examples { get; } = [];
+        public string Notes { get; set; } = notes;
+
+        public ZynCoverageBucket ToBucket(int exampleCount) =>
+            new(Area, Key, Status, Count, Examples.Take(exampleCount).ToList(), Notes);
     }
 }

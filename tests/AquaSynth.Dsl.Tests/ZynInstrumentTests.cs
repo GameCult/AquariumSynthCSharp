@@ -264,6 +264,100 @@ public sealed class ZynInstrumentTests
         }
 
         await File.WriteAllLinesAsync(Path.Combine(artifactDir, "report.txt"), report);
+        var coverage = ZynInstrumentSurvey.CoverageDirectory(bankRoot);
+        await File.WriteAllTextAsync(Path.Combine(artifactDir, "coverage.md"), ZynInstrumentSurvey.CoverageMarkdown(coverage));
+    }
+
+    [Fact]
+    public void CoverageSurveyClassifiesProjectAuthoredZynPressure()
+    {
+        var root = Path.Combine(AppContext.BaseDirectory, "Fixtures", "ZynAddSubFX", "ProjectAuthored");
+
+        var report = ZynInstrumentSurvey.CoverageDirectory(root);
+
+        Assert.Equal(5, report.FileCount);
+        Assert.Equal(5, report.ParsedFileCount);
+        Assert.Contains(report.Buckets, bucket =>
+            bucket.Area == "engine" &&
+            bucket.Key == "pad" &&
+            bucket.Status == ZynCoverageStatus.Handled);
+        Assert.Contains(report.Buckets, bucket =>
+            bucket.Area == "engine" &&
+            bucket.Key == "add" &&
+            bucket.Status == ZynCoverageStatus.Counted);
+        Assert.Contains(report.Buckets, bucket =>
+            bucket.Area == "engine" &&
+            bucket.Key == "sub" &&
+            bucket.Status == ZynCoverageStatus.Counted);
+        Assert.Contains(report.Buckets, bucket =>
+            bucket.Area == "envelope" &&
+            bucket.Key.EndsWith(".free", StringComparison.Ordinal) &&
+            bucket.Status == ZynCoverageStatus.Counted);
+
+        var markdown = ZynInstrumentSurvey.CoverageMarkdown(report);
+        Assert.Contains("## Unknown", markdown);
+        Assert.Contains("## Counted", markdown);
+        Assert.Contains("## Handled", markdown);
+    }
+
+    [Fact]
+    public void CoverageSurveyExposesUnhandledZynPadSubtypes()
+    {
+        var dir = Directory.CreateTempSubdirectory("aquasynth-zyn-coverage-");
+        try
+        {
+            File.WriteAllText(Path.Combine(dir.FullName, "unknown-pad.xiz"), """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <ZynAddSubFX-data>
+                  <INSTRUMENT>
+                    <INFO><string name="name">Unknown PAD Modes</string></INFO>
+                    <INSTRUMENT_KIT>
+                      <INSTRUMENT_KIT_ITEM id="0">
+                        <par_bool name="enabled" value="yes"/>
+                        <par_bool name="pad_enabled" value="yes"/>
+                        <PAD_SYNTH_PARAMETERS>
+                          <OSCIL>
+                            <par name="filter_type" value="12"/>
+                            <par name="wave_shaping_function" value="14"/>
+                            <HARMONICS>
+                              <HARMONIC id="1"><par name="mag" value="127"/></HARMONIC>
+                            </HARMONICS>
+                          </OSCIL>
+                          <FILTER_PARAMETERS>
+                            <FILTER>
+                              <par name="category" value="2"/>
+                              <par name="type" value="3"/>
+                            </FILTER>
+                            <FILTER_LFO>
+                              <par name="intensity" value="40"/>
+                            </FILTER_LFO>
+                          </FILTER_PARAMETERS>
+                        </PAD_SYNTH_PARAMETERS>
+                      </INSTRUMENT_KIT_ITEM>
+                    </INSTRUMENT_KIT>
+                  </INSTRUMENT>
+                </ZynAddSubFX-data>
+                """);
+
+            var report = ZynInstrumentSurvey.CoverageDirectory(dir.FullName);
+
+            Assert.Contains(report.UnknownBuckets, bucket =>
+                bucket.Area == "pad.oscil.filter_type" &&
+                bucket.Key == "12");
+            Assert.Contains(report.UnknownBuckets, bucket =>
+                bucket.Area == "pad.oscil.wave_shape" &&
+                bucket.Key == "14");
+            Assert.Contains(report.UnknownBuckets, bucket =>
+                bucket.Area == "pad.filter" &&
+                bucket.Key == "cat=2 type=3");
+            Assert.Contains(report.CountedBuckets, bucket =>
+                bucket.Area == "pad.filter_lfo" &&
+                bucket.Key == "intensity=40");
+        }
+        finally
+        {
+            dir.Delete(recursive: true);
+        }
     }
 
     private static void AssertFeature(ZynInstrument instrument, string name, string value) =>

@@ -75,6 +75,36 @@ library candidates.
 - **Drum kits should not be first golf targets.** They are the best stress test
   for the model, but probably too broad for the first new syntax slice.
 
+## Coverage Map
+
+`ZynInstrumentSurvey.CoverageDirectory` now emits a handled/counted/unknown
+coverage report instead of only ranking instruments by aggregate pressure. The
+upstream GPL bank report is written to
+`artifacts/parity/zyn-upstream-bank-survey/coverage.md` by
+`SurveysUpstreamGplInstrumentBankWhenAvailable`.
+
+Current upstream bank coverage:
+
+- Files parsed: `1318/1318`
+- Enabled kit items: `1459`
+- Layered instruments: `63`
+- Handled with parity-backed or native AquaSynth coverage: PAD layers, named
+  kit layers, PAD table modes/bandwidth, PAD source-table extraction for the
+  implemented OscilGen subset, analog PAD LP/HP cutoff/order/Q/envelopes, and
+  staged non-free envelopes.
+- Counted but not translated: ADD, SUB, mixed-engine kits, free envelopes,
+  active LFO routing, formant filters/motion, and effects.
+- Unknown PAD filter pressure: non-analog or unimplemented PAD global filter
+  categories/types such as `cat=1 type=0`, `cat=2 type=0`, `cat=2 type=2`,
+  `cat=0 type=4`, `cat=0 type=6`, and smaller buckets.
+- Unknown PAD OscilGen pressure: unimplemented source filter types
+  `10`, `12`, `11`, `4`, `5`, `3`, and `8`; unimplemented waveshapers
+  `2`, `14`, `5`, `6`, `3`, `13`, `8`, and `9`.
+
+This map is not a clone checklist. It is a workout list. A bucket graduates from
+counted or unknown only when a parity target proves which AquaSynth authority
+should own the behavior.
+
 ## Recommended Next Cut
 
 Start with **named layer routing**, not PAD synthesis.

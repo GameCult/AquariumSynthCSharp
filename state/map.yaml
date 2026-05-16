@@ -30,6 +30,7 @@ modules:
   faust_rendering: src/AquaSynth.Dsl/FaustExport.cs
   dx7_reference_render_tests: tests/AquaSynth.Dsl.Tests/Dx7ReferenceParityTests.cs
   zyn_reference_reader: src/AquaSynth.Dsl/ZynInstrument.cs
+  zyn_coverage_survey: src/AquaSynth.Dsl/ZynInstrument.cs
   package_boundary_tests: tests/AquaSynth.Dsl.Tests/PackageBoundaryTests.cs
   sfxr: src/AquaSynth.Dsl/SfxrParams.cs
   analysis: src/AquaSynth.Dsl/AudioAnalysis.cs
