@@ -226,6 +226,51 @@ public sealed class ZynInstrumentTests
     }
 
     [Fact]
+    public void RebuildMapsZynStateVariablePadLowPassToAquaFilterAuthority()
+    {
+        var rebuild = ZynInstrumentReader.RebuildFirstPadAsAquaSynthScript(Encoding.UTF8.GetBytes("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <ZynAddSubFX-data>
+              <INSTRUMENT>
+                <INFO><string name="name">SV Low PAD</string></INFO>
+                <INSTRUMENT_KIT>
+                  <INSTRUMENT_KIT_ITEM id="0">
+                    <par_bool name="enabled" value="yes"/>
+                    <par_bool name="pad_enabled" value="yes"/>
+                    <PAD_SYNTH_PARAMETERS>
+                      <OSCIL>
+                        <HARMONICS>
+                          <HARMONIC id="1"><par name="mag" value="127"/></HARMONIC>
+                        </HARMONICS>
+                      </OSCIL>
+                      <FILTER_PARAMETERS>
+                        <FILTER>
+                          <par name="category" value="2"/>
+                          <par name="type" value="0"/>
+                          <par name="freq" value="48"/>
+                          <par name="q" value="32"/>
+                          <par name="stages" value="2"/>
+                        </FILTER>
+                      </FILTER_PARAMETERS>
+                    </PAD_SYNTH_PARAMETERS>
+                  </INSTRUMENT_KIT_ITEM>
+                </INSTRUMENT_KIT>
+              </INSTRUMENT>
+            </ZynAddSubFX-data>
+            """), tableRootFrequencyHz: 77.7813f);
+        var patch = PatchScript.Parse(rebuild.Script);
+
+        var bank = Assert.Single(patch.SpectralBanks);
+        var voice = bank.Treatment;
+        Assert.True(voice.Filter.LowPass < 1);
+        Assert.Equal(3, voice.Filter.LowPassOrder);
+        Assert.True(voice.Filter.LowPassQ > 0);
+        Assert.Equal(0, voice.Filter.HighPass);
+        Assert.Contains(rebuild.MatchedFeatures, feature => feature.Name == "pad_filter_lpf");
+        Assert.Contains(rebuild.MatchedFeatures, feature => feature.Name == "pad_filter_lpf_order" && feature.Value == "3");
+    }
+
+    [Fact]
     public async Task SurveysUpstreamGplInstrumentBankWhenAvailable()
     {
         var root = RepositoryRoot();
@@ -338,9 +383,40 @@ public sealed class ZynInstrumentTests
                   </INSTRUMENT>
                 </ZynAddSubFX-data>
                 """);
+            File.WriteAllText(Path.Combine(dir.FullName, "handled-sv-pad.xiz"), """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <ZynAddSubFX-data>
+                  <INSTRUMENT>
+                    <INFO><string name="name">Handled SV PAD</string></INFO>
+                    <INSTRUMENT_KIT>
+                      <INSTRUMENT_KIT_ITEM id="0">
+                        <par_bool name="enabled" value="yes"/>
+                        <par_bool name="pad_enabled" value="yes"/>
+                        <PAD_SYNTH_PARAMETERS>
+                          <OSCIL>
+                            <HARMONICS>
+                              <HARMONIC id="1"><par name="mag" value="127"/></HARMONIC>
+                            </HARMONICS>
+                          </OSCIL>
+                          <FILTER_PARAMETERS>
+                            <FILTER>
+                              <par name="category" value="2"/>
+                              <par name="type" value="0"/>
+                            </FILTER>
+                          </FILTER_PARAMETERS>
+                        </PAD_SYNTH_PARAMETERS>
+                      </INSTRUMENT_KIT_ITEM>
+                    </INSTRUMENT_KIT>
+                  </INSTRUMENT>
+                </ZynAddSubFX-data>
+                """);
 
             var report = ZynInstrumentSurvey.CoverageDirectory(dir.FullName);
 
+            Assert.Contains(report.Buckets, bucket =>
+                bucket.Area == "pad.filter" &&
+                bucket.Key == "cat=2 type=0" &&
+                bucket.Status == ZynCoverageStatus.Handled);
             Assert.Contains(report.UnknownBuckets, bucket =>
                 bucket.Area == "pad.oscil.filter_type" &&
                 bucket.Key == "12");

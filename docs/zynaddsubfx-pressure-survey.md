@@ -90,13 +90,15 @@ Current upstream bank coverage:
 - Layered instruments: `63`
 - Handled with parity-backed or native AquaSynth coverage: PAD layers, named
   kit layers, PAD table modes/bandwidth, PAD source-table extraction for the
-  implemented OscilGen subset, analog PAD LP/HP cutoff/order/Q/envelopes, and
-  staged non-free envelopes.
+  implemented OscilGen subset, analog and state-variable PAD LP/HP
+  cutoff/order/Q/envelopes, and staged non-free envelopes.
 - Counted but not translated: ADD, SUB, mixed-engine kits, free envelopes,
   active LFO routing, formant filters/motion, and effects.
-- Unknown PAD filter pressure: non-analog or unimplemented PAD global filter
-  categories/types such as `cat=1 type=0`, `cat=2 type=0`, `cat=2 type=2`,
-  `cat=0 type=4`, `cat=0 type=6`, and smaller buckets.
+- Unknown PAD filter pressure: formant filters, state-variable band/notch, and
+  other unimplemented PAD global filter categories/types such as
+  `cat=1 type=0`, `cat=2 type=2`, `cat=0 type=4`, `cat=0 type=6`, and
+  smaller buckets. State-variable LP/HP (`cat=2 type=0/1`) now lower through
+  AquaSynth's existing cutoff/order/Q authority.
 - Unknown PAD OscilGen pressure: unimplemented source filter types
   `10`, `12`, `11`, `4`, `5`, `3`, and `8`; unimplemented waveshapers
   `2`, `14`, `5`, `6`, `3`, `13`, `8`, and `9`.
