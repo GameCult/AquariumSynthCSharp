@@ -59,9 +59,11 @@ Current slice:
   `PadSynthWaveform` uses the Zyn PAD profile/bandwidth formulas for those
   banks and keeps the old generic PADsynth path for ordinary `spectrum`.
 - `ZynInstrumentReader.RebuildFirstPadAsAquariumScript` now emits readable
-  `zyn_mode=`, `zyn_bandwidth=`, `zyn_bwscale=`, `zyn_profile=...`, and
-  `zyn_position=...` fields, and maps Zyn PAD volume with the source
-  exponential gain curve instead of the old tiny linear `/500` guess.
+  neutral `pad_mode=`, `pad_bandwidth=`, `pad_bwscale=`, `pad_profile=...`,
+  and `pad_position=...` fields, and maps Zyn PAD volume with the source
+  exponential gain curve instead of the old tiny linear `/500` guess. The
+  parser still accepts older `zyn_*` aliases for parity artifacts, but authored
+  `.aqua` should use Aquarium-native PAD terms.
 - The translator now expands a useful subset of Zyn OscilGen base-function
   harmonic content plus spectrum adjustment before feeding PAD synthesis. This
   is a coherent source-table owner, but current parity is mixed: it improves

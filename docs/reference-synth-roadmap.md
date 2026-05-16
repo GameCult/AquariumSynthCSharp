@@ -184,6 +184,13 @@ PAD engine parity across all harmonic profiles, randomness controls, or
 multi-table pitch-zone behavior. `root`, `spread`, and `partials` are
 authoring-time table shape, not runtime controls.
 
+The canonical Aquarium spelling for richer spectral-table shaping is neutral:
+`pad_mode`, `pad_bandwidth`, `pad_bwscale`, `pad_profile`, and `pad_position`.
+The Zyn importer may populate those fields from Zyn's PAD controls, and the
+parser still accepts older `zyn_*` names in generated parity artifacts, but
+authored or newly generated `.aqua` should not use reference-synth names for
+general DSP intent.
+
 Sources:
 
 - [ZynAddSubFX](https://github.com/zynaddsubfx/zynaddsubfx)

@@ -46,7 +46,7 @@ internal static class PadSynthWaveform
     {
         return bank.Profile.Mode == PadSpectrumMode.Generic
             ? GenericAmplitudeSpectrum(bank, tableSize)
-            : ZynAmplitudeSpectrum(bank, tableSize);
+            : ProfiledAmplitudeSpectrum(bank, tableSize);
     }
 
     private static double[] GenericAmplitudeSpectrum(SpectralBank bank, int tableSize)
@@ -97,18 +97,18 @@ internal static class PadSynthWaveform
         return amplitudes;
     }
 
-    private static double[] ZynAmplitudeSpectrum(SpectralBank bank, int tableSize)
+    private static double[] ProfiledAmplitudeSpectrum(SpectralBank bank, int tableSize)
     {
         var amplitudes = new double[tableSize / 2 + 1];
         var harmonics = NormalizeHarmonics(bank.Partials);
-        var profile = ZynProfile(bank.Profile.ZynProfile);
-        if (bank.Profile.Mode == PadSpectrumMode.ZynBandwidth)
+        var profile = HarmonicProfile(bank.Profile.HarmonicProfile);
+        if (bank.Profile.Mode == PadSpectrumMode.Bandwidth)
         {
-            AddZynBandwidthSpectrum(amplitudes, harmonics, profile, bank, tableSize);
+            AddProfiledBandwidthSpectrum(amplitudes, harmonics, profile, bank, tableSize);
             return amplitudes;
         }
 
-        AddZynPeakSpectrum(amplitudes, harmonics, bank, tableSize, bank.Profile.Mode == PadSpectrumMode.ZynContinuous);
+        AddProfiledPeakSpectrum(amplitudes, harmonics, bank, tableSize, bank.Profile.Mode == PadSpectrumMode.Continuous);
         return amplitudes;
     }
 
@@ -125,7 +125,7 @@ internal static class PadSynthWaveform
             .ToArray();
     }
 
-    private static double[] ZynProfile(ZynHarmonicProfile profile)
+    private static double[] HarmonicProfile(PadHarmonicProfile profile)
     {
         const int profileSize = 512;
         const int superSample = 16;
@@ -148,11 +148,11 @@ internal static class PadSynthWaveform
                 continue;
             }
 
-            if (profile.Half == ZynProfileHalf.Upper && x > 0.5)
+            if (profile.Half == PadProfileHalf.Upper && x > 0.5)
             {
                 continue;
             }
-            if (profile.Half == ZynProfileHalf.Lower && x < 0.5)
+            if (profile.Half == PadProfileHalf.Lower && x < 0.5)
             {
                 continue;
             }
@@ -164,12 +164,12 @@ internal static class PadSynthWaveform
 
             var value = profile.BaseType switch
             {
-                ZynProfileBaseType.Square => Math.Exp(-(x * x) * basePar) < 0.4 ? 0.0 : 1.0,
-                ZynProfileBaseType.DoubleExponential => Math.Exp(-Math.Abs(x) * Math.Sqrt(basePar)),
+                PadProfileBaseType.Square => Math.Exp(-(x * x) * basePar) < 0.4 ? 0.0 : 1.0,
+                PadProfileBaseType.DoubleExponential => Math.Exp(-Math.Abs(x) * Math.Sqrt(basePar)),
                 _ => Math.Exp(-(x * x) * basePar)
             };
 
-            value = ApplyZynAmplitudeMultiplier(value, originalX, ampPar1, ampPar2, profile);
+            value = ApplyProfileAmplitudeMultiplier(value, originalX, ampPar1, ampPar2, profile);
             smp[i / superSample] += value / superSample;
         }
 
@@ -185,49 +185,49 @@ internal static class PadSynthWaveform
         return smp;
     }
 
-    private static double ApplyZynAmplitudeMultiplier(
+    private static double ApplyProfileAmplitudeMultiplier(
         double value,
         double originalX,
         double ampPar1,
         double ampPar2,
-        ZynHarmonicProfile profile)
+        PadHarmonicProfile profile)
     {
-        if (profile.AmplitudeType == ZynProfileAmplitudeType.Off)
+        if (profile.AmplitudeType == PadProfileAmplitudeType.Off)
         {
             return value;
         }
 
         var amp = profile.AmplitudeType switch
         {
-            ZynProfileAmplitudeType.Gaussian => Math.Exp(-(originalX * originalX) * 10.0 * ampPar1),
-            ZynProfileAmplitudeType.Sine => 0.5 * (1.0 + Math.Cos(Math.PI * originalX * Math.Sqrt(ampPar1 * 4.0 + 1.0))),
-            ZynProfileAmplitudeType.Flat => 1.0 / (Math.Pow(originalX * (ampPar1 * 2.0 + 0.8), 14.0) + 1.0),
+            PadProfileAmplitudeType.Gaussian => Math.Exp(-(originalX * originalX) * 10.0 * ampPar1),
+            PadProfileAmplitudeType.Sine => 0.5 * (1.0 + Math.Cos(Math.PI * originalX * Math.Sqrt(ampPar1 * 4.0 + 1.0))),
+            PadProfileAmplitudeType.Flat => 1.0 / (Math.Pow(originalX * (ampPar1 * 2.0 + 0.8), 14.0) + 1.0),
             _ => 1.0
         };
 
         return profile.AmplitudeMode switch
         {
-            ZynProfileAmplitudeMode.Mult => value * (amp * (1.0 - ampPar2) + ampPar2),
-            ZynProfileAmplitudeMode.Div1 => value / (amp + Math.Pow(ampPar2, 4.0) * 20.0 + 0.0001),
-            ZynProfileAmplitudeMode.Div2 => amp / (value + Math.Pow(ampPar2, 4.0) * 20.0 + 0.0001),
+            PadProfileAmplitudeMode.Mult => value * (amp * (1.0 - ampPar2) + ampPar2),
+            PadProfileAmplitudeMode.Div1 => value / (amp + Math.Pow(ampPar2, 4.0) * 20.0 + 0.0001),
+            PadProfileAmplitudeMode.Div2 => amp / (value + Math.Pow(ampPar2, 4.0) * 20.0 + 0.0001),
             _ => amp * (1.0 - ampPar2) + value * ampPar2
         };
     }
 
-    private static void AddZynBandwidthSpectrum(
+    private static void AddProfiledBandwidthSpectrum(
         double[] amplitudes,
         IReadOnlyList<HarmonicPartial> harmonics,
         double[] profile,
         SpectralBank bank,
         int tableSize)
     {
-        var bandwidthCents = ZynBandwidthCents(bank.Profile.Bandwidth);
-        var bandwidthScale = ZynBandwidthScalePower(bank.Profile.BandwidthScale);
-        var bandwidthAdjust = Math.Max(0.001, ZynProfileBandwidthAdjust(bank.Profile.ZynProfile, profile));
+        var bandwidthCents = PadBandwidthCents(bank.Profile.Bandwidth);
+        var bandwidthScale = PadBandwidthScalePower(bank.Profile.BandwidthScale);
+        var bandwidthAdjust = Math.Max(0.001, HarmonicProfileBandwidthAdjust(bank.Profile.HarmonicProfile, profile));
         var spectrumSize = tableSize / 2;
         foreach (var harmonic in harmonics)
         {
-            var realRatio = ZynHarmonicRatio(harmonic.Ratio, bank.Profile.ZynPosition);
+            var realRatio = PadHarmonicRatio(harmonic.Ratio, bank.Profile.HarmonicPosition);
             var realFrequency = realRatio * bank.RootFrequencyHz;
             if (realFrequency > SampleRate * 0.49999 || realFrequency < 20 || harmonic.Gain < 0.0001f)
             {
@@ -274,7 +274,7 @@ internal static class PadSynthWaveform
         }
     }
 
-    private static void AddZynPeakSpectrum(
+    private static void AddProfiledPeakSpectrum(
         double[] amplitudes,
         IReadOnlyList<HarmonicPartial> harmonics,
         SpectralBank bank,
@@ -285,7 +285,7 @@ internal static class PadSynthWaveform
         var previousGain = 0.0;
         foreach (var harmonic in harmonics)
         {
-            var frequency = ZynHarmonicRatio(harmonic.Ratio, bank.Profile.ZynPosition) * bank.RootFrequencyHz;
+            var frequency = PadHarmonicRatio(harmonic.Ratio, bank.Profile.HarmonicPosition) * bank.RootFrequencyHz;
             var bin = (int)Math.Round(frequency / SampleRate * tableSize);
             if (bin <= 0 || bin >= amplitudes.Length)
             {
@@ -307,13 +307,13 @@ internal static class PadSynthWaveform
         }
     }
 
-    private static double ZynBandwidthCents(int bandwidth)
+    private static double PadBandwidthCents(int bandwidth)
     {
         var result = Math.Pow(Math.Max(0, bandwidth) / 1000.0, 1.1);
         return Math.Pow(10.0, result * 4.0) * 0.25;
     }
 
-    private static double ZynBandwidthScalePower(int scale) => scale switch
+    private static double PadBandwidthScalePower(int scale) => scale switch
     {
         1 => 0.0,
         2 => 0.25,
@@ -325,7 +325,7 @@ internal static class PadSynthWaveform
         _ => 1.0
     };
 
-    private static double ZynProfileBandwidthAdjust(ZynHarmonicProfile harmonicProfile, IReadOnlyList<double> profile)
+    private static double HarmonicProfileBandwidthAdjust(PadHarmonicProfile harmonicProfile, IReadOnlyList<double> profile)
     {
         if (!harmonicProfile.AutoScale)
         {
@@ -345,7 +345,7 @@ internal static class PadSynthWaveform
         return 1.0;
     }
 
-    private static double ZynHarmonicRatio(float harmonicNumber, ZynHarmonicPosition position)
+    private static double PadHarmonicRatio(float harmonicNumber, PadHarmonicPosition position)
     {
         var n = Math.Max(1.0, harmonicNumber);
         var n0 = n - 1.0;
@@ -353,13 +353,13 @@ internal static class PadSynthWaveform
         var par2 = position.Parameter2 / 255.0;
         var result = position.Type switch
         {
-            ZynHarmonicPositionType.ShiftUp => ZynShiftUp(n, n0, par1, par2),
-            ZynHarmonicPositionType.ShiftDown => ZynShiftDown(n, n0, par1, par2),
-            ZynHarmonicPositionType.PowerUp => Math.Pow(n0 / (par1 * 100.0 + 1.0), 1.0 - par2 * 0.8) * (par1 * 100.0 + 1.0) + 1.0,
-            ZynHarmonicPositionType.PowerDown => n0 * (1.0 - par1) + Math.Pow(n0 * 0.1, par2 * 3.0 + 1.0) * par1 * 10.0 + 1.0,
-            ZynHarmonicPositionType.Sine => n0 + Math.Sin(n0 * par2 * par2 * Math.PI * 0.999) * Math.Sqrt(par1) * 2.0 + 1.0,
-            ZynHarmonicPositionType.Power => n0 * Math.Pow(1.0 + par1 * Math.Pow(n0 * 0.8, Math.Pow(par2 * 2.0, 2.0) + 0.1), Math.Pow(par2 * 2.0, 2.0) + 0.1) + 1.0,
-            ZynHarmonicPositionType.Shift => (n + position.Parameter1 / 255.0) / (position.Parameter1 / 255.0 + 1.0),
+            PadHarmonicPositionType.ShiftUp => PadShiftUp(n, n0, par1, par2),
+            PadHarmonicPositionType.ShiftDown => PadShiftDown(n, n0, par1, par2),
+            PadHarmonicPositionType.PowerUp => Math.Pow(n0 / (par1 * 100.0 + 1.0), 1.0 - par2 * 0.8) * (par1 * 100.0 + 1.0) + 1.0,
+            PadHarmonicPositionType.PowerDown => n0 * (1.0 - par1) + Math.Pow(n0 * 0.1, par2 * 3.0 + 1.0) * par1 * 10.0 + 1.0,
+            PadHarmonicPositionType.Sine => n0 + Math.Sin(n0 * par2 * par2 * Math.PI * 0.999) * Math.Sqrt(par1) * 2.0 + 1.0,
+            PadHarmonicPositionType.Power => n0 * Math.Pow(1.0 + par1 * Math.Pow(n0 * 0.8, Math.Pow(par2 * 2.0, 2.0) + 0.1), Math.Pow(par2 * 2.0, 2.0) + 0.1) + 1.0,
+            PadHarmonicPositionType.Shift => (n + position.Parameter1 / 255.0) / (position.Parameter1 / 255.0 + 1.0),
             _ => n
         };
         var forced = position.Parameter3 / 255.0;
@@ -367,13 +367,13 @@ internal static class PadSynthWaveform
         return Math.Max(0.0001, rounded + (1.0 - forced) * (result - rounded));
     }
 
-    private static double ZynShiftUp(double n, double n0, double par1, double par2)
+    private static double PadShiftUp(double n, double n0, double par1, double par2)
     {
         var threshold = par2 * par2 * 100.0 + 1.0;
         return n < threshold ? n : 1.0 + n0 + (n0 - threshold + 1.0) * par1 * 8.0;
     }
 
-    private static double ZynShiftDown(double n, double n0, double par1, double par2)
+    private static double PadShiftDown(double n, double n0, double par1, double par2)
     {
         var threshold = par2 * par2 * 100.0 + 1.0;
         return n < threshold ? n : 1.0 + n0 - (n0 - threshold + 1.0) * par1 * 0.90;
@@ -483,22 +483,22 @@ internal static class PadSynthWaveform
         AddInt((int)bank.Profile.Mode);
         AddInt(bank.Profile.Bandwidth);
         AddInt(bank.Profile.BandwidthScale);
-        AddInt((int)bank.Profile.ZynProfile.BaseType);
-        AddInt(bank.Profile.ZynProfile.BaseParameter);
-        AddInt(bank.Profile.ZynProfile.FrequencyMultiplier);
-        AddInt(bank.Profile.ZynProfile.ModulatorParameter);
-        AddInt(bank.Profile.ZynProfile.ModulatorFrequency);
-        AddInt(bank.Profile.ZynProfile.Width);
-        AddInt((int)bank.Profile.ZynProfile.AmplitudeType);
-        AddInt((int)bank.Profile.ZynProfile.AmplitudeMode);
-        AddInt(bank.Profile.ZynProfile.AmplitudeParameter1);
-        AddInt(bank.Profile.ZynProfile.AmplitudeParameter2);
-        AddInt(bank.Profile.ZynProfile.AutoScale ? 1 : 0);
-        AddInt((int)bank.Profile.ZynProfile.Half);
-        AddInt((int)bank.Profile.ZynPosition.Type);
-        AddInt(bank.Profile.ZynPosition.Parameter1);
-        AddInt(bank.Profile.ZynPosition.Parameter2);
-        AddInt(bank.Profile.ZynPosition.Parameter3);
+        AddInt((int)bank.Profile.HarmonicProfile.BaseType);
+        AddInt(bank.Profile.HarmonicProfile.BaseParameter);
+        AddInt(bank.Profile.HarmonicProfile.FrequencyMultiplier);
+        AddInt(bank.Profile.HarmonicProfile.ModulatorParameter);
+        AddInt(bank.Profile.HarmonicProfile.ModulatorFrequency);
+        AddInt(bank.Profile.HarmonicProfile.Width);
+        AddInt((int)bank.Profile.HarmonicProfile.AmplitudeType);
+        AddInt((int)bank.Profile.HarmonicProfile.AmplitudeMode);
+        AddInt(bank.Profile.HarmonicProfile.AmplitudeParameter1);
+        AddInt(bank.Profile.HarmonicProfile.AmplitudeParameter2);
+        AddInt(bank.Profile.HarmonicProfile.AutoScale ? 1 : 0);
+        AddInt((int)bank.Profile.HarmonicProfile.Half);
+        AddInt((int)bank.Profile.HarmonicPosition.Type);
+        AddInt(bank.Profile.HarmonicPosition.Parameter1);
+        AddInt(bank.Profile.HarmonicPosition.Parameter2);
+        AddInt(bank.Profile.HarmonicPosition.Parameter3);
         foreach (var partial in bank.Partials)
         {
             AddFloat(partial.Ratio);

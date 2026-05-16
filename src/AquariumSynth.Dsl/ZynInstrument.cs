@@ -370,7 +370,7 @@ public static class ZynInstrumentReader
         var filterQText = lowPass < 1 ? $" lpf_q={F(lowPassQ)}" : "";
         var highPassText = highPass > 0 ? $" hpf={F(highPass)} hpf_order={highPassOrder}" : "";
         script.AppendLine($"layer name={safeName} engine=pad gain={F(layerGain)} lpf={F(lowPass)}{filterQText} lpf_order={lowPassOrder}{highPassText}{filterEnvelopeText}{highPassEnvelopeText} env=rl rates={F(attack)},{F(decay)},1,{F(release)} levels=1,1,1,0 curves=lin,lin,lin,lin gate=1.5");
-        script.AppendLine($"spectrum layer={safeName} root={F(tableRootFrequencyHz)} freq={F(noteFrequencyHz)} spread=0 zyn_mode={mode} zyn_bandwidth={bandwidth} zyn_bwscale={bandwidthScale} zyn_profile={profile} zyn_position={position} partials={partialText}");
+        script.AppendLine($"spectrum layer={safeName} root={F(tableRootFrequencyHz)} freq={F(noteFrequencyHz)} spread=0 pad_mode={mode} pad_bandwidth={bandwidth} pad_bwscale={bandwidthScale} pad_profile={profile} pad_position={position} partials={partialText}");
     }
 
     private static ZynKitItem ParseKitItem(XElement item)

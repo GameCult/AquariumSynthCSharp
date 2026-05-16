@@ -159,11 +159,13 @@ public sealed class ZynInstrumentTests
         Assert.Equal(0, rebuild.KitItemId);
         Assert.Contains("spectrum", rebuild.Script);
         Assert.Contains("root=77.7813", rebuild.Script);
-        Assert.Contains("zyn_profile=", rebuild.Script);
-        Assert.Contains("zyn_position=", rebuild.Script);
+        Assert.Contains("pad_profile=", rebuild.Script);
+        Assert.Contains("pad_position=", rebuild.Script);
+        Assert.DoesNotContain("zyn_profile=", rebuild.Script);
+        Assert.DoesNotContain("zyn_position=", rebuild.Script);
         var bank = Assert.Single(patch.SpectralBanks);
         Assert.Equal(77.7813f, bank.RootFrequencyHz, precision: 4);
-        Assert.Equal(PadSpectrumMode.ZynBandwidth, bank.Profile.Mode);
+        Assert.Equal(PadSpectrumMode.Bandwidth, bank.Profile.Mode);
         Assert.Contains(bank.Partials, partial => Math.Abs(partial.Ratio - 2) < 0.0001f && partial.Gain > 0);
         Assert.Contains(rebuild.MatchedFeatures, feature => feature.Name == "pad_oscillator_harmonics");
         Assert.Contains(rebuild.MatchedFeatures, feature => feature.Name == "pad_harmonic_profile");

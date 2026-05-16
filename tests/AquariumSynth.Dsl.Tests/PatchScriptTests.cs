@@ -441,7 +441,27 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
-    public void SpectralBankParsesZynPadProfileFields()
+    public void SpectralBankParsesPadProfileFields()
+    {
+        var patch = PatchScript.Parse("""
+            layer name=pad engine=pad gain=.08
+            spectrum layer=pad root=77.7813 freq=261.6256 pad_mode=bandwidth pad_bandwidth=485 pad_bwscale=3 pad_profile=gaussian:99:8:12:55:127:sine:mult:80:20:yes:full pad_position=sine:20:40:60 partials=1:.08,2:.04
+            """);
+
+        var bank = Assert.Single(patch.SpectralBanks);
+        Assert.Equal(PadSpectrumMode.Bandwidth, bank.Profile.Mode);
+        Assert.Equal(485, bank.Profile.Bandwidth);
+        Assert.Equal(3, bank.Profile.BandwidthScale);
+        Assert.Equal(PadProfileBaseType.Gaussian, bank.Profile.HarmonicProfile.BaseType);
+        Assert.Equal(8, bank.Profile.HarmonicProfile.FrequencyMultiplier);
+        Assert.Equal(PadProfileAmplitudeType.Sine, bank.Profile.HarmonicProfile.AmplitudeType);
+        Assert.Equal(PadProfileAmplitudeMode.Mult, bank.Profile.HarmonicProfile.AmplitudeMode);
+        Assert.Equal(PadHarmonicPositionType.Sine, bank.Profile.HarmonicPosition.Type);
+        Assert.Equal(60, bank.Profile.HarmonicPosition.Parameter3);
+    }
+
+    [Fact]
+    public void SpectralBankStillParsesLegacyZynPadProfileFields()
     {
         var patch = PatchScript.Parse("""
             layer name=pad engine=pad gain=.08
@@ -449,15 +469,11 @@ public sealed class PatchScriptTests
             """);
 
         var bank = Assert.Single(patch.SpectralBanks);
-        Assert.Equal(PadSpectrumMode.ZynBandwidth, bank.Profile.Mode);
+        Assert.Equal(PadSpectrumMode.Bandwidth, bank.Profile.Mode);
         Assert.Equal(485, bank.Profile.Bandwidth);
         Assert.Equal(3, bank.Profile.BandwidthScale);
-        Assert.Equal(ZynProfileBaseType.Gaussian, bank.Profile.ZynProfile.BaseType);
-        Assert.Equal(8, bank.Profile.ZynProfile.FrequencyMultiplier);
-        Assert.Equal(ZynProfileAmplitudeType.Sine, bank.Profile.ZynProfile.AmplitudeType);
-        Assert.Equal(ZynProfileAmplitudeMode.Mult, bank.Profile.ZynProfile.AmplitudeMode);
-        Assert.Equal(ZynHarmonicPositionType.Sine, bank.Profile.ZynPosition.Type);
-        Assert.Equal(60, bank.Profile.ZynPosition.Parameter3);
+        Assert.Equal(PadProfileAmplitudeType.Sine, bank.Profile.HarmonicProfile.AmplitudeType);
+        Assert.Equal(PadHarmonicPositionType.Sine, bank.Profile.HarmonicPosition.Type);
     }
 
     [Fact]

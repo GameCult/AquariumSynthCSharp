@@ -210,19 +210,19 @@ public sealed record HarmonicBank(
 public enum PadSpectrumMode
 {
     Generic,
-    ZynBandwidth,
-    ZynDiscrete,
-    ZynContinuous
+    Bandwidth,
+    Discrete,
+    Continuous
 }
 
-public enum ZynProfileBaseType
+public enum PadProfileBaseType
 {
     Gaussian = 0,
     Square = 1,
     DoubleExponential = 2
 }
 
-public enum ZynProfileAmplitudeType
+public enum PadProfileAmplitudeType
 {
     Off = 0,
     Gaussian = 1,
@@ -230,7 +230,7 @@ public enum ZynProfileAmplitudeType
     Flat = 3
 }
 
-public enum ZynProfileAmplitudeMode
+public enum PadProfileAmplitudeMode
 {
     Sum = 0,
     Mult = 1,
@@ -238,14 +238,14 @@ public enum ZynProfileAmplitudeMode
     Div2 = 3
 }
 
-public enum ZynProfileHalf
+public enum PadProfileHalf
 {
     Full = 0,
     Upper = 1,
     Lower = 2
 }
 
-public enum ZynHarmonicPositionType
+public enum PadHarmonicPositionType
 {
     Harmonic = 0,
     ShiftUp = 1,
@@ -257,22 +257,22 @@ public enum ZynHarmonicPositionType
     Shift = 7
 }
 
-public sealed record ZynHarmonicProfile(
-    ZynProfileBaseType BaseType = ZynProfileBaseType.Gaussian,
+public sealed record PadHarmonicProfile(
+    PadProfileBaseType BaseType = PadProfileBaseType.Gaussian,
     int BaseParameter = 80,
     int FrequencyMultiplier = 0,
     int ModulatorParameter = 0,
     int ModulatorFrequency = 30,
     int Width = 127,
-    ZynProfileAmplitudeType AmplitudeType = ZynProfileAmplitudeType.Off,
-    ZynProfileAmplitudeMode AmplitudeMode = ZynProfileAmplitudeMode.Sum,
+    PadProfileAmplitudeType AmplitudeType = PadProfileAmplitudeType.Off,
+    PadProfileAmplitudeMode AmplitudeMode = PadProfileAmplitudeMode.Sum,
     int AmplitudeParameter1 = 80,
     int AmplitudeParameter2 = 64,
     bool AutoScale = true,
-    ZynProfileHalf Half = ZynProfileHalf.Full);
+    PadProfileHalf Half = PadProfileHalf.Full);
 
-public sealed record ZynHarmonicPosition(
-    ZynHarmonicPositionType Type = ZynHarmonicPositionType.Harmonic,
+public sealed record PadHarmonicPosition(
+    PadHarmonicPositionType Type = PadHarmonicPositionType.Harmonic,
     int Parameter1 = 0,
     int Parameter2 = 0,
     int Parameter3 = 0);
@@ -281,14 +281,14 @@ public sealed record PadSpectrumProfile(
     PadSpectrumMode Mode = PadSpectrumMode.Generic,
     int Bandwidth = 500,
     int BandwidthScale = 0,
-    ZynHarmonicProfile ZynProfile = null!,
-    ZynHarmonicPosition ZynPosition = null!)
+    PadHarmonicProfile HarmonicProfile = null!,
+    PadHarmonicPosition HarmonicPosition = null!)
 {
     public static PadSpectrumProfile Generic { get; } = new();
 
-    public ZynHarmonicProfile ZynProfile { get; init; } = ZynProfile ?? new();
+    public PadHarmonicProfile HarmonicProfile { get; init; } = HarmonicProfile ?? new();
 
-    public ZynHarmonicPosition ZynPosition { get; init; } = ZynPosition ?? new();
+    public PadHarmonicPosition HarmonicPosition { get; init; } = HarmonicPosition ?? new();
 }
 
 public sealed record SpectralBank(
