@@ -10,11 +10,13 @@
     <Company>GameCult</Company>
     <Description>AquaSynth patch DSL model, parser, analysis helpers, and Faust source emitter.</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon-package.png</PackageIcon>
     <RepositoryUrl>https://github.com/GameCult/AquaSynth</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\icon-package.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

@@ -1,5 +1,9 @@
 # AquaSynth
 
+<p align="center">
+  <img src="icon.png" alt="AquaSynth icon" width="180" />
+</p>
+
 C# front-end for AquaSynth patch scripts. It parses the AquaSynth patch DSL
 into a serializable patch graph, emits Faust `.dsp`, and can ask an installed
 Faust compiler to generate backend code such as C#, C++, C, or Rust.

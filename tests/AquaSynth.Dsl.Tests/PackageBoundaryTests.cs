@@ -24,6 +24,7 @@ public sealed class PackageBoundaryTests
 
             Assert.Contains(entries, entry => entry.StartsWith("lib/net10.0/AquaSynth.Dsl.dll", StringComparison.Ordinal));
             Assert.Contains("README.md", entries);
+            Assert.Contains("icon-package.png", entries);
             Assert.DoesNotContain(entries, entry => entry.StartsWith("tests/", StringComparison.OrdinalIgnoreCase));
             Assert.DoesNotContain(entries, entry => entry.StartsWith("Fixtures/", StringComparison.OrdinalIgnoreCase));
             Assert.DoesNotContain(entries, entry => entry.StartsWith("patches/", StringComparison.OrdinalIgnoreCase));
