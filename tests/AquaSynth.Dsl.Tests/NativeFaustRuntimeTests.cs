@@ -1,4 +1,5 @@
 using AquaSynth.Dsl;
+using AquaSynth.Faust;
 
 namespace AquaSynth.Dsl.Tests;
 

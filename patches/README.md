@@ -2,7 +2,7 @@
 
 This folder is the development patch library for AquaSynth `.aqua` scripts. It is where reusable stock, reference rebuilds, calibration probes, and inspiration patches live as files instead of being trapped inside C# string constants or ignored render artifacts.
 
-The library is intentionally outside `src/` and is not part of the shipped `AquaSynth.Dsl` NuGet package. Treat it as repo-owned source material for future synth consumers, examples, and parity work.
+The library is intentionally outside `src/` and is not part of the shipped AquaSynth NuGet packages. Treat it as repo-owned source material for future synth consumers, examples, and parity work.
 
 ## Layout
 

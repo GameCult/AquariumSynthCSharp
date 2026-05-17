@@ -1,6 +1,6 @@
 version: 1
 purpose: Development patch library for AquaSynth DSL examples, parity rebuilds, and stock inspiration.
-package_boundary: Not included in AquaSynth.Dsl.nupkg unless explicitly promoted later.
+package_boundary: Not included in published AquaSynth packages unless explicitly promoted later.
 entries:
   - path: patches/808/clap.aqua
     family: 808

@@ -4,9 +4,9 @@
   <img src="icon.png" alt="AquaSynth icon" width="180" />
 </p>
 
-C# front-end for AquaSynth patch scripts. It parses the AquaSynth patch DSL
-into a serializable patch graph, emits Faust `.dsp`, and owns the path from
-patch intent to generated DSP artifacts.
+C# front-end and Faust toolchain for AquaSynth patch scripts. It parses the
+AquaSynth patch DSL into a serializable patch graph, emits Faust `.dsp`, and
+owns the path from patch intent to generated DSP artifacts.
 
 This repo is the C# bridge for AquaSynth/Vortice-land. Rust remains the reference
 lab; this project is the tool that lets the engine script Faust without dragging
@@ -31,33 +31,41 @@ git submodule update --init --recursive
 ```
 
 That source is a parity oracle only. AquaSynth does not ship Zyn code, link it
-from `AquaSynth.Dsl`, or treat it as runtime machinery.
+from published packages, or treat it as runtime machinery.
 
 ## Package Boundary
 
-Downstream consumers should pin this library as an `AquaSynth.Dsl` NuGet
-package, not use it as a live project reference. Breaking synth-library work
-should happen here freely, then consumers should intentionally update only after
-a new package version is packed and tested.
+Downstream consumers should pin NuGet packages from this repo, not use live
+project references. Breaking synth-library work should happen here freely, then
+consumers should intentionally update only after new package versions are packed
+and tested.
 
 ```powershell
-dotnet pack src\AquaSynth.Dsl\AquaSynth.Dsl.csproj -c Release
+dotnet pack src\AquaSynth.Core\AquaSynth.Core.csproj -c Release
+dotnet pack src\AquaSynth.Faust\AquaSynth.Faust.csproj -c Release
 ```
+
+`AquaSynth.Core` owns the patch model, `.aqua` parser, authoring helpers,
+analysis/scoring tools, presets, and Faust source emission.
+`AquaSynth.Faust` depends on Core and owns Faust toolchain interaction:
+validation, target-code generation, native `libfaust` loading, compile
+manifests, DSP factory lifetime, and offline/sample rendering.
 
 The test suite verifies that development fixtures, Python render helpers,
 external reference synth sources, and SysEx banks do not ship in
-`AquaSynth.Dsl.nupkg`.
+published packages.
 
 ## Shape
 
 - `PatchScript.Parse(script)` lowers terse script into `SynthPatch`.
 - `FaustEmitter.Emit(patch)` emits Faust source.
-- `FaustCompiler.ValidateAsync(source)` compile-checks with Faust when present.
+- `FaustCompiler.ValidateAsync(source)` compile-checks with Faust when present
+  from `AquaSynth.Faust`.
 - `FaustCompiler.CompileAsync(source, options)` writes generated backend code
-  through an installed or resolved Faust compiler.
-- `AquaSynthNativeCompiler` loads a Faust native toolchain, compiles `.aqua`
-  scripts into hosted DSP factories, emits manifests, and renders buffers for
-  engine hosts.
+  through an installed or resolved Faust compiler from `AquaSynth.Faust`.
+- `AquaSynthNativeCompiler` from `AquaSynth.Faust` loads a Faust native
+  toolchain, compiles `.aqua` scripts into hosted DSP factories, emits
+  manifests, and renders buffers for engine hosts.
 - `BuiltInScripts.ReferenceScripts()` carries readable SFXR, BFXR-flavored,
   808, FM bell, wobble bass, and advanced layered patches. They are stable
   references for testing and for judging whether the DSL can express useful

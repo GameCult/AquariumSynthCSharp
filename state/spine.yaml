@@ -12,30 +12,31 @@ current_objective: >
   AquaSynth's DSL grows only when a real target proves the abstraction belongs.
 
 current_mechanism:
-  parser: src/AquaSynth.Dsl/PatchScript.cs
-  model: src/AquaSynth.Dsl/Model.cs
-  faust_emitter: src/AquaSynth.Dsl/FaustExport.cs
-  faust_renderer: src/AquaSynth.Dsl/FaustExport.cs
-  operator_graph_model: src/AquaSynth.Dsl/Model.cs
-  analysis: src/AquaSynth.Dsl/AudioAnalysis.cs
-  built_ins: src/AquaSynth.Dsl/BuiltInScripts.cs
+  parser: src/AquaSynth.Core/PatchScript.cs
+  model: src/AquaSynth.Core/Model.cs
+  faust_emitter: src/AquaSynth.Core/FaustExport.cs
+  faust_compiler: src/AquaSynth.Faust/FaustCompiler.cs
+  native_faust_runtime: src/AquaSynth.Faust/NativeFaustRuntime.cs
+  operator_graph_model: src/AquaSynth.Core/Model.cs
+  analysis: src/AquaSynth.Core/AudioAnalysis.cs
+  built_ins: src/AquaSynth.Core/BuiltInScripts.cs
   patch_library: patches
-  dx7_references: src/AquaSynth.Dsl/Dx7SysEx.cs
+  dx7_references: src/AquaSynth.Core/Dx7SysEx.cs
   dx7_reference_fixtures: tests/AquaSynth.Dsl.Tests/Fixtures/Dx7/PublicDomain
   dx7_reference_renderer_tests: tests/AquaSynth.Dsl.Tests/Dx7ReferenceParityTests.cs
   zyn_reference_source: external/zynaddsubfx
   zyn_upstream_instrument_bank: external/zynaddsubfx/instruments
   zyn_reference_build_script: tools/zyn-reference/build-zyn-reference.ps1
   zyn_pad_reference_renderer: tools/zyn-reference/ZynPadReference.cpp
-  zyn_reference_reader: src/AquaSynth.Dsl/ZynInstrument.cs
+  zyn_reference_reader: src/AquaSynth.Core/ZynInstrument.cs
   zyn_project_fixtures: tests/AquaSynth.Dsl.Tests/Fixtures/ZynAddSubFX/ProjectAuthored
-  reference_rebuilds: src/AquaSynth.Dsl/ReferenceRebuilds.cs
+  reference_rebuilds: src/AquaSynth.Core/ReferenceRebuilds.cs
   tests: tests/AquaSynth.Dsl.Tests/PatchScriptTests.cs
   doctrine: docs/audio-doctrine.md
   dx7_calibration_plan: docs/dx7-calibration-plan.md
   zyn_pressure_survey: docs/zynaddsubfx-pressure-survey.md
   roadmap: docs/reference-synth-roadmap.md
-  parameter_contracts: src/AquaSynth.Dsl/Model.cs
+  parameter_contracts: src/AquaSynth.Core/Model.cs
 
 live_invariants:
   - AquaSynth owns its patch graph; external synths are references, not runtime dependencies.
@@ -76,7 +77,7 @@ live_invariants:
   - Do not replace applied-envelope release with a naive traced threshold duration; it shortened releases too aggressively and broke broader DX7 parity.
   - Recompile only for graph shape changes; vary declared parameters through the hosted DSP control API.
   - Reference fixtures must preserve provenance, license status, source hash, and feature pressure.
-  - Public-domain reference fixtures, GPL Zyn instrument-bank fixtures, dexed-py helpers, and pinned ZynAddSubFX source are test/development material only; the NuGet package must ship only AquaSynth.Dsl.
+  - Public-domain reference fixtures, GPL Zyn instrument-bank fixtures, dexed-py helpers, and pinned ZynAddSubFX source are test/development material only; published NuGet packages must ship only AquaSynth.Core/AquaSynth.Faust surfaces.
   - ZynAddSubFX import starts as feature extraction and then explicit, scoped rebuilds. Upstream GPL `.xiz` instruments may be used as test-only pressure/parity feedstock with provenance reports, while project-authored `.xiz` fixtures remain the clean baseline. The Zyn engine source and instrument bank are pinned under `external/zynaddsubfx` for parity oracles only, not AquaSynth runtime code.
   - Named `layer` declarations own Zyn-style kit/layer identity: engine tag, optional key range metadata, default gain, and effect-send labels. They lower to ordinary voices for now; do not smuggle PAD/free-envelope/effect behavior into them.
   - Additive `harmonics` declarations own authored ratio/gain partial banks under named layers. They lower to ordinary voices for now; do not pretend this covers Zyn ADDsynth phase, bandwidth, oscillator shaping, or free-envelope semantics.
@@ -145,7 +146,7 @@ reference_targets:
 next_agent_start_here:
   recommended_first_task: >
     Continue the ZynAddSubFX phase. The first parser/classifier slice exists in
-    `src/AquaSynth.Dsl/ZynInstrument.cs` with project-authored fixtures
+    `src/AquaSynth.Core/ZynInstrument.cs` with project-authored fixtures
     under `tests/AquaSynth.Dsl.Tests/Fixtures/ZynAddSubFX/ProjectAuthored`.
     Named `layer` declarations own source identity, additive `harmonics` banks
     attach to those layers, PAD `spectrum` banks attach to those layers as
@@ -413,7 +414,7 @@ completed_slices:
       Added guard tests proving the source, license, PAD implementation files,
       and commit are present, and tightened the package-boundary test so
       `external/`, C++ sources, and headers do not ship in
-      `AquaSynth.Dsl.nupkg`. This establishes Zyn as a parity oracle, not
+      published AquaSynth packages. This establishes Zyn as a parity oracle, not
       AquaSynth implementation.
     verification: "AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore: 95 passed"
   - date: 2026-05-14

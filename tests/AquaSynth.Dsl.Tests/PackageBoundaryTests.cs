@@ -6,7 +6,7 @@ namespace AquaSynth.Dsl.Tests;
 public sealed class PackageBoundaryTests
 {
     [Fact]
-    public async Task NuGetPackageContainsOnlyPublishedSynthSurface()
+    public async Task CoreNuGetPackageContainsOnlyPublishedAuthoringSurface()
     {
         var root = RepositoryRoot();
         var outputDir = Path.Combine(Path.GetTempPath(), $"aquasynth-pack-{Guid.NewGuid():N}");
@@ -15,16 +15,65 @@ public sealed class PackageBoundaryTests
         {
             var result = await RunAsync(
                 "dotnet",
-                ["pack", Path.Combine(root, "src", "AquaSynth.Dsl", "AquaSynth.Dsl.csproj"), "-c", "Release", "--no-restore", "-o", outputDir]);
+                ["pack", Path.Combine(root, "src", "AquaSynth.Core", "AquaSynth.Core.csproj"), "-c", "Release", "--no-restore", "-o", outputDir]);
             Assert.Equal(0, result.ExitCode);
 
-            var package = Assert.Single(Directory.GetFiles(outputDir, "AquaSynth.Dsl.*.nupkg"));
+            var package = Assert.Single(Directory.GetFiles(outputDir, "AquaSynth.Core.*.nupkg"));
             using var archive = ZipFile.OpenRead(package);
             var entries = archive.Entries.Select(entry => entry.FullName).ToArray();
 
-            Assert.Contains(entries, entry => entry.StartsWith("lib/net10.0/AquaSynth.Dsl.dll", StringComparison.Ordinal));
+            Assert.Contains(entries, entry => entry.StartsWith("lib/net10.0/AquaSynth.Core.dll", StringComparison.Ordinal));
+            Assert.DoesNotContain(entries, entry => entry.StartsWith("lib/net10.0/AquaSynth.Faust.dll", StringComparison.Ordinal));
             Assert.Contains("README.md", entries);
             Assert.Contains("icon-package.png", entries);
+            AssertPublishedPackagesKeepReferenceFixturesOut(entries);
+        }
+        finally
+        {
+            Directory.Delete(outputDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task FaustNuGetPackageContainsRuntimeSurfaceAndDependsOnCore()
+    {
+        var root = RepositoryRoot();
+        var outputDir = Path.Combine(Path.GetTempPath(), $"aquasynth-pack-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(outputDir);
+        try
+        {
+            var result = await RunAsync(
+                "dotnet",
+                ["pack", Path.Combine(root, "src", "AquaSynth.Faust", "AquaSynth.Faust.csproj"), "-c", "Release", "--no-restore", "-o", outputDir]);
+            Assert.Equal(0, result.ExitCode);
+
+            var package = Assert.Single(Directory.GetFiles(outputDir, "AquaSynth.Faust.*.nupkg"));
+            using var archive = ZipFile.OpenRead(package);
+            var entries = archive.Entries.Select(entry => entry.FullName).ToArray();
+
+            Assert.Contains(entries, entry => entry.StartsWith("lib/net10.0/AquaSynth.Faust.dll", StringComparison.Ordinal));
+            Assert.Contains(entries, entry => entry.EndsWith(".nuspec", StringComparison.Ordinal));
+            Assert.Contains("AquaSynth.Core", ReadNuspecText(archive));
+            Assert.Contains("README.md", entries);
+            Assert.Contains("icon-package.png", entries);
+            AssertPublishedPackagesKeepReferenceFixturesOut(entries);
+        }
+        finally
+        {
+            Directory.Delete(outputDir, recursive: true);
+        }
+    }
+
+    private static string ReadNuspecText(ZipArchive archive)
+    {
+        var nuspec = archive.Entries.Single(entry => entry.FullName.EndsWith(".nuspec", StringComparison.Ordinal));
+        using var stream = nuspec.Open();
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
+    }
+
+    private static void AssertPublishedPackagesKeepReferenceFixturesOut(IReadOnlyCollection<string> entries)
+    {
             Assert.DoesNotContain(entries, entry => entry.StartsWith("tests/", StringComparison.OrdinalIgnoreCase));
             Assert.DoesNotContain(entries, entry => entry.StartsWith("Fixtures/", StringComparison.OrdinalIgnoreCase));
             Assert.DoesNotContain(entries, entry => entry.StartsWith("patches/", StringComparison.OrdinalIgnoreCase));
@@ -35,11 +84,6 @@ public sealed class PackageBoundaryTests
             Assert.DoesNotContain(entries, entry => entry.StartsWith("external/", StringComparison.OrdinalIgnoreCase));
             Assert.DoesNotContain(entries, entry => entry.EndsWith(".cpp", StringComparison.OrdinalIgnoreCase));
             Assert.DoesNotContain(entries, entry => entry.EndsWith(".h", StringComparison.OrdinalIgnoreCase));
-        }
-        finally
-        {
-            Directory.Delete(outputDir, recursive: true);
-        }
     }
 
     private static string RepositoryRoot()

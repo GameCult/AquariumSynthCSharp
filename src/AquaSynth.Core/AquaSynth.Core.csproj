@@ -4,11 +4,12 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PackageId>AquaSynth.Dsl</PackageId>
+    <AssemblyName>AquaSynth.Core</AssemblyName>
+    <PackageId>AquaSynth.Core</PackageId>
     <Version>0.1.0-aquasynth.1</Version>
     <Authors>GameCult</Authors>
     <Company>GameCult</Company>
-    <Description>AquaSynth patch DSL model, parser, analysis helpers, Faust source emitter, and native Faust compile/render runtime.</Description>
+    <Description>AquaSynth patch model, DSL parser, analysis helpers, presets, and Faust source emitter.</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>icon-package.png</PackageIcon>
     <RepositoryUrl>https://github.com/GameCult/AquaSynth</RepositoryUrl>

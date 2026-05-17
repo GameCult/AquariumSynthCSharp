@@ -105,8 +105,8 @@
     "binding_rule": "Parameter binding uses field-site references such as `lpf=@/macro/brightness` and `/opgraphs/0/operators/2/level`; the field owns meaning and the parameter owns the runtime value. Avoid target-routing semantics unless a new graph authority is deliberately mapped."
   },
   "last_verified": {
-    "command": "dotnet build AquaSynth.slnx --no-restore; dotnet test tests\\AquaSynth.Dsl.Tests\\AquaSynth.Dsl.Tests.csproj --no-build -v minimal; dotnet pack src\\AquaSynth.Dsl\\AquaSynth.Dsl.csproj -c Release --no-restore",
-    "result": "Renamed local repo, namespaces, package metadata, docs, state, and remote wiring to AquaSynth/AquaSynth-rs; test assembly passed 108 and pack produced AquaSynth.Dsl.0.1.0-aquasynth.1.nupkg",
-    "commit": "pending AquaSynth rename wiring"
+    "command": "dotnet build AquaSynth.slnx --no-restore; dotnet test tests\\AquaSynth.Dsl.Tests\\AquaSynth.Dsl.Tests.csproj --no-build -v minimal; dotnet pack src\\AquaSynth.Core\\AquaSynth.Core.csproj -c Release --no-restore; dotnet pack src\\AquaSynth.Faust\\AquaSynth.Faust.csproj -c Release --no-restore",
+    "result": "AquaSynth package structure is split: AquaSynth.Core owns patch authoring and Faust source emission, AquaSynth.Faust depends on Core and owns Faust toolchain/rendering.",
+    "commit": "pending package split"
   }
 }

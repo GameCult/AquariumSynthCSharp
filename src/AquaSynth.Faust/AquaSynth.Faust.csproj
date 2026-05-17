@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>AquaSynth.Faust</AssemblyName>
+    <PackageId>AquaSynth.Faust</PackageId>
+    <Version>0.1.0-aquasynth.1</Version>
+    <Authors>GameCult</Authors>
+    <Company>GameCult</Company>
+    <Description>Native Faust toolchain loading, compile manifests, DSP factory lifetime, and offline rendering for AquaSynth patches.</Description>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon-package.png</PackageIcon>
+    <RepositoryUrl>https://github.com/GameCult/AquaSynth</RepositoryUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AquaSynth.Core\AquaSynth.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\icon-package.png" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

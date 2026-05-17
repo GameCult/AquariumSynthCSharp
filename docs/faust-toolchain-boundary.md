@@ -5,6 +5,14 @@ Engine owns audio hosting. That split keeps the compiler brain near the patch
 model and keeps the engine from becoming a synth compiler with a game loop
 stapled to it.
 
+Package ownership follows that boundary:
+
+- `AquaSynth.Core` owns patch meaning: model records, `.aqua` parsing, analysis,
+  presets, and Faust source emission.
+- `AquaSynth.Faust` depends on Core and owns toolchain/rendering: Faust CLI
+  validation, target-code generation, native `libfaust` loading, compile
+  manifests, factory lifetime, and offline/sample rendering.
+
 ## Pipeline Map
 
 1. AquaSynth parses `.aqua` script into an explicit `SynthPatch`.

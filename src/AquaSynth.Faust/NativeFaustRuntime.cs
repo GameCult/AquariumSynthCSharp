@@ -1,10 +1,10 @@
 using System.Diagnostics;
-using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
+using AquaSynth.Dsl;
 
-namespace AquaSynth.Dsl;
+namespace AquaSynth.Faust;
 
 public sealed record AquaSynthNativeOptions(
     int SampleRate = 44100,

@@ -11,7 +11,8 @@ surfaces:
   evidence: state/evidence.jsonl
   spine: state/spine.yaml
   solution: AquaSynth.slnx
-  library: src/AquaSynth.Dsl
+  core_library: src/AquaSynth.Core
+  faust_library: src/AquaSynth.Faust
   patch_library: patches
   tests: tests/AquaSynth.Dsl.Tests
   reference_roadmap: docs/reference-synth-roadmap.md
@@ -23,21 +24,23 @@ surfaces:
   zyn_pad_reference_renderer: tools/zyn-reference/ZynPadReference.cpp
   zyn_reference_build_patches: tools/zyn-reference/patches
   zyn_project_fixtures: tests/AquaSynth.Dsl.Tests/Fixtures/ZynAddSubFX/ProjectAuthored
-  package: AquaSynth.Dsl 0.1.0-aquasynth.1
+  core_package: AquaSynth.Core 0.1.0-aquasynth.1
+  faust_package: AquaSynth.Faust 0.1.0-aquasynth.1
 modules:
-  model: src/AquaSynth.Dsl/Model.cs
-  parser: src/AquaSynth.Dsl/PatchScript.cs
-  faust: src/AquaSynth.Dsl/FaustExport.cs
-  faust_rendering: src/AquaSynth.Dsl/FaustExport.cs
+  model: src/AquaSynth.Core/Model.cs
+  parser: src/AquaSynth.Core/PatchScript.cs
+  faust_emitter: src/AquaSynth.Core/FaustExport.cs
+  faust_compiler: src/AquaSynth.Faust/FaustCompiler.cs
+  native_faust_runtime: src/AquaSynth.Faust/NativeFaustRuntime.cs
   dx7_reference_render_tests: tests/AquaSynth.Dsl.Tests/Dx7ReferenceParityTests.cs
-  zyn_reference_reader: src/AquaSynth.Dsl/ZynInstrument.cs
-  zyn_coverage_survey: src/AquaSynth.Dsl/ZynInstrument.cs
+  zyn_reference_reader: src/AquaSynth.Core/ZynInstrument.cs
+  zyn_coverage_survey: src/AquaSynth.Core/ZynInstrument.cs
   package_boundary_tests: tests/AquaSynth.Dsl.Tests/PackageBoundaryTests.cs
-  sfxr: src/AquaSynth.Dsl/SfxrParams.cs
-  analysis: src/AquaSynth.Dsl/AudioAnalysis.cs
-  scoring: src/AquaSynth.Dsl/ScriptMetrics.cs
-  presets: src/AquaSynth.Dsl/Presets.cs
-  built_in_scripts: src/AquaSynth.Dsl/BuiltInScripts.cs
+  sfxr: src/AquaSynth.Core/SfxrParams.cs
+  analysis: src/AquaSynth.Core/AudioAnalysis.cs
+  scoring: src/AquaSynth.Core/ScriptMetrics.cs
+  presets: src/AquaSynth.Core/Presets.cs
+  built_in_scripts: src/AquaSynth.Core/BuiltInScripts.cs
 boundaries:
   leave_in_rust:
     - sample renderer
@@ -50,9 +53,9 @@ boundaries:
     - SFXR parameter mapping and atoms
     - analysis and comparison tools
     - script scoring
-    - Faust source generation, target-code generation, compile-product contracts, and candidate rendering
-    - dynamic patch compilation policy, cache identity, generated artifact manifests, and Faust toolchain selection
-    - native Faust factory lifetime and offline sample-buffer rendering for engine hosts
+    - Faust source generation in AquaSynth.Core
+    - target-code generation, compile-product contracts, dynamic patch compilation policy, cache identity, generated artifact manifests, and Faust toolchain selection in AquaSynth.Faust
+    - native Faust factory lifetime and offline sample-buffer rendering for engine hosts in AquaSynth.Faust
   dev_only:
     - public-domain DX7 SysEx fixtures
     - pinned GPL ZynAddSubFX source for parity tests
@@ -61,7 +64,8 @@ boundaries:
     - structured .aqua patch library
 checks:
   default: dotnet test
-  package: dotnet pack src/AquaSynth.Dsl/AquaSynth.Dsl.csproj -c Release
+  core_package: dotnet pack src/AquaSynth.Core/AquaSynth.Core.csproj -c Release
+  faust_package: dotnet pack src/AquaSynth.Faust/AquaSynth.Faust.csproj -c Release
   faust_validation: automatic in tests when Faust is installed
   dexed_py_reference: optional in tests when AQUASYNTH_DX7_PYTHON or a Python with dexed-py is available
   zyn_reference_source: pinned submodule used only for parity tests; never package content
