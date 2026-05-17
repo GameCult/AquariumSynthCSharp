@@ -123,6 +123,99 @@ public sealed class AquaSynthCompiledPatch : IDisposable
     }
 }
 
+public sealed class AquaSynthRenderSession : IDisposable
+{
+    private readonly AquaSynthNativeOptions options;
+    private AquaSynthNativeCompiler? compiler;
+    private string? loadError;
+    private bool disposed;
+
+    public AquaSynthRenderSession(AquaSynthNativeOptions? options = null)
+    {
+        this.options = options ?? new AquaSynthNativeOptions();
+    }
+
+    public string? LoadError => loadError;
+
+    public bool IsReady => compiler is not null;
+
+    public string? FaustVersion => compiler?.FaustVersion;
+
+    public bool TryCompileScript(AquaSynthCompileIdentity identity, out AquaSynthCompiledPatch? patch, out string? error)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        patch = null;
+        if (!EnsureCompiler(out error))
+        {
+            return false;
+        }
+
+        try
+        {
+            patch = compiler!.CompileScript(identity);
+            error = null;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    public bool TryRenderScript(string name, string script, float gain, out float[] samples, out string? error)
+    {
+        samples = [];
+        if (!TryCompileScript(new AquaSynthCompileIdentity(name, name, script), out var patch, out error))
+        {
+            return false;
+        }
+
+        using (patch)
+        {
+            samples = patch!.Render(gain);
+            error = null;
+            return true;
+        }
+    }
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        compiler?.Dispose();
+        disposed = true;
+    }
+
+    private bool EnsureCompiler(out string? error)
+    {
+        if (compiler is not null)
+        {
+            error = null;
+            return true;
+        }
+
+        if (loadError is not null)
+        {
+            error = loadError;
+            return false;
+        }
+
+        if (AquaSynthNativeCompiler.TryLoad(out var loaded, out loadError, options))
+        {
+            compiler = loaded;
+            error = null;
+            return true;
+        }
+
+        error = loadError;
+        return false;
+    }
+}
+
 public sealed class AquaSynthNativeCompiler : IDisposable
 {
     private readonly FaustNativeToolchain toolchain;
@@ -160,27 +253,8 @@ public sealed class AquaSynthNativeCompiler : IDisposable
         out string? error,
         AquaSynthNativeOptions? options = null)
     {
-        samples = [];
-        if (!TryLoad(out var compiler, out error, options))
-        {
-            return false;
-        }
-
-        using (compiler)
-        {
-            try
-            {
-                using var patch = compiler!.CompileScript(new AquaSynthCompileIdentity(name, name, script));
-                samples = patch.Render(gain);
-                error = null;
-                return true;
-            }
-            catch (Exception ex)
-            {
-                error = ex.Message;
-                return false;
-            }
-        }
+        using var session = new AquaSynthRenderSession(options);
+        return session.TryRenderScript(name, script, gain, out samples, out error);
     }
 
     public AquaSynthCompiledPatch CompileScript(AquaSynthCompileIdentity identity)

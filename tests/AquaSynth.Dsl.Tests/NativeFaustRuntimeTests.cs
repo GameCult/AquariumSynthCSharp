@@ -29,7 +29,8 @@ public sealed class NativeFaustRuntimeTests
                 decay=0.12
             """;
 
-        if (!AquaSynthNativeCompiler.TryRenderScript("native_smoke", script, 1.0f, out var samples, out var error))
+        using var session = new AquaSynthRenderSession();
+        if (!session.TryRenderScript("native_smoke", script, 1.0f, out var samples, out var error))
         {
             if (error?.Contains("Faust toolchain not found", StringComparison.OrdinalIgnoreCase) == true ||
                 error?.Contains("Faust DLL not found", StringComparison.OrdinalIgnoreCase) == true)
