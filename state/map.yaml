@@ -22,6 +22,7 @@ surfaces:
   zyn_upstream_instrument_bank: external/zynaddsubfx/instruments
   zyn_reference_build_script: tools/zyn-reference/build-zyn-reference.ps1
   zyn_pad_reference_renderer: tools/zyn-reference/ZynPadReference.cpp
+  zyn_voice_reference_renderer: tools/zyn-reference/ZynVoiceReference.cpp
   zyn_reference_build_patches: tools/zyn-reference/patches
   zyn_project_fixtures: tests/AquaSynth.Dsl.Tests/Fixtures/ZynAddSubFX/ProjectAuthored
   core_package: AquaSynth.Core 0.1.0-alpha.2

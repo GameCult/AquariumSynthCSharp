@@ -358,6 +358,146 @@ public sealed class ZynReferenceParityTests
         await File.WriteAllLinesAsync(Path.Combine(artifactDir, $"survey-{Timestamp()}.txt"), report);
     }
 
+    [Fact]
+    public async Task ZynVoiceReferenceRendererSurveysUpstreamFormantFixturesWhenBuilt()
+    {
+        var root = RepositoryRoot();
+        var bash = @"C:\msys64\usr\bin\bash.exe";
+        var renderer = Path.Combine(root, "artifacts", "zyn-reference-build-msys", "src", "Tests", "ZynVoiceReference.exe");
+        var bankRoot = Path.Combine(root, "external", "zynaddsubfx", "instruments", "banks");
+        if (!File.Exists(bash) || !File.Exists(renderer) || !Directory.Exists(bankRoot))
+        {
+            return;
+        }
+
+        var selected = Directory.GetFiles(bankRoot, "*.xiz", SearchOption.AllDirectories)
+            .Select(file => new
+            {
+                File = file,
+                Instrument = ZynInstrumentReader.ParseFile(file),
+                Rebuild = TryRebuildFormantMotion(file)
+            })
+            .Where(item => item.Instrument.KitItems.Any(kit =>
+                    kit.Enabled &&
+                    kit.Engines.Contains(ZynEngine.AddSynth) &&
+                    kit.FormantFilterCount > 0) &&
+                item.Rebuild is not null &&
+                item.Rebuild.MatchedFeatures.Any(feature =>
+                    feature.Name == "formant_frames" &&
+                    int.TryParse(feature.Value, out var frameCount) &&
+                    frameCount > 1))
+            .Select(item => new
+            {
+                item.File,
+                item.Instrument,
+                Rebuild = item.Rebuild!,
+                Score = ZynInstrumentSurvey.ComplexityScore(item.Instrument.Features())
+            })
+            .OrderByDescending(item => item.Score)
+            .ThenBy(item => Path.GetRelativePath(bankRoot, item.File), StringComparer.OrdinalIgnoreCase)
+            .Take(3)
+            .ToArray();
+        Assert.True(selected.Length >= 2, "The Zyn formant parity workout needs at least two upstream ADD/formant fixtures.");
+
+        var artifactDir = Path.Combine(root, "artifacts", "parity", "zyn-upstream-formant-fixtures");
+        Directory.CreateDirectory(artifactDir);
+
+        var report = new List<string>
+        {
+            "Zyn upstream GPL formant fixture survey",
+            "source: https://github.com/zynaddsubfx/instruments",
+            "license: GPL test/development corpus via upstream ZynAddSubFX instruments submodule",
+            $"renderer: {renderer}"
+        };
+
+        foreach (var selectedItem in selected)
+        {
+            var input = selectedItem.File;
+            var relative = Path.GetRelativePath(bankRoot, input);
+            var rebuild = selectedItem.Rebuild;
+            var runDir = Path.Combine(artifactDir, RunFolderName(Path.GetFileNameWithoutExtension(input)));
+            Directory.CreateDirectory(runDir);
+
+            var referenceRaw = Path.Combine(runDir, "reference-zyn.f32");
+            var referenceWav = Path.Combine(runDir, "reference-zyn.wav");
+            var candidateWav = Path.Combine(runDir, "candidate-aquasynth.wav");
+
+            var reference = await RunAsync(bash, ["-lc", ZynVoiceCommand(root, input, referenceRaw, rebuild.KitItemId, "110", "1.8")]);
+            Assert.Equal(0, reference.ExitCode);
+
+            var referenceSamples = await ReadFloat32Async(referenceRaw);
+            Assert.True(referenceSamples.Length > 0);
+            WriteWav(referenceWav, referenceSamples, 44100, 0.9f);
+            await File.WriteAllTextAsync(Path.Combine(runDir, "candidate.aqua"), rebuild.Script);
+
+            var candidate = await FaustCompiler.RenderAsync(
+                FaustEmitter.EmitScript(rebuild.Script, new FaustExportOptions("zyn_formant_candidate")).Source,
+                new FaustRenderOptions(DurationSeconds: 1.8f));
+
+            var features = AudioAnalyzer.AnalyzeAudio(referenceSamples).Features;
+            var runReport = new List<string>
+            {
+                $"fixture: {relative}",
+                $"instrument: {selectedItem.Instrument.Name}",
+                $"input: {input}",
+                $"kit_index: {rebuild.KitItemId}",
+                $"candidate: generated Zyn formant-motion rebuild",
+                $"reference_stdout: {reference.Stdout.Trim()}",
+                $"peak: {Peak(referenceSamples):0.######}",
+                $"rms: {Rms(referenceSamples):0.######}",
+                $"duration: {features.DurationSeconds:0.######}",
+                $"centroid: {features.SpectralCentroidHz:0.######}"
+            };
+            runReport.AddRange(rebuild.MatchedFeatures.Select(feature => $"matched_{feature.Name}: {feature.Value}"));
+            runReport.AddRange(rebuild.MissingFeatures.Select(feature => $"missing_{feature.Name}: {feature.Value} - {feature.Notes}"));
+
+            report.Add("");
+            report.Add($"fixture: {relative}");
+            report.Add($"instrument: {selectedItem.Instrument.Name}");
+            report.Add($"kit_index: {rebuild.KitItemId}");
+            report.Add($"reference_stdout: {reference.Stdout.Trim()}");
+            report.Add($"peak: {Peak(referenceSamples):0.######}");
+            report.Add($"rms: {Rms(referenceSamples):0.######}");
+            report.Add($"duration: {features.DurationSeconds:0.######}");
+            report.Add($"centroid: {features.SpectralCentroidHz:0.######}");
+            report.Add($"artifact_dir: {runDir}");
+            report.AddRange(rebuild.MatchedFeatures.Select(feature => $"matched_{feature.Name}: {feature.Value}"));
+            report.AddRange(rebuild.MissingFeatures.Select(feature => $"missing_{feature.Name}: {feature.Value} - {feature.Notes}"));
+
+            if (candidate is { Samples.Length: > 0 })
+            {
+                WriteWav(candidateWav, candidate.Samples, candidate.SampleRate, 0.9f);
+                var comparison = AudioAnalyzer.CompareAudio(referenceSamples, candidate.Samples);
+                report.Add($"log_mel_distance: {comparison.LogMelDistance:0.######}");
+                report.Add($"envelope_distance: {comparison.EnvelopeDistance:0.######}");
+                report.Add($"rms_ratio: {comparison.RmsRatio:0.######}");
+                report.Add($"centroid_ratio: {comparison.CentroidRatio:0.######}");
+                report.Add($"score: {comparison.Score:0.######}");
+                runReport.Add($"log_mel_distance: {comparison.LogMelDistance:0.######}");
+                runReport.Add($"envelope_distance: {comparison.EnvelopeDistance:0.######}");
+                runReport.Add($"rms_ratio: {comparison.RmsRatio:0.######}");
+                runReport.Add($"centroid_ratio: {comparison.CentroidRatio:0.######}");
+                runReport.Add($"score: {comparison.Score:0.######}");
+            }
+
+            await File.WriteAllLinesAsync(Path.Combine(runDir, "report.txt"), runReport);
+        }
+
+        await File.WriteAllLinesAsync(Path.Combine(artifactDir, $"survey-{Timestamp()}.txt"), report);
+    }
+
+    private static ZynFormantMotionRebuild? TryRebuildFormantMotion(string path)
+    {
+        try
+        {
+            return ZynInstrumentReader.RebuildFirstFormantMotionAsAquaSynthScript(path);
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
+    }
+
     private static string RepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
@@ -410,6 +550,18 @@ public sealed class ZynReferenceParityTests
             BashQuote(ToMsysPath(output)),
             kitIndex.ToString(System.Globalization.CultureInfo.InvariantCulture),
             ..modeArguments
+        ]);
+
+    private static string ZynVoiceCommand(string root, string input, string output, int kitIndex, string frequency, string seconds) =>
+        string.Join(' ', [
+            "export PATH=/mingw64/bin:/usr/bin:/bin:$PATH;",
+            $"cd {BashQuote(ToMsysPath(root))};",
+            "./artifacts/zyn-reference-build-msys/src/Tests/ZynVoiceReference.exe",
+            BashQuote(ToMsysPath(input)),
+            BashQuote(ToMsysPath(output)),
+            kitIndex.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            frequency,
+            seconds
         ]);
 
     private static string SanitizeArtifactName(string name)

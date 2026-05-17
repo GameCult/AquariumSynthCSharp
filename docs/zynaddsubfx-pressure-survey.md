@@ -60,6 +60,29 @@ semantics such as Zyn harmonic profile shaping, bandwidth/profile behavior, and
 filter envelope/LFO lowering. These are listening and parity fixtures, not
 library candidates.
 
+## Upstream Formant Listening Batch
+
+`ZynVoiceReferenceRendererSurveysUpstreamFormantFixturesWhenBuilt` renders a
+small GPL ADD/formant batch through `ZynVoiceReference` when the reference
+renderer is built:
+
+- `Companion/0056-Wide Bass.xiz`
+- `Companion/0121-Ghost Ensemble.xiz`
+- `Companion/0119-Ghost Choir.xiz`
+
+The batch intentionally requires multi-frame formant motion so the first workout
+does not get hijacked by drum-kit envelope/source failures. Each run writes Zyn
+reference WAVs, AquaSynth candidate WAVs, `candidate.aqua`, and `report.txt`
+under `artifacts/parity/zyn-upstream-formant-fixtures/`. The first baseline
+scores are poor but useful: Wide Bass `0.280990`, Ghost Ensemble `0.312813`,
+and Ghost Choir `0.363644`. The shared missing features are exact Zyn
+filter-position-driven vowel motion, formant smoothing/clearness, and ADD voice
+source detail.
+
+This is now ready for the real parity workout. The fixtures are expected to
+scream. The point is that they scream in a chorus instead of letting one wounded
+patch write the architecture.
+
 ## Pressure Conclusions
 
 - **Named layers are real.** Anonymous AquaSynth voices can sketch small Zyn

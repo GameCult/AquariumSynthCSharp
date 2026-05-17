@@ -2,12 +2,15 @@ diff --git a/src/Tests/CMakeLists.txt b/src/Tests/CMakeLists.txt
 index 871a0457..567cb3f9 100644
 --- a/src/Tests/CMakeLists.txt
 +++ b/src/Tests/CMakeLists.txt
-@@ -25,6 +25,9 @@ set(test_lib zynaddsubfx_core ${GUI_LIBRARIES} ${ZLIB_LIBRARY} ${FFTW3F_LIBRARIE
+@@ -25,6 +25,12 @@ set(test_lib zynaddsubfx_core ${GUI_LIBRARIES} ${ZLIB_LIBRARY} ${FFTW3F_LIBRARIE
  
  message(STATUS "Linking tests with: ${test_lib}")
  
 +add_executable(ZynPadReference ZynPadReference.cpp)
 +target_link_libraries(ZynPadReference ${test_lib})
++
++add_executable(ZynVoiceReference ZynVoiceReference.cpp)
++target_link_libraries(ZynVoiceReference ${test_lib})
 +
  quick_test(AdNoteTest       ${test_lib})
  quick_test(AllocatorTest    ${test_lib})

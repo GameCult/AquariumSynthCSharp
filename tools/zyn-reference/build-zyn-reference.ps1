@@ -36,7 +36,8 @@ $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\.."))
 $zynRoot = Join-Path $repoRoot "external\zynaddsubfx"
 $workSource = [System.IO.Path]::GetFullPath((Join-Path $repoRoot $SourceDir))
 $patchRoot = Join-Path $PSScriptRoot "patches"
-$referenceSource = Join-Path $PSScriptRoot "ZynPadReference.cpp"
+$padReferenceSource = Join-Path $PSScriptRoot "ZynPadReference.cpp"
+$voiceReferenceSource = Join-Path $PSScriptRoot "ZynVoiceReference.cpp"
 $bash = Join-Path $MsysRoot "usr\bin\bash.exe"
 
 if (-not (Test-Path $bash)) {
@@ -62,7 +63,8 @@ if ($LASTEXITCODE -gt 7) {
     throw "Failed to copy Zyn source to $workSource"
 }
 
-Copy-Item -LiteralPath $referenceSource -Destination (Join-Path $workSource "src\Tests\ZynPadReference.cpp") -Force
+Copy-Item -LiteralPath $padReferenceSource -Destination (Join-Path $workSource "src\Tests\ZynPadReference.cpp") -Force
+Copy-Item -LiteralPath $voiceReferenceSource -Destination (Join-Path $workSource "src\Tests\ZynVoiceReference.cpp") -Force
 
 foreach ($patchPath in Get-ChildItem -LiteralPath $patchRoot -Filter "*.patch" | Sort-Object Name | Select-Object -ExpandProperty FullName) {
     $applyCheck = Invoke-GitProbe @("-C", $workSource, "apply", "--check", $patchPath)
@@ -84,7 +86,19 @@ foreach ($patchPath in Get-ChildItem -LiteralPath $patchRoot -Filter "*.patch" |
 
 $repoUnix = Convert-ToMsysPath $repoRoot
 $sourceUnix = Convert-ToMsysPath $workSource
-$buildUnix = Convert-ToMsysPath (Join-Path $repoRoot $BuildDir)
+$buildPath = [System.IO.Path]::GetFullPath((Join-Path $repoRoot $BuildDir))
+$artifactRoot = [System.IO.Path]::GetFullPath((Join-Path $repoRoot "artifacts"))
+$cachePath = Join-Path $buildPath "CMakeCache.txt"
+if ((Test-Path $cachePath) -and
+    (Select-String -LiteralPath $cachePath -SimpleMatch $workSource -Quiet) -eq $false) {
+    if (-not $buildPath.StartsWith($artifactRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to clear non-artifact Zyn build directory: $buildPath"
+    }
+
+    Remove-Item -LiteralPath $buildPath -Recurse -Force
+}
+
+$buildUnix = Convert-ToMsysPath $buildPath
 $script = @"
 set -euo pipefail
 export PATH=/mingw64/bin:/usr/bin:/bin:`$PATH
@@ -98,6 +112,7 @@ cmake -S "$sourceUnix" -B "$buildUnix" -G Ninja \
   -DWerror=OFF
 cmake --build "$buildUnix" --target PadNoteTest -j 4
 cmake --build "$buildUnix" --target ZynPadReference -j 4
+cmake --build "$buildUnix" --target ZynVoiceReference -j 4
 ctest --test-dir "$buildUnix" -R PadNoteTest --output-on-failure
 "@
 
