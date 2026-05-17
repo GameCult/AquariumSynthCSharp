@@ -1,12 +1,12 @@
 # AquaSynth
 
 <p align="center">
-  <img src="icon.png" alt="AquaSynth icon" width="180" />
+  <img src="icon.png" alt="AquaSynth icon" width="260" />
 </p>
 
-C# front-end and Faust toolchain for AquaSynth patch scripts. It parses the
-AquaSynth patch DSL into a serializable patch graph, emits Faust `.dsp`, and
-owns the path from patch intent to generated DSP artifacts.
+C# patch authoring, analysis, and Faust toolchain for AquaSynth. It parses the
+`.aqua` DSL into a serializable patch graph, emits Faust `.dsp`, and owns the
+path from patch intent to generated DSP artifacts.
 
 This repo is the C# bridge for AquaSynth/Vortice-land. Rust remains the reference
 lab; this project is the tool that lets the engine script Faust without dragging
@@ -35,7 +35,7 @@ from published packages, or treat it as runtime machinery.
 
 ## Package Boundary
 
-Downstream consumers should pin NuGet packages from this repo, not use live
+Downstream consumers should pin the NuGet packages from this repo, not use live
 project references. Breaking synth-library work should happen here freely, then
 consumers should intentionally update only after new package versions are packed
 and tested.
@@ -45,9 +45,9 @@ dotnet pack src\AquaSynth.Core\AquaSynth.Core.csproj -c Release
 dotnet pack src\AquaSynth.Faust\AquaSynth.Faust.csproj -c Release
 ```
 
-`AquaSynth.Core` owns the patch model, `.aqua` parser, authoring helpers,
-analysis/scoring tools, presets, and Faust source emission.
-`AquaSynth.Faust` depends on Core and owns Faust toolchain interaction:
+`AquaSynth.Core` owns patch meaning: model records, the `.aqua` parser,
+authoring helpers, analysis/scoring tools, presets, and Faust source emission.
+`AquaSynth.Faust` depends on Core and owns toolchain/rendering work: Faust CLI
 validation, target-code generation, native `libfaust` loading, compile
 manifests, DSP factory lifetime, and offline/sample rendering.
 
@@ -110,7 +110,8 @@ See [`docs/faust-toolchain-boundary.md`](docs/faust-toolchain-boundary.md).
 
 The current slice covers the modular graph surface needed by the reference
 scripts, SFXR atoms, script scoring, audio comparison, presets, Faust emission,
-and installed Faust validation. Migration coverage is tracked in
+native Faust compilation/rendering, and installed Faust validation. Migration
+coverage is tracked in
 [`docs/migration-checklist.md`](docs/migration-checklist.md), because leaving
 important things behind in the old repo would be a very efficient way to become
 our own haunted house.
