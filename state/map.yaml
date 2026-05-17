@@ -15,6 +15,7 @@ surfaces:
   patch_library: patches
   tests: tests/AquaSynth.Dsl.Tests
   reference_roadmap: docs/reference-synth-roadmap.md
+  faust_toolchain_boundary: docs/faust-toolchain-boundary.md
   dx7_public_domain_fixtures: tests/AquaSynth.Dsl.Tests/Fixtures/Dx7/PublicDomain
   zyn_reference_source: external/zynaddsubfx
   zyn_upstream_instrument_bank: external/zynaddsubfx/instruments
@@ -49,7 +50,8 @@ boundaries:
     - SFXR parameter mapping and atoms
     - analysis and comparison tools
     - script scoring
-    - Faust source generation, target-code generation, and candidate rendering
+    - Faust source generation, target-code generation, compile-product contracts, and candidate rendering
+    - dynamic patch compilation policy, cache identity, generated artifact manifests, and Faust toolchain selection
   dev_only:
     - public-domain DX7 SysEx fixtures
     - pinned GPL ZynAddSubFX source for parity tests

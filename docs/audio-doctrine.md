@@ -67,7 +67,13 @@ That separation is the model for this repo:
 
 - The DSL owns musical intent and graph construction.
 - The Faust emitter owns pure signal expression.
+- AquaSynth owns the compile product contract: Faust toolchain selection,
+  target-language options, cache keys, generated artifact layout, parameter and
+  bus manifests, diagnostics, and provenance.
 - The engine owns scheduling, buffers, device I/O, threading, and presentation.
+- The engine may request compilation or load a cached artifact, but dynamic
+  patch compilation belongs to AquaSynth and must complete outside the realtime
+  callback before the engine swaps in the finished DSP.
 - Patch parameters are runtime controls, not compile-time constants. A compiled
   DSP must be able to expose stable parameter paths so AquaSynth can vary a sound
   without recompiling the patch.
@@ -76,6 +82,13 @@ That separation is the model for this repo:
 Generated Faust should be stable, boring, and inspectable. Cleverness belongs in
 the DSL compiler only when it lowers to a graph a tired engineer can still read
 after midnight.
+
+Authoring and parity tests may render through Faust-generated C# because that
+keeps comparison buffers inside the .NET test harness. Shipping/runtime paths
+should prefer Faust native targets when the platform permits it. Bundled Faust
+belongs in an explicit AquaSynth toolchain lane, while consumer runtimes should
+usually ship compiled DSP artifacts plus manifests instead of silently dragging a
+compiler into the engine package.
 
 ## Control And Modulation
 

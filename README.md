@@ -5,8 +5,8 @@
 </p>
 
 C# front-end for AquaSynth patch scripts. It parses the AquaSynth patch DSL
-into a serializable patch graph, emits Faust `.dsp`, and can ask an installed
-Faust compiler to generate backend code such as C#, C++, C, or Rust.
+into a serializable patch graph, emits Faust `.dsp`, and owns the path from
+patch intent to generated DSP artifacts.
 
 This repo is the C# bridge for AquaSynth/Vortice-land. Rust remains the reference
 lab; this project is the tool that lets the engine script Faust without dragging
@@ -53,7 +53,8 @@ external reference synth sources, and SysEx banks do not ship in
 - `PatchScript.Parse(script)` lowers terse script into `SynthPatch`.
 - `FaustEmitter.Emit(patch)` emits Faust source.
 - `FaustCompiler.ValidateAsync(source)` compile-checks with Faust when present.
-- `FaustCompiler.CompileAsync(source, options)` writes generated backend code.
+- `FaustCompiler.CompileAsync(source, options)` writes generated backend code
+  through an installed or resolved Faust compiler.
 - `BuiltInScripts.ReferenceScripts()` carries readable SFXR, BFXR-flavored,
   808, FM bell, wobble bass, and advanced layered patches. They are stable
   references for testing and for judging whether the DSL can express useful
@@ -61,7 +62,8 @@ external reference synth sources, and SysEx banks do not ship in
 - `SfxrParams`, `PatchScriptScoring`, `AudioAnalyzer`, and `Presets` carry the
   reusable AquaSynth-rs-side analysis, scoring, SFXR, and preset tools.
 
-Faust `2.85.5` supports `-lang csharp`, so the intended hot path is:
+The authoring/test lane can compile Faust-generated C# for easy .NET rendering
+and parity checks:
 
 ```csharp
 var patch = PatchScript.Parse("""
@@ -77,6 +79,15 @@ await FaustCompiler.CompileAsync(
     export.Source,
     new FaustCompileOptions(FaustTargetLanguage.CSharp, "Generated/Bass.cs"));
 ```
+
+The runtime lane is different. AquaSynth should own Faust toolchain selection,
+compile cache identity, generated artifacts, parameter manifests, and dynamic
+patch compilation outside the realtime path. Aquarium Engine should load and
+host the finished artifact, bind controls, and schedule audio. Native Faust
+targets are the preferred shipping path when the platform allows them; C# output
+is convenient authoring machinery, not the ceiling.
+
+See [`docs/faust-toolchain-boundary.md`](docs/faust-toolchain-boundary.md).
 
 ## Status
 
