@@ -55,6 +55,9 @@ external reference synth sources, and SysEx banks do not ship in
 - `FaustCompiler.ValidateAsync(source)` compile-checks with Faust when present.
 - `FaustCompiler.CompileAsync(source, options)` writes generated backend code
   through an installed or resolved Faust compiler.
+- `AquaSynthNativeCompiler` loads a Faust native toolchain, compiles `.aqua`
+  scripts into hosted DSP factories, emits manifests, and renders buffers for
+  engine hosts.
 - `BuiltInScripts.ReferenceScripts()` carries readable SFXR, BFXR-flavored,
   808, FM bell, wobble bass, and advanced layered patches. They are stable
   references for testing and for judging whether the DSL can express useful
@@ -86,6 +89,12 @@ patch compilation outside the realtime path. Aquarium Engine should load and
 host the finished artifact, bind controls, and schedule audio. Native Faust
 targets are the preferred shipping path when the platform allows them; C# output
 is convenient authoring machinery, not the ceiling.
+
+`AquaSynthNativeCompiler` is the first runtime-facing version of that boundary:
+it owns native `libfaust` loading, script parsing, Faust emission, compile keys,
+DSP source artifacts, manifests, and sample rendering. Engine callers keep their
+device and scheduling code, and ask AquaSynth for compiled/renderable synth
+products.
 
 See [`docs/faust-toolchain-boundary.md`](docs/faust-toolchain-boundary.md).
 

@@ -49,6 +49,7 @@
       "Faust toolchain selection and compile-product contracts",
       "dynamic patch compilation policy outside the realtime callback",
       "generated DSP artifact manifests for engine hosting",
+      "native Faust factory lifetime and offline sample-buffer rendering for engine hosts",
       "patch script parser",
       "SFXR atoms and parameter mapping",
       "analysis/comparison metrics",

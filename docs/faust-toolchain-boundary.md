@@ -32,6 +32,7 @@ AquaSynth owns:
 - parameter and bus manifests
 - diagnostics and compile provenance
 - dynamic patch compilation outside the realtime callback
+- native Faust factory lifetime and offline/sample-buffer rendering for hosts
 
 Aquarium owns:
 
@@ -62,6 +63,11 @@ ordinary patch controls move through the compiled DSP parameter API.
   installer lane, not as an accidental dependency of the core DSL package.
 - Consumer runtimes should normally bundle compiled DSP artifacts plus manifests,
   not the compiler itself, unless live user patch authoring is a product feature.
+
+Current API foothold: `AquaSynthNativeCompiler` loads `libfaust`, compiles
+`.aqua` scripts into native Faust factories, writes optional `.dsp` artifacts,
+returns `AquaSynthNativeManifest`, and renders mono sample buffers for hosts that
+need triggered one-shot playback.
 
 ## Invariants
 

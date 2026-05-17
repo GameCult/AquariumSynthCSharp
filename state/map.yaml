@@ -52,6 +52,7 @@ boundaries:
     - script scoring
     - Faust source generation, target-code generation, compile-product contracts, and candidate rendering
     - dynamic patch compilation policy, cache identity, generated artifact manifests, and Faust toolchain selection
+    - native Faust factory lifetime and offline sample-buffer rendering for engine hosts
   dev_only:
     - public-domain DX7 SysEx fixtures
     - pinned GPL ZynAddSubFX source for parity tests
