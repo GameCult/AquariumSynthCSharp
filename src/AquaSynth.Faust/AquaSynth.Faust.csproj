@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>AquaSynth.Faust</AssemblyName>
     <PackageId>AquaSynth.Faust</PackageId>
-    <Version>0.1.0-aquasynth.2</Version>
+    <Version>0.1.0-alpha.2</Version>
     <Authors>GameCult</Authors>
     <Company>GameCult</Company>
     <Description>Native Faust toolchain loading, compile manifests, DSP factory lifetime, and offline rendering for AquaSynth patches.</Description>
