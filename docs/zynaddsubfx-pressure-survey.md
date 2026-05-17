@@ -92,9 +92,10 @@ Current upstream bank coverage:
   notch filters, PAD layers, named
   kit layers, PAD table modes/bandwidth, PAD source-table extraction for the
   implemented OscilGen subset, PAD LP/HP/BPF/notch cutoff/order/Q/envelopes,
-  and staged non-free envelopes.
+  staged non-free envelopes, and authored vowel-frame formant motion.
 - Counted but not translated: ADD, SUB, mixed-engine kits, free envelopes,
-  active LFO routing, formant filters/motion, and effects.
+  active LFO routing beyond explicit control lanes, exact Zyn formant position
+  drivers/smoothing, and effects.
 - Unknown PAD filter pressure: formant filters, peak filters, shelf filters,
   and other unimplemented PAD global filter categories/types such as
   `cat=1 type=0`, `cat=0 type=6`, `cat=0 type=8`, and smaller buckets.
@@ -111,12 +112,13 @@ should own the behavior.
 
 ## Recommended Next Cut
 
-Start with **named layer routing**, not PAD synthesis.
+Start with **ADD/SUB voice extraction or free-envelope point curves**, not more
+PAD synthesis.
 
-Reason: the worst Zyn instruments repeatedly combine multiple kit items and
-engines. A named layer surface would give additive banks, PAD sources, free
-envelopes, and formant motion somewhere coherent to live later. Without it, the
-next abstractions risk becoming loose fields on anonymous voices.
+Reason: named layers, PAD spectral sources, staged envelopes, native
+band-pass/notch filters, and a first vowel-frame formant-motion surface now
+exist. The next counted Zyn pressure is no longer "where does this live?" for
+formants; it is either ADD/SUB source detail or arbitrary envelope shape.
 
 ## First Responses
 
@@ -168,3 +170,16 @@ a PADsynth-style authoring path: frequency-domain harmonic spreading,
 deterministic random phase, one inverse FFT, and normalization. This is not full
 Zyn PAD engine parity across every harmonic profile and pitch-zone behavior, but
 it is now real spectral-table synthesis rather than voice-count theater.
+
+Wide Bass promoted the first formant-motion rung:
+
+```text
+voice layer=wide_bass formant_mix=.7 vowel_hz=.39
+    vowels=600:90:1,1200:160:.7|500:80:1,900:120:.8
+```
+
+The `vowels` field is an AquaSynth voice authority: each `|`-separated frame is
+a formant bank, and Faust blends adjacent frames cyclically at `vowel_hz`. The
+Zyn workout can seed frames from `FORMANT_FILTER` vowel sequences, but exact Zyn
+filter-frequency position driving, slowness, and vowel clearness remain pressure
+rather than hidden compatibility sludge.

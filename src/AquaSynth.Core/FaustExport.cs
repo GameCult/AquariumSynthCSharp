@@ -261,7 +261,7 @@ public static class FaustEmitter
         {
             source.AppendLine($"{name}_phased = {name}_filtered;");
         }
-        source.AppendLine($"{name}_formants = {FormantExpression(name, voice)};");
+        source.AppendLine($"{name}_formants = {FormantExpression(name, voice, ownerPath, parameters)};");
         source.AppendLine($"{name} = (({name}_phased * (1.0 - {formantMix}) + {name}_formants * {formantMix}) * {envelope}{tremolo} * max(0.0, 1.0 + patch_mod_gain + {gain}) * {parameters.Expression(OwnerField(ownerPath, "gain"), voice.Gain)});");
         source.AppendLine();
     }
@@ -495,11 +495,35 @@ public static class FaustEmitter
         return ordered;
     }
 
-    private static string FormantExpression(string name, Voice voice)
+    private static string FormantExpression(string name, Voice voice, string ownerPath, ParameterMap parameters)
     {
-        if (voice.Formants.Count == 0) return $"{name}_phased";
-        var gainSum = Math.Max(voice.Formants.Sum(formant => Math.Abs(formant.Gain)), 0.001f);
-        var parts = voice.Formants.Select(formant =>
+        if (voice.FormantFrames.Count > 0)
+        {
+            if (voice.FormantFrames.Count == 1)
+            {
+                return StaticFormantExpression(name, voice.FormantFrames[0].Formants);
+            }
+
+            var frameCount = voice.FormantFrames.Count;
+            var rate = parameters.Expression(OwnerField(ownerPath, "color/vowel_rate"), voice.FormantFrameRateHz);
+            var position = $"wrap01(age * {rate}) * {F(frameCount)}";
+            var frames = voice.FormantFrames.Select((frame, index) =>
+            {
+                var distance = $"min(abs(({position}) - {F(index)}), {F(frameCount)} - abs(({position}) - {F(index)}))";
+                var weight = $"max(0.0, 1.0 - {distance})";
+                return $"({StaticFormantExpression(name, frame.Formants)}) * ({weight})";
+            });
+            return string.Join(" + ", frames);
+        }
+
+        return StaticFormantExpression(name, voice.Formants);
+    }
+
+    private static string StaticFormantExpression(string name, IReadOnlyList<Formant> formants)
+    {
+        if (formants.Count == 0) return $"{name}_phased";
+        var gainSum = Math.Max(formants.Sum(formant => Math.Abs(formant.Gain)), 0.001f);
+        var parts = formants.Select(formant =>
         {
             var q = Math.Clamp(formant.FrequencyHz / Math.Max(formant.BandwidthHz, 10), 0.2f, 40);
             return $"({name}_phased : fi.resonbp({F(formant.FrequencyHz)}, {F(q)}, 1.0)) * {F(formant.Gain)}";

@@ -136,6 +136,8 @@ public sealed record VoiceColor(
 
 public sealed record Formant(float FrequencyHz, float BandwidthHz, float Gain);
 
+public sealed record FormantFrame(IReadOnlyList<Formant> Formants);
+
 public sealed record Modulator(
     ModTarget Target,
     ModWaveform Waveform = ModWaveform.Sine,
@@ -334,6 +336,8 @@ public sealed record Voice
     public FrequencyModulation Fm { get; init; } = new();
     public VoiceColor Color { get; init; } = new();
     public IReadOnlyList<Formant> Formants { get; init; } = Array.Empty<Formant>();
+    public IReadOnlyList<FormantFrame> FormantFrames { get; init; } = Array.Empty<FormantFrame>();
+    public float FormantFrameRateHz { get; init; } = 0.5f;
     public IReadOnlyList<Modulator> Modulators { get; init; } = Array.Empty<Modulator>();
     public float Gain { get; init; } = 0.2f;
 }

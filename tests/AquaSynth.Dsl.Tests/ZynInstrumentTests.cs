@@ -226,6 +226,31 @@ public sealed class ZynInstrumentTests
     }
 
     [Fact]
+    public void UpstreamWideBassExportsFormantMotionWorkoutWhenAvailable()
+    {
+        var root = RepositoryRoot();
+        var path = Path.Combine(root, "external", "zynaddsubfx", "instruments", "banks", "Companion", "0056-Wide Bass.xiz");
+        if (!File.Exists(path))
+        {
+            return;
+        }
+
+        var rebuild = ZynInstrumentReader.RebuildFirstFormantMotionAsAquaSynthScript(path);
+        var patch = PatchScript.Parse(rebuild.Script);
+
+        var voice = Assert.Single(patch.Voices);
+        Assert.Equal("Wide Bass", rebuild.InstrumentName);
+        Assert.True(voice.FormantFrames.Count >= 3);
+        Assert.All(voice.FormantFrames, frame => Assert.True(frame.Formants.Count >= 3));
+        Assert.Contains("vowels=", rebuild.Script);
+        Assert.Contains(rebuild.MatchedFeatures, feature => feature.Name == "formant_sequence");
+        Assert.Contains(rebuild.MissingFeatures, feature => feature.Name == "zyn_formant_position_driver");
+
+        var faust = FaustEmitter.Emit(patch).Source;
+        Assert.Contains("wrap01(age *", faust);
+    }
+
+    [Fact]
     public void RebuildMapsZynStateVariablePadLowPassToAquaFilterAuthority()
     {
         var rebuild = ZynInstrumentReader.RebuildFirstPadAsAquaSynthScript(Encoding.UTF8.GetBytes("""

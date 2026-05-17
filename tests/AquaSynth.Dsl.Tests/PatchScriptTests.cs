@@ -66,6 +66,22 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
+    public void ParserSupportsVoiceVowelFrames()
+    {
+        var patch = PatchScript.Parse("v w=saw f=90 fmix=.7 vowel_hz=.8 vowels=600:90:1,1200:160:.7|500:80:1,900:120:.8");
+
+        var voice = Assert.Single(patch.Voices);
+        Assert.Equal(2, voice.FormantFrames.Count);
+        Assert.Equal(2, voice.FormantFrames[0].Formants.Count);
+        Assert.Equal(.8f, voice.FormantFrameRateHz, 5);
+
+        var faust = FaustEmitter.Emit(patch).Source;
+        Assert.Contains("wrap01(age * 0.8)", faust);
+        Assert.Contains("fi.resonbp(600", faust);
+        Assert.Contains("fi.resonbp(500", faust);
+    }
+
+    [Fact]
     public void ParserPreservesDeclaredPatchParameters()
     {
         var patch = PatchScript.Parse("param name=brightness path=/macro/brightness default=.45 min=0 max=1 step=.001 unit=normalized rate=control;v w=saw f=80");

@@ -109,6 +109,13 @@ public sealed record ZynPadRebuild(
     IReadOnlyList<ReferenceFeature> MatchedFeatures,
     IReadOnlyList<ReferenceFeature> MissingFeatures);
 
+public sealed record ZynFormantMotionRebuild(
+    string InstrumentName,
+    int KitItemId,
+    string Script,
+    IReadOnlyList<ReferenceFeature> MatchedFeatures,
+    IReadOnlyList<ReferenceFeature> MissingFeatures);
+
 public sealed record ZynPadTableRoot(float Sample0RootFrequencyHz, float? SelectedRootFrequencyHz = null);
 
 public enum ZynEngine
@@ -163,6 +170,92 @@ public static class ZynInstrumentReader
         IReadOnlyDictionary<int, ZynPadTableRoot> tableRootFrequencyHzByKitItem,
         float playbackFrequencyHz = 261.6256f) =>
         RebuildEnabledPadsAsAquaSynthScript(File.ReadAllBytes(path), tableRootFrequencyHzByKitItem, playbackFrequencyHz);
+
+    public static ZynFormantMotionRebuild RebuildFirstFormantMotionAsAquaSynthScript(
+        string path,
+        float playbackFrequencyHz = 110.0f) =>
+        RebuildFirstFormantMotionAsAquaSynthScript(File.ReadAllBytes(path), playbackFrequencyHz);
+
+    public static ZynFormantMotionRebuild RebuildFirstFormantMotionAsAquaSynthScript(
+        ReadOnlySpan<byte> bytes,
+        float playbackFrequencyHz = 110.0f)
+    {
+        if (playbackFrequencyHz <= 0) throw new ArgumentOutOfRangeException(nameof(playbackFrequencyHz));
+
+        var document = ParseDocument(bytes);
+        var instrument = document.Descendants("INSTRUMENT").FirstOrDefault()
+            ?? throw new ArgumentException("Zyn instrument XML is missing INSTRUMENT");
+        var name = StringValue(instrument.Element("INFO"), "name", "unnamed");
+        var item = instrument
+            .Descendants("INSTRUMENT_KIT_ITEM")
+            .Where(item => BoolParam(item, "enabled"))
+            .FirstOrDefault(item => item.Descendants("FORMANT_FILTER").Any())
+            ?? throw new ArgumentException("Zyn instrument XML has no enabled formant filter kit item");
+
+        var formantFilter = item
+            .Descendants("FORMANT_FILTER")
+            .FirstOrDefault(filter => filter.Ancestors("FILTER_PARAMETERS")
+                .Elements("FILTER_LFO")
+                .Any(lfo => IntParam(lfo, "intensity", 0) > 0))
+            ?? item.Descendants("FORMANT_FILTER").First();
+        var filterLfo = formantFilter
+            .Ancestors("FILTER_PARAMETERS")
+            .Elements("FILTER_LFO")
+            .FirstOrDefault(lfo => IntParam(lfo, "intensity", 0) > 0);
+
+        var frameCount = Math.Clamp(IntParam(formantFilter, "sequence_size", 1), 1, 8);
+        var formantCount = Math.Clamp(IntParam(formantFilter, "num_formants", 3), 1, 6);
+        var sequence = formantFilter
+            .Elements("SEQUENCE_POS")
+            .OrderBy(element => IntAttribute(element, "id"))
+            .Select(element => IntParam(element, "vowel_id", 0))
+            .Take(frameCount)
+            .ToArray();
+        if (sequence.Length == 0)
+        {
+            sequence = Enumerable.Range(0, frameCount).ToArray();
+        }
+
+        var frames = sequence
+            .Select(vowelId => ParseZynVowelFrame(formantFilter, vowelId, formantCount))
+            .Where(frame => frame.Count > 0)
+            .ToList();
+        if (frames.Count == 0)
+        {
+            throw new ArgumentException("Zyn formant filter has no vowel frame formants");
+        }
+
+        var safeName = SafeIdentifier(name);
+        var vowelText = string.Join("|", frames.Select(frame => string.Join(",", frame.Select(formant => $"{F(formant.FrequencyHz)}:{F(formant.BandwidthHz)}:{F(formant.Gain)}"))));
+        var vowelRate = filterLfo is null ? 0.5f : Math.Clamp(RealParam(filterLfo, "freq", 0.5f), 0.01f, 20.0f);
+        var engines = EnabledEnginesForReader(item).ToArray();
+        var engine = engines.Contains(ZynEngine.AddSynth) ? "add" :
+            engines.Contains(ZynEngine.SubSynth) ? "sub" :
+            engines.Contains(ZynEngine.PadSynth) ? "pad" : "formant";
+
+        var script = new StringBuilder();
+        script.AppendLine("# Generated from a ZynAddSubFX formant-motion fixture for parity pressure.");
+        script.AppendLine("# Scope: first enabled kit item with a FORMANT_FILTER vowel sequence.");
+        script.AppendLine("patch gain=0.45 soft_clip=true");
+        script.AppendLine($"layer name={safeName} engine={engine} gain=0.25");
+        script.AppendLine($"voice layer={safeName} wave=saw freq={F(playbackFrequencyHz)} gain=0.18 gate=1.8 env=rl rates=0.04,0.18,0.9,0.3 levels=1,0.9,0.75,0 formant_mix=0.7 vowel_hz={F(vowelRate)} vowels={vowelText}");
+
+        return new ZynFormantMotionRebuild(
+            name,
+            IntAttribute(item, "id"),
+            script.ToString(),
+            [
+                new("formant_filter_count", item.Descendants("FORMANT_FILTER").Count().ToString(CultureInfo.InvariantCulture), "Read Zyn FORMANT_FILTER blocks from the enabled kit item."),
+                new("formant_sequence", string.Join(",", sequence), "Lowered the Zyn vowel sequence into AquaSynth vowel frames."),
+                new("formant_frames", frames.Count.ToString(CultureInfo.InvariantCulture), "Each frame owns one static formant bank; Faust blends between frames at control/audio expression time."),
+                new("formant_frame_rate_hz", F(vowelRate), filterLfo is null ? "No active FILTER_LFO was found; the workout uses a slow audible scan." : "Seeded from the active Zyn FILTER_LFO frequency.")
+            ],
+            [
+                new("zyn_formant_position_driver", "filter frequency to vowel position", "Zyn derives vowel position from the formant filter cutoff path; AquaSynth currently states an explicit frame rate."),
+                new("zyn_formant_smoothing", "formant_slowness/vowel_clearness", "AquaSynth blends adjacent frames with a simple cyclic triangular window."),
+                new("zyn_add_voice_detail", "full ADD voice oscillator/FM stack", "This workout keeps the source deliberately plain so the formant-motion authority is the thing under test.")
+            ]);
+    }
 
     public static ZynPadRebuild RebuildFirstPadAsAquaSynthScript(
         ReadOnlySpan<byte> bytes,
@@ -472,6 +565,13 @@ public static class ZynInstrumentReader
 
     private static bool IsEnabledPadItem(XElement item) =>
         BoolParam(item, "enabled") && EngineEnabled(item, "pad_enabled", "PAD_SYNTH_PARAMETERS");
+
+    private static IEnumerable<ZynEngine> EnabledEnginesForReader(XElement item)
+    {
+        if (EngineEnabled(item, "add_enabled", "ADD_SYNTH_PARAMETERS")) yield return ZynEngine.AddSynth;
+        if (EngineEnabled(item, "sub_enabled", "SUB_SYNTH_PARAMETERS")) yield return ZynEngine.SubSynth;
+        if (EngineEnabled(item, "pad_enabled", "PAD_SYNTH_PARAMETERS")) yield return ZynEngine.PadSynth;
+    }
 
     private static string StringValue(XElement? root, string name, string fallback) =>
         root?.Elements("string")
@@ -1431,6 +1531,43 @@ public static class ZynInstrumentReader
             ?.Attribute("value")
             ?.Value;
         return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) ? parsed : fallback;
+    }
+
+    private static float RealParam(XElement? root, string name, float fallback)
+    {
+        var value = root?.Elements("par_real")
+            .FirstOrDefault(element => AttributeValue(element, "name") == name)
+            ?.Attribute("value")
+            ?.Value;
+        return float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed) ? parsed : fallback;
+    }
+
+    private static IReadOnlyList<Formant> ParseZynVowelFrame(XElement formantFilter, int vowelId, int formantCount)
+    {
+        var center = IntParam(formantFilter, "center_freq", 64);
+        var octaves = IntParam(formantFilter, "octaves_freq", 64);
+        return formantFilter
+            .Elements("VOWEL")
+            .FirstOrDefault(vowel => IntAttribute(vowel, "id") == vowelId)
+            ?.Elements("FORMANT")
+            .OrderBy(formant => IntAttribute(formant, "id"))
+            .Take(formantCount)
+            .Select(formant =>
+            {
+                var frequency = ZynFormantFrequencyHz(IntParam(formant, "freq", 64), center, octaves);
+                var q = Math.Clamp(MathF.Pow(25.0f, (IntParam(formant, "q", 64) - 32.0f) / 64.0f), 0.2f, 40.0f);
+                var gain = MathF.Pow(0.1f, (1.0f - IntParam(formant, "amp", 127) / 127.0f) * 4.0f);
+                return new Formant(frequency, Math.Max(10.0f, frequency / q), gain);
+            })
+            .ToArray() ?? [];
+    }
+
+    private static float ZynFormantFrequencyHz(int value, int center, int octaves)
+    {
+        var centerHz = 10000.0f * MathF.Pow(10.0f, -(1.0f - center / 127.0f) * 2.0f);
+        var octaveSpan = 0.25f + 10.0f * octaves / 127.0f;
+        var octaveFactor = MathF.Pow(2.0f, octaveSpan);
+        return centerHz / MathF.Sqrt(octaveFactor) * MathF.Pow(octaveFactor, Math.Clamp(value, 0, 127) / 127.0f);
     }
 
     private static float EnvelopeTime(XElement? envelope, string name, float fallback)

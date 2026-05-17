@@ -397,6 +397,9 @@ public static class PatchScript
             var formants = TryGetAny(fields, ["formants", "fs"], out var formantSpec)
                 ? ParseFormants(formantSpec, line)
                 : [];
+            var formantFrames = TryGetAny(fields, ["vowels", "vowel_frames", "formant_frames"], out var vowelSpec)
+                ? ParseFormantFrames(vowelSpec, line)
+                : [];
 
             var modulators = TryGetAny(fields, ["mods", "m"], out var mods)
                 ? ParseVoiceModulators(mods, line)
@@ -470,6 +473,8 @@ public static class PatchScript
                     GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "color/tremolo_hz"), "tremolo_hz", "th"),
                     GetBoundFloat(fields, line, 0, OwnerField(ownerPath, "color/formant_mix"), "formant_mix", "fmix")),
                 Formants = formants,
+                FormantFrames = formantFrames,
+                FormantFrameRateHz = GetBoundFloat(fields, line, 0.5f, OwnerField(ownerPath, "color/vowel_rate"), "vowel_hz", "vowel_rate", "vowels_hz"),
                 Modulators = modulators,
                 Gain = GetBoundFloat(fields, line, 0.2f, OwnerField(ownerPath, "gain"), "gain", "g") * gainScale
             };
@@ -1230,6 +1235,11 @@ public static class PatchScript
                 if (pieces.Length != 3) throw new PatchScriptException(line, $"bad formant `{part}`");
                 return new Formant(ParseFloat(pieces[0], line), ParseFloat(pieces[1], line), ParseFloat(pieces[2], line));
             })
+            .ToList();
+
+    private static List<FormantFrame> ParseFormantFrames(string value, int line) =>
+        value.Split('|', StringSplitOptions.RemoveEmptyEntries)
+            .Select(frame => new FormantFrame(ParseFormants(frame, line)))
             .ToList();
 
     private static List<Modulator> ParseVoiceModulators(string value, int line) =>
