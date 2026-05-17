@@ -370,7 +370,7 @@ public sealed class Dx7ReferenceParityTests
     private static string ArtifactPath(params string[] parts)
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null && !File.Exists(Path.Combine(current.FullName, "AquaSynth.slnx")))
+        while (current is not null && !File.Exists(Path.Combine(current.FullName, "AquaSynth.sln")))
         {
             current = current.Parent;
         }
@@ -1131,3 +1131,4 @@ internal static class TestFormat
     public static string ToStringInvariant(this float value) =>
         value.ToString(System.Globalization.CultureInfo.InvariantCulture);
 }
+

@@ -361,7 +361,7 @@ public sealed class ZynReferenceParityTests
     private static string RepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AquaSynth.slnx")))
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AquaSynth.sln")))
         {
             directory = directory.Parent;
         }
@@ -494,3 +494,4 @@ public sealed class ZynReferenceParityTests
         }
     }
 }
+

@@ -10,7 +10,7 @@ surfaces:
   scratch: state/scratch.md
   evidence: state/evidence.jsonl
   spine: state/spine.yaml
-  solution: AquaSynth.slnx
+  solution: AquaSynth.sln
   core_library: src/AquaSynth.Core
   faust_library: src/AquaSynth.Faust
   patch_library: patches
@@ -70,3 +70,4 @@ checks:
   dexed_py_reference: optional in tests when AQUASYNTH_DX7_PYTHON or a Python with dexed-py is available
   zyn_reference_source: pinned submodule used only for parity tests; never package content
   zyn_upstream_instrument_bank: nested GPL submodule used only for test/development pressure surveys and oracle renders; never package content
+

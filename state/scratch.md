@@ -44,7 +44,7 @@ Current slice:
   same as the references. Treat the remaining high log-mel values as regression
   pressure and diagnostic smoke, not as a mandate to keep sanding sounds that
   have already landed perceptually.
-- Verification: `dotnet test AquaSynth.slnx --no-restore`: 107
+- Verification: `dotnet test AquaSynth.sln --no-restore`: 107
   passed.
 - Next pressure can leave this Zyn PAD batch and move to the roadmap's next
   synth/abstraction rung; keep sin2x and broader OscilGen/PAD source-table
@@ -255,13 +255,13 @@ Completed this slice:
   `dotnet test tests\AquaSynth.Dsl.Tests\AquaSynth.Dsl.Tests.csproj --no-restore --filter "FullyQualifiedName~SpectralBank|FullyQualifiedName~ZynStyleReferenceRebuildsParseExportAndDeclarePressure|FullyQualifiedName~BuiltInReferenceScriptsParseAndExportFaust"`:
   4 passed.
 - Wavetable replacement verification:
-  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.sln --no-restore`:
   94 passed.
 - FFT table generator focused verification:
   `dotnet test tests\AquaSynth.Dsl.Tests\AquaSynth.Dsl.Tests.csproj --no-restore --filter "FullyQualifiedName~SpectralBank|FullyQualifiedName~FaustCompilerValidatesSpectralBank|FullyQualifiedName~ZynStyleReferenceRebuildsParseExportAndDeclarePressure"`:
   4 passed.
 - Full verification after FFT table generator:
-  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.sln --no-restore`:
   94 passed.
 
 Previous slice:
@@ -279,7 +279,7 @@ Previous slice:
   `dotnet test tests\AquaSynth.Dsl.Tests\AquaSynth.Dsl.Tests.csproj --no-restore --filter "FullyQualifiedName~LayeredVoiceRateLevelEnvelope|FullyQualifiedName~ZynStyleReferenceRebuildsParseExportAndDeclarePressure|FullyQualifiedName~BuiltInReferenceScriptsParseAndExportFaust"`:
   3 passed.
 - Full verification with bundled Python/dexed-py:
-  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.sln --no-restore`:
   91 passed.
 
 Previous slice:
@@ -294,7 +294,7 @@ Previous slice:
 - This is not Zyn ADDsynth parity theater. Phase, bandwidth, oscillator
   shaping, and exact free-envelope behavior remain explicit pressure.
 - Verified with bundled Python/dexed-py still wired:
-  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.sln --no-restore`:
   90 passed.
 
 Previous slice:
@@ -309,7 +309,7 @@ Previous slice:
   Future additive-bank, PAD-source, free-envelope, and formant-motion syntax
   now has somewhere coherent to attach.
 - Verified with bundled Python/dexed-py still wired:
-  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.sln --no-restore`:
   88 passed.
 
 Previous slice:
@@ -328,7 +328,7 @@ Previous slice:
 - Survey conclusion: named kit/layer routing should probably precede syntax
   golf for additive banks, PAD sources, or formant motion.
 - Verified with bundled Python/dexed-py still wired:
-  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.sln --no-restore`:
   86 passed.
 
 Previous slice:
@@ -343,7 +343,7 @@ Previous slice:
   normal voices, named kit/layer routing with per-layer effect sends, and richer
   formant/vowel morphing. No new runtime surface was added yet.
 - Verified with bundled Python/dexed-py still wired:
-  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.sln --no-restore`:
   83 passed.
 
 Previous slice:
@@ -359,7 +359,7 @@ Previous slice:
   layering, envelopes, free envelopes, LFOs, filters, formant filters, and
   effects. This is inventory for choosing rebuild targets, not translation yet.
 - Verified with bundled Python/dexed-py still wired:
-  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.sln --no-restore`:
   81 passed.
 
 Previous slice:
@@ -392,7 +392,7 @@ Previous slice:
   too aggressively and broke PRC, `Piano Bass`, `RES SYNTH1`, and `ANLGSYN 1`;
   release duration remains part of the broader DX7 envelope model pressure.
 - Verified with bundled Python/dexed-py:
-  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.sln --no-restore`:
   76 passed.
 
 Previous slice:
@@ -414,7 +414,7 @@ Previous slice:
   and does not deserve to live. Mooger's "too hard" harmonics remain unresolved
   overtone-emphasis pressure, not a solved high-band-energy problem.
 - Focused verification with bundled Python/dexed-py:
-  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore --filter "Dx7SysExTests|PublicDomainDx7MoogerAndPianoBassMeetRenderedParityWhenInstalled|PublicDomainDx7AnlgSyn1KeepsBuzzingModulationWhenInstalled|PublicDomainDx7MellowSoloWritesPressureWavsWhenInstalled|PublicDomainDx7PrcSynth1WritesListeningWavsWhenInstalled"`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.sln --no-restore --filter "Dx7SysExTests|PublicDomainDx7MoogerAndPianoBassMeetRenderedParityWhenInstalled|PublicDomainDx7AnlgSyn1KeepsBuzzingModulationWhenInstalled|PublicDomainDx7MellowSoloWritesPressureWavsWhenInstalled|PublicDomainDx7PrcSynth1WritesListeningWavsWhenInstalled"`:
   28 passed.
 
 Previous slice:
@@ -436,7 +436,7 @@ Previous slice:
   more Dexed-shaped on paper, but worsened `MELLOWSOLO` and `ANLGSYN 1`, so it
   does not belong in the live machine yet.
 - Focused verification with bundled Python/dexed-py:
-  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore --filter "Dx7SysExTests|PublicDomainDx7MoogerAndPianoBassMeetRenderedParityWhenInstalled|PublicDomainDx7AnlgSyn1KeepsBuzzingModulationWhenInstalled|PublicDomainDx7MellowSoloWritesPressureWavsWhenInstalled|PublicDomainDx7PrcSynth1WritesListeningWavsWhenInstalled"`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.sln --no-restore --filter "Dx7SysExTests|PublicDomainDx7MoogerAndPianoBassMeetRenderedParityWhenInstalled|PublicDomainDx7AnlgSyn1KeepsBuzzingModulationWhenInstalled|PublicDomainDx7MellowSoloWritesPressureWavsWhenInstalled|PublicDomainDx7PrcSynth1WritesListeningWavsWhenInstalled"`:
   28 passed.
 
 Previous slice:
@@ -456,7 +456,7 @@ Previous slice:
   `DX1 LEAD B` score `.45156077`, log-mel `.43533683`, RMS `.8193191`;
   `MELLOWSOLO` score `.5359293`, log-mel `.39420125`, RMS `.99559265`.
 - Verified with bundled Python/dexed-py:
-  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.sln --no-restore`:
   74 passed.
 
 Previous slice:
@@ -476,7 +476,7 @@ Previous slice:
 - Fresh `ANLGSYN 1`: score `.7245976`, log-mel `.18460114`, envelope
   `.119950555`, RMS `.97143364`, zero-crossing `.97149533`.
 - Verified with bundled Python/dexed-py:
-  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.sln --no-restore`:
   74 passed.
 
 Earlier slice:
@@ -505,7 +505,7 @@ Earlier slice:
   - 1.2-2.5 kHz candidate/reference energy: `.008 -> .656`
   - 2.5-5 kHz candidate/reference energy: near zero -> `.321`
 - Verified with bundled Python/dexed-py:
-  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.sln --no-restore`:
   73 passed.
 
 Earlier slice:
@@ -523,7 +523,7 @@ Earlier slice:
   focused gates. Latest metrics: log-mel `.19427659`, envelope `.14924917`,
   zero-crossing `.94662774`, centroid `.9182808`, score `.659334`.
 - Verified with bundled Python/dexed-py:
-  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.sln --no-restore`:
   73 passed.
 
 Previous slice:
@@ -540,7 +540,7 @@ Previous slice:
 - Fixed `Piano Bass` metrics: log-mel `.16180529`, envelope `.13544041`,
   zero-crossing `.905511`, score `.64267576`.
 - Verified with bundled Python/dexed-py:
-  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.sln --no-restore`:
   71 passed.
 
 Previous slice:
@@ -561,7 +561,7 @@ Previous slice:
   from the passing gate because log-mel and zero-crossing mismatch were too
   large. That is pressure, not library stock.
 - Verified with bundled Python/dexed-py:
-  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.sln --no-restore`:
   70 passed.
 
 Previous slice:
@@ -582,7 +582,7 @@ Previous slice:
   intentionally not part of the patch library: they are useful measuring tools,
   not pleasant or reusable stock.
 - Verified with bundled Python/dexed-py:
-  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.slnx --no-restore`:
+  `AQUASYNTH_DX7_PYTHON=<bundled python> dotnet test AquaSynth.sln --no-restore`:
   69 passed.
 
 Previous slice:
@@ -600,7 +600,7 @@ Previous slice:
 - Added a test contract: every `.aqua` under `patches/` must parse through
   `PatchScript.Parse` and export Faust, while package-boundary tests keep
   `patches/` and `.aqua` files out of the NuGet package.
-- Verified with `dotnet test AquaSynth.slnx --no-restore`: 67 passed.
+- Verified with `dotnet test AquaSynth.sln --no-restore`: 67 passed.
 
 Previous slice:
 
@@ -792,7 +792,7 @@ Previous slice:
   that emits staged envelope script specs from four-rate/four-level operator EG
   data.
 - Verified the surface structurally and through the render path:
-  `dotnet test AquaSynth.slnx --no-restore`: 53 passed.
+  `dotnet test AquaSynth.sln --no-restore`: 53 passed.
 - Retried the hard `PRC SYNTH1` probe with direct DX7 rate/level lowering. The
   best quick score was only ~0.316, worse than the hand-tweaked ADSR candidate.
   The DSL can now express the missing contour shape, but DX7 EG timing/gain
@@ -807,7 +807,7 @@ Previous slice:
   mapping alone did not rescue the hard target: quick probes moved from ~0.24
   to ~0.34, and envelope tweaks reached ~0.42. The next missing pressure is
   DX7-style operator envelope/gain evolution, not just static operator levels.
-- Verified with `dotnet test AquaSynth.slnx --no-restore`: 50 passed.
+- Verified with `dotnet test AquaSynth.sln --no-restore`: 50 passed.
 
 Previous slice:
 
@@ -819,7 +819,7 @@ Previous slice:
   `FaustCompilerRendersOperatorFeedbackWhenInstalled`.
 - Exact DX7 feedback scaling and EG behavior are still not solved, but feedback
   no longer makes the Faust render path fall over.
-- Verified with `dotnet test AquaSynth.slnx --no-restore`: 49 passed.
+- Verified with `dotnet test AquaSynth.sln --no-restore`: 49 passed.
 
 Previous slice:
 
@@ -835,7 +835,7 @@ Previous slice:
   DX7 operator execution. The next DX7 pressure should be a harder voice that
   audibly needs the operator graph.
 - Verified with bundled Python plus `dexed-py`: parity test passed.
-- Verified with `dotnet test AquaSynth.slnx --no-restore`: 48 passed.
+- Verified with `dotnet test AquaSynth.sln --no-restore`: 48 passed.
 
 Previous slice:
 
@@ -850,7 +850,7 @@ Previous slice:
   test fixtures, SysEx banks, and Python helpers are not shipped.
 - Verified with bundled Python plus `dexed-py`: the DX7 fixture renders through
   Dexed successfully.
-- Verified with `dotnet test AquaSynth.slnx --no-restore`: 47 passed.
+- Verified with `dotnet test AquaSynth.sln --no-restore`: 47 passed.
 
 Previous slice:
 
@@ -861,7 +861,7 @@ Previous slice:
   audio and can be compared through `AudioAnalyzer`.
 - DX7 audio parity is still not claimed: the candidate renderer exists, but the
   reference side needs Dexed output or a captured licensed fixture.
-- Verified with `dotnet test AquaSynth.slnx --no-restore`: 44 passed.
+- Verified with `dotnet test AquaSynth.sln --no-restore`: 44 passed.
 
 Previous slice:
 
@@ -871,7 +871,7 @@ Previous slice:
   pressure and `operator_envelope_exactness` as still missing.
 - Doctrine now states that DX7 EG approximation is not exact DX7 envelope
   execution.
-- Verified with `dotnet test AquaSynth.slnx --no-restore`: 43 passed.
+- Verified with `dotnet test AquaSynth.sln --no-restore`: 43 passed.
 
 Previous slice:
 
@@ -882,7 +882,7 @@ Previous slice:
   the exact `/opgraphs/...` field paths.
 - Fixed AD operator envelope binding to use `/env/decay` for the second AD
   value, matching the ADSR model instead of calling it release by accident.
-- Verified with `dotnet test AquaSynth.slnx --no-restore`: 42 passed.
+- Verified with `dotnet test AquaSynth.sln --no-restore`: 42 passed.
 
 Previous slice:
 
@@ -892,7 +892,7 @@ Previous slice:
   `[midi:on][nvoices:8]` option and `freq`, `gain`, `gate` controls.
 - Host/MIDI playback no longer emits per-voice `/voices/0/note/frequency` and
   `/voices/0/note/gate` controls; Faust architecture owns allocation.
-- Verified with `dotnet test AquaSynth.slnx --no-restore`: 41 passed.
+- Verified with `dotnet test AquaSynth.sln --no-restore`: 41 passed.
 
 Previous slice:
 
@@ -905,7 +905,7 @@ Previous slice:
 - Added host note mode for MIDI-oriented patches through stable note frequency
   and note gate controls in generated Faust.
 - Moved built-in authoring examples off `punch=` and onto `sustain_level=`.
-- Verified with `dotnet test AquaSynth.slnx --no-restore`: 40 passed.
+- Verified with `dotnet test AquaSynth.sln --no-restore`: 40 passed.
 
 Previous slice:
 
@@ -915,7 +915,7 @@ Previous slice:
   envelope forms for operator declarations.
 - Kept compact `ops=`/`edges=` syntax as parser/interchange scaffolding, but it
   is no longer the built-in authoring example.
-- Verified with `dotnet test AquaSynth.slnx --no-restore`: 36 passed.
+- Verified with `dotnet test AquaSynth.sln --no-restore`: 36 passed.
 
 Previous slice:
 
@@ -927,7 +927,7 @@ Previous slice:
 - Updated the DX7 algorithm-8 rebuild to use a real operator graph for the
   topology. The remaining missing feature is exact DX7 feedback-register timing
   and DX7 rate/level envelopes, not graph ownership.
-- Verified with `dotnet test AquaSynth.slnx --no-restore`: 35 passed.
+- Verified with `dotnet test AquaSynth.sln --no-restore`: 35 passed.
 
 Earlier rebuild slice:
 
@@ -941,7 +941,7 @@ Earlier rebuild slice:
     `6->5`, `4+5->3`, `2->1`, or operator-local self-feedback.
 - Added matched/missing feature records so topology mismatch becomes evidence
   instead of being hidden inside prose.
-- Verified with `dotnet test AquaSynth.slnx --no-restore`: 34 passed.
+- Verified with `dotnet test AquaSynth.sln --no-restore`: 34 passed.
 
 Earlier topology slice:
 
@@ -954,7 +954,7 @@ Earlier topology slice:
   `modulation_edge_count`, `feedback_sources`, and
   `self_feedback_operators`.
 - Representative tests cover algorithm 8, algorithm 16, and algorithm 32.
-- Verified with `dotnet test AquaSynth.slnx --no-restore`: 31 passed.
+- Verified with `dotnet test AquaSynth.sln --no-restore`: 31 passed.
 
 Earlier slice:
 
@@ -965,7 +965,7 @@ Earlier slice:
 - Added `Dx7Voice.ToReferencePatch` and structural feature extraction so DX7
   voices can pressure the reference model before translation exists.
 - Checksum validation rejects bad wrapped SysEx payloads.
-- Verified with `dotnet test AquaSynth.slnx --no-restore`: 28 passed.
+- Verified with `dotnet test AquaSynth.sln --no-restore`: 28 passed.
 
 Parameter slice:
 
@@ -982,7 +982,7 @@ Parameter slice:
   parameter default as the graph value.
 - Faust emission substitutes the parameter expression only at the bound field
   site. Unbound parameters still emit a warning.
-- Verified with `dotnet test AquaSynth.slnx --no-restore`: 23 passed.
+- Verified with `dotnet test AquaSynth.sln --no-restore`: 23 passed.
 
 Next likely slice:
 
@@ -991,3 +991,4 @@ Next likely slice:
   current frequency/gate controls.
 - Keep tests focused on structure first, then add rendered audio comparison once
   the render path is explicit.
+
