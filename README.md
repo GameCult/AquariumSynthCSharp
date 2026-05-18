@@ -63,6 +63,9 @@ published packages.
   from `AquaSynth.Faust`.
 - `FaustCompiler.CompileAsync(source, options)` writes generated backend code
   through an installed or resolved Faust compiler from `AquaSynth.Faust`.
+- `FaustCompiler.CompileWebAssemblyScriptAsync(...)` and
+  `CompileWebAssemblyAsync(...)` emit browser-ready `.dsp`, `.wasm`, and Faust
+  JSON UI metadata artifacts.
 - `AquaSynthPatchCompiler` from `AquaSynth.Faust` is the live host-facing
   boundary for compiling `.aqua` scripts into hosted DSP factories.
 - `AquaSynthNativeCompiler` remains the lower native `libfaust` compiler
@@ -90,6 +93,16 @@ var export = FaustEmitter.Emit(patch, new FaustExportOptions("bass"));
 await FaustCompiler.CompileAsync(
     export.Source,
     new FaustCompileOptions(FaustTargetLanguage.CSharp, "Generated/Bass.cs"));
+```
+
+The browser lane uses Faust's WebAssembly backend and keeps the same ownership:
+AquaSynth emits the `.dsp`, `.wasm`, and JSON UI description; the host supplies
+WebAudio scheduling and parameter binding.
+
+```csharp
+await FaustCompiler.CompileWebAssemblyScriptAsync(
+    "v w=sin f=880 g=.12 sustain=.04 decay=.2",
+    new FaustWebAssemblyCompileOptions("Generated/Web", "ui_select"));
 ```
 
 The runtime lane is different. AquaSynth should own Faust toolchain selection,

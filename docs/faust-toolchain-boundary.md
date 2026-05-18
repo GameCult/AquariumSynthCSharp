@@ -66,6 +66,9 @@ ordinary patch controls move through the compiled DSP parameter API.
 
 - Authoring/tests may use Faust-generated C# because it is easy to render,
   inspect, and compare inside the .NET test suite.
+- Browser-hosted tools should use Faust-generated WebAssembly plus Faust JSON UI
+  metadata. AquaSynth owns those artifacts; the web app owns WebAudio loading,
+  scheduling, user gesture unlocking, and parameter binding.
 - Shipping builds should prefer Faust-generated native targets when the platform
   permits it.
 - A bundled Faust compiler belongs in an AquaSynth toolchain package or

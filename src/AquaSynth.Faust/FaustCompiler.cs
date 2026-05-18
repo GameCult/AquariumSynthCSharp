@@ -10,12 +10,30 @@ public enum FaustTargetLanguage
     C,
     Cpp,
     CSharp,
-    Rust
+    Rust,
+    WebAssembly,
+    WebAssemblyText
 }
 
 public sealed record FaustCompileOptions(FaustTargetLanguage Language, string OutputPath);
 
 public sealed record FaustValidation(string Command, bool Success, int? StatusCode, string Stdout, string Stderr);
+
+public sealed record FaustWebAssemblyCompileOptions(
+    string OutputDirectory,
+    string BaseName = "aquasynth_patch",
+    bool Stereo = false);
+
+public sealed record FaustWebAssemblyManifest(
+    string Name,
+    string DspPath,
+    string WasmPath,
+    string JsonPath,
+    string FaustPath,
+    bool Success,
+    int? StatusCode,
+    string Stdout,
+    string Stderr);
 
 public sealed record FaustRenderOptions(int SampleRate = 44100, float DurationSeconds = 1);
 
@@ -63,6 +81,64 @@ public static class FaustCompiler
         {
             File.Delete(sourcePath);
         }
+    }
+
+    public static async Task<FaustWebAssemblyManifest?> CompileWebAssemblyAsync(
+        SynthPatch patch,
+        FaustWebAssemblyCompileOptions options,
+        string? faustPath = null,
+        CancellationToken cancellationToken = default)
+    {
+        var export = FaustEmitter.Emit(patch, new FaustExportOptions(options.BaseName, options.Stereo));
+        return await CompileWebAssemblySourceAsync(export.Source, options, faustPath, cancellationToken);
+    }
+
+    public static async Task<FaustWebAssemblyManifest?> CompileWebAssemblyScriptAsync(
+        string script,
+        FaustWebAssemblyCompileOptions options,
+        string? faustPath = null,
+        CancellationToken cancellationToken = default)
+    {
+        var export = FaustEmitter.EmitScript(script, new FaustExportOptions(options.BaseName, options.Stereo));
+        return await CompileWebAssemblySourceAsync(export.Source, options, faustPath, cancellationToken);
+    }
+
+    public static async Task<FaustWebAssemblyManifest?> CompileWebAssemblySourceAsync(
+        string source,
+        FaustWebAssemblyCompileOptions options,
+        string? faustPath = null,
+        CancellationToken cancellationToken = default)
+    {
+        faustPath ??= FindFaust();
+        if (faustPath is null) return null;
+
+        Directory.CreateDirectory(options.OutputDirectory);
+        var baseName = SafeArtifactName(options.BaseName);
+        var dspPath = Path.Combine(options.OutputDirectory, $"{baseName}.dsp");
+        var wasmPath = Path.Combine(options.OutputDirectory, $"{baseName}.wasm");
+        var jsonPath = Path.Combine(options.OutputDirectory, $"{baseName}.json");
+        await File.WriteAllTextAsync(dspPath, source, cancellationToken);
+
+        var result = await RunAsync(
+            faustPath,
+            [
+                "-lang", Language(FaustTargetLanguage.WebAssembly),
+                "-json",
+                "-o", wasmPath,
+                dspPath
+            ],
+            cancellationToken);
+
+        return new FaustWebAssemblyManifest(
+            options.BaseName,
+            dspPath,
+            wasmPath,
+            jsonPath,
+            faustPath,
+            result.ExitCode == 0 && File.Exists(wasmPath),
+            result.ExitCode,
+            result.Stdout,
+            result.Stderr);
     }
 
     public static async Task<FaustValidation?> ValidateAsync(
@@ -140,8 +216,17 @@ public static class FaustCompiler
         FaustTargetLanguage.Cpp => "cpp",
         FaustTargetLanguage.CSharp => "csharp",
         FaustTargetLanguage.Rust => "rust",
+        FaustTargetLanguage.WebAssembly => "wasm",
+        FaustTargetLanguage.WebAssemblyText => "wast",
         _ => throw new ArgumentOutOfRangeException(nameof(language), language, null)
     };
+
+    private static string SafeArtifactName(string value)
+    {
+        var sanitized = new string(value.Select(character =>
+            char.IsAsciiLetterOrDigit(character) || character is '-' or '_' ? character : '_').ToArray());
+        return string.IsNullOrWhiteSpace(sanitized) ? "aquasynth_patch" : sanitized;
+    }
 
     private static async Task<string?> FaustArchDirAsync(string faustPath, CancellationToken cancellationToken)
     {

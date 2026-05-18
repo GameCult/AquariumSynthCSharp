@@ -888,6 +888,34 @@ public sealed class PatchScriptTests
     }
 
     [Fact]
+    public async Task FaustCompilerCanEmitWebAssemblyWhenInstalled()
+    {
+        var outputDir = Path.Combine(Path.GetTempPath(), $"aquasynth-wasm-{Guid.NewGuid():N}");
+        try
+        {
+            var manifest = await FaustCompiler.CompileWebAssemblyScriptAsync(
+                "v w=sin f=440 g=.2 s=.1 d=.2",
+                new FaustWebAssemblyCompileOptions(outputDir, "ui_bloom"));
+
+            if (manifest is null)
+            {
+                return;
+            }
+
+            Assert.True(manifest.Success, manifest.Stderr);
+            Assert.True(File.Exists(manifest.DspPath));
+            Assert.True(File.Exists(manifest.WasmPath));
+            Assert.True(File.Exists(manifest.JsonPath));
+            Assert.True(new FileInfo(manifest.WasmPath).Length > 0);
+            Assert.Contains("\"name\"", await File.ReadAllTextAsync(manifest.JsonPath));
+        }
+        finally
+        {
+            if (Directory.Exists(outputDir)) Directory.Delete(outputDir, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task FaustCompilerRendersGeneratedSourceWhenInstalled()
     {
         var export = FaustEmitter.EmitScript("v w=sin f=440 gain=.2 sustain=.08 decay=.04");
