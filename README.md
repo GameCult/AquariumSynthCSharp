@@ -48,8 +48,8 @@ dotnet pack src\AquaSynth.Faust\AquaSynth.Faust.csproj -c Release
 `AquaSynth.Core` owns patch meaning: model records, the `.aqua` parser,
 authoring helpers, analysis/scoring tools, presets, and Faust source emission.
 `AquaSynth.Faust` depends on Core and owns toolchain/rendering work: Faust CLI
-validation, target-code generation, native `libfaust` loading, compile
-manifests, DSP factory lifetime, and offline/sample rendering.
+validation, target-code generation, live patch compilation, native `libfaust`
+loading, compile manifests, DSP factory lifetime, and offline/sample rendering.
 
 The test suite verifies that development fixtures, Python render helpers,
 external reference synth sources, and SysEx banks do not ship in
@@ -63,9 +63,10 @@ published packages.
   from `AquaSynth.Faust`.
 - `FaustCompiler.CompileAsync(source, options)` writes generated backend code
   through an installed or resolved Faust compiler from `AquaSynth.Faust`.
-- `AquaSynthNativeCompiler` from `AquaSynth.Faust` loads a Faust native
-  toolchain, compiles `.aqua` scripts into hosted DSP factories, emits
-  manifests, and renders buffers for engine hosts.
+- `AquaSynthPatchCompiler` from `AquaSynth.Faust` is the live host-facing
+  boundary for compiling `.aqua` scripts into hosted DSP factories.
+- `AquaSynthNativeCompiler` remains the lower native `libfaust` compiler
+  machinery behind that boundary.
 - `BuiltInScripts.ReferenceScripts()` carries readable SFXR, BFXR-flavored,
   808, FM bell, wobble bass, and advanced layered patches. They are stable
   references for testing and for judging whether the DSL can express useful
@@ -98,11 +99,11 @@ host the finished artifact, bind controls, and schedule audio. Native Faust
 targets are the preferred shipping path when the platform allows them; C# output
 is convenient authoring machinery, not the ceiling.
 
-`AquaSynthNativeCompiler` is the first runtime-facing version of that boundary:
-it owns native `libfaust` loading, script parsing, Faust emission, compile keys,
-DSP source artifacts, manifests, and sample rendering. Engine callers keep their
-device and scheduling code, and ask AquaSynth for compiled/renderable synth
-products.
+`AquaSynthPatchCompiler` is the live runtime-facing version of that boundary: it
+owns native `libfaust` loading policy, script parsing, Faust emission, compile
+keys, DSP source artifacts, manifests, and compiled products. Engine callers
+keep their device and scheduling code, and ask AquaSynth for compiled/renderable
+synth products.
 
 See [`docs/faust-toolchain-boundary.md`](docs/faust-toolchain-boundary.md).
 

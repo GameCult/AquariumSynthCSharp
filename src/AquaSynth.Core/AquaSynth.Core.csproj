@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>AquaSynth.Core</AssemblyName>
     <PackageId>AquaSynth.Core</PackageId>
-    <Version>0.1.0-alpha.2</Version>
+    <Version>0.1.0-alpha.3</Version>
     <Authors>GameCult</Authors>
     <Company>GameCult</Company>
     <Description>AquaSynth patch model, DSL parser, analysis helpers, presets, and Faust source emitter.</Description>

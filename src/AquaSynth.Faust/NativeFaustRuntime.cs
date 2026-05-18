@@ -123,14 +123,14 @@ public sealed class AquaSynthCompiledPatch : IDisposable
     }
 }
 
-public sealed class AquaSynthRenderSession : IDisposable
+public sealed class AquaSynthPatchCompiler : IDisposable
 {
     private readonly AquaSynthNativeOptions options;
     private AquaSynthNativeCompiler? compiler;
     private string? loadError;
     private bool disposed;
 
-    public AquaSynthRenderSession(AquaSynthNativeOptions? options = null)
+    public AquaSynthPatchCompiler(AquaSynthNativeOptions? options = null)
     {
         this.options = options ?? new AquaSynthNativeOptions();
     }
@@ -588,6 +588,56 @@ internal sealed class NativeUtf8String : IDisposable
         {
             Marshal.FreeCoTaskMem(Pointer);
         }
+    }
+}
+
+public sealed class AquaSynthRenderSession : IDisposable
+{
+    private readonly AquaSynthPatchCompiler compiler;
+    private bool disposed;
+
+    public AquaSynthRenderSession(AquaSynthNativeOptions? options = null)
+    {
+        compiler = new AquaSynthPatchCompiler(options);
+    }
+
+    public string? LoadError => compiler.LoadError;
+
+    public bool IsReady => compiler.IsReady;
+
+    public string? FaustVersion => compiler.FaustVersion;
+
+    public bool TryCompileScript(AquaSynthCompileIdentity identity, out AquaSynthCompiledPatch? patch, out string? error)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        return compiler.TryCompileScript(identity, out patch, out error);
+    }
+
+    public bool TryRenderScript(string name, string script, float gain, out float[] samples, out string? error)
+    {
+        samples = [];
+        if (!TryCompileScript(new AquaSynthCompileIdentity(name, name, script), out var patch, out error))
+        {
+            return false;
+        }
+
+        using (patch)
+        {
+            samples = patch!.Render(gain);
+            error = null;
+            return true;
+        }
+    }
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        compiler.Dispose();
+        disposed = true;
     }
 }
 

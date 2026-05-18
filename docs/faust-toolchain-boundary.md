@@ -10,8 +10,8 @@ Package ownership follows that boundary:
 - `AquaSynth.Core` owns patch meaning: model records, `.aqua` parsing, analysis,
   presets, and Faust source emission.
 - `AquaSynth.Faust` depends on Core and owns toolchain/rendering: Faust CLI
-  validation, target-code generation, native `libfaust` loading, compile
-  manifests, factory lifetime, and offline/sample rendering.
+  validation, target-code generation, live patch compilation, native `libfaust`
+  loading, compile manifests, factory lifetime, and offline/sample rendering.
 
 ## Pipeline Map
 
@@ -41,6 +41,7 @@ AquaSynth owns:
 - diagnostics and compile provenance
 - dynamic patch compilation outside the realtime callback
 - native Faust factory lifetime and offline/sample-buffer rendering for hosts
+- live patch compiler sessions requested by engine hosts
 
 Aquarium owns:
 
@@ -72,10 +73,12 @@ ordinary patch controls move through the compiled DSP parameter API.
 - Consumer runtimes should normally bundle compiled DSP artifacts plus manifests,
   not the compiler itself, unless live user patch authoring is a product feature.
 
-Current API foothold: `AquaSynthNativeCompiler` loads `libfaust`, compiles
-`.aqua` scripts into native Faust factories, writes optional `.dsp` artifacts,
-returns `AquaSynthNativeManifest`, and renders mono sample buffers for hosts that
-need triggered one-shot playback.
+Current API foothold: `AquaSynthPatchCompiler` is the host-facing live compiler
+surface. It owns lazy `libfaust` loading through AquaSynth, compiles `.aqua`
+scripts into native Faust factories, writes optional `.dsp` artifacts, and
+returns `AquaSynthCompiledPatch` products with `AquaSynthNativeManifest`.
+`AquaSynthRenderSession` is only a render-proof convenience wrapper for tests
+and offline one-shot buffers.
 
 ## Invariants
 
